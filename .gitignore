@@ -54,4 +54,6 @@ Mkfile.old
 dkms.conf
 
 .idea/
-/commons/
+commons/
+
+.DS_Store
