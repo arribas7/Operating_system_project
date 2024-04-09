@@ -1,7 +1,7 @@
-# tp-scaffold
+# TP Grupo 4 2024-1C K3050
 
-Esta es una plantilla de proyecto diseñada para generar un TP de Sistemas
-Operativos de la UTN FRBA.
+### [Enunciado](https://docs.google.com/document/d/1-AqFTroovEMcA1BfC2rriB5jsLE6SUa4mbcAox1rPec/edit)
+
 
 ## Dependencias
 
