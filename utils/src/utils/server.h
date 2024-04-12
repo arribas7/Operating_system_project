@@ -17,7 +17,7 @@ typedef enum
 {
     MENSAJE,
     PAQUETE
-}op_code;
+} op_code;
 
 extern t_log* logger;
 
@@ -33,4 +33,4 @@ t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
 
-#endif /* UTILS_H_ */
+#endif /* UTILS_SERVER_H_ */
