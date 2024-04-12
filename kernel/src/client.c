@@ -3,7 +3,7 @@
 #include<stdlib.h>
 #include<commons/string.h>
 #include <commons/config.h>
-#include <../utils/client.h>
+#include <utils/client.h>
 
 void *serializar_pcb(t_pcb *pcb, int bytes) {
     void *magic = malloc(bytes);

@@ -13,12 +13,6 @@
 
 #define PUERTO "4444"
 
-typedef enum
-{
-    MENSAJE,
-    PAQUETE
-} op_code;
-
 extern t_log* logger;
 
 void* recibir_buffer(int*, int);
