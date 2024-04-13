@@ -11,8 +11,6 @@
 #include<string.h>
 #include<assert.h>
 
-#define PUERTO "4444"
-
 extern t_log* logger;
 
 void* recibir_buffer(int*, int);
@@ -21,7 +19,7 @@ void* recibir_buffer(int*, int);
 * @fn    Iniciar servidor
 * @brief Inicia el servidor y devuelve el socket
 */
-int iniciar_servidor(void);
+int iniciar_servidor(const char*);
 int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);

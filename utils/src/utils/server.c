@@ -1,7 +1,7 @@
 #include <string.h>
 #include"server.h"
 
-int iniciar_servidor(void)
+int iniciar_servidor(const char* puerto)
 {
     int socket_servidor;
 
@@ -12,7 +12,7 @@ int iniciar_servidor(void)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    getaddrinfo(NULL, PUERTO, &hints, &servinfo);
+    getaddrinfo(NULL, puerto, &hints, &servinfo);
 
     // Creamos el socket de escucha del servidor
 
