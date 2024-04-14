@@ -1,6 +1,6 @@
-// model.h tiene las estructuras y funciones relacionadas a la comunicación entre módulos.
-#ifndef UTILS_MODEL_H_
-#define UTILS_MODEL_H_
+// kernel.h tiene las estructuras y funciones relacionadas a la comunicación entre módulos.
+#ifndef UTILS_KERNEL_H_
+#define UTILS_KERNEL_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,15 +10,16 @@
 #include <netdb.h>
 #include <string.h>
 #include <commons/log.h>
+#include "client.h"
 
 typedef struct {
-    int dato; // TODO: TBD
+    u_int32_t dato; // TODO: TBD
 } t_register;
 
 typedef struct {
-    int pid;
-    int pc;
-    int quantum;
+    u_int32_t pid;
+    u_int32_t pc;
+    u_int32_t quantum;
     t_register *reg;
 } t_pcb;
 
@@ -26,13 +27,13 @@ typedef struct {
 * @fn    serializar_pcb
 * @brief Serializa la estructura pcb para poder transportarla a otros servicios.
 */
-void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset);
+void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
 
 /**
 * @fn    deserializar_pcb
 * @brief Deserializa la estructura pcb para identificarla desde otros servicios.
 */
-void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset);
+t_pcb *deserializar_pcb(t_buffer* buffer);
 
 t_pcb *nuevo_pcb(int pid);
 

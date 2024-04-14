@@ -1,4 +1,4 @@
-#include "model.h"
+#include "kernel.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include<commons/string.h>
@@ -18,7 +18,7 @@ t_pcb *nuevo_pcb(int pid) { // TODO: Una vez bien definida la struct. Pasar por 
     return pcb;
 }
 
-void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset) {
+/*void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset) {
     memcpy(buffer + *offset, &(pcb->pid), sizeof(int));
     *offset += sizeof(int);
 
@@ -35,10 +35,6 @@ void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset) {
 }
 
 void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
-    if (pcb == NULL || buffer == NULL) {
-        return;
-    }
-
     memcpy(&(pcb->pid), buffer + *offset, sizeof(int));
     *offset += sizeof(int);
 
@@ -55,10 +51,54 @@ void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
 
     memcpy(&(pcb->reg->dato), buffer + *offset, sizeof(int));
     *offset += sizeof(int);
-}
+}*/
 
 void eliminar_pcb(t_pcb *pcb) {
     free(pcb->reg);
     free(pcb);
 }
 
+void serializar_pcb(t_pcb* pcb, t_buffer* buffer){
+    void* aux;
+
+    buffer->size = sizeof(u_int32_t) * 4;
+
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+
+    memcpy(buffer->stream + buffer->offset, &(pcb->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(pcb->pc), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    if (pcb->reg != NULL) {
+        memcpy(buffer->stream + buffer->offset, &(pcb->reg->dato), sizeof(u_int32_t));
+        buffer->offset += sizeof(u_int32_t);
+    }
+}
+
+t_pcb* deserializar_pcb(t_buffer* buffer) {
+    t_pcb* pcb = nuevo_pcb(0);
+
+    void* stream = buffer->stream;
+    memcpy(&(pcb->pid), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->pc), stream, sizeof(int));
+    stream += sizeof(int);
+    memcpy(&(pcb->quantum), stream, sizeof(int));
+    stream += sizeof(int);
+
+    pcb->reg = malloc(sizeof(t_register));
+    if (pcb->reg == NULL) {
+        return;
+    }
+
+    memcpy(&(pcb->reg->dato), stream, sizeof(int));
+    //stream += sizeof(int);
+
+    return pcb;
+}

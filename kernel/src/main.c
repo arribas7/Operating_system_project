@@ -97,14 +97,11 @@ void *consola_interactiva(void *arg) {
 
     t_pcb *pcb = nuevo_pcb(15);
 
-    uint8_t buffer[sizeof(t_pcb)]; // TODO: Chequear si usar este tipo u otro
-    int offset = 0;
-
-    // Serializa el PCB en el buffer
-    serializar_pcb(pcb, buffer, &offset);
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_pcb(pcb, buffer);
 
     t_paquete *paquete = crear_paquete(PCB);
-    agregar_a_paquete(paquete, buffer, offset);
+    agregar_a_paquete(paquete, buffer, buffer->offset);
 
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);

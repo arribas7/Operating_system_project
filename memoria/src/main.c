@@ -59,9 +59,8 @@ int correr_servidor(void *arg) {
             case PCB:
                 lista = recibir_paquete(cliente_fd);
                 void *pcb_buffer = list_get(lista, 0);
-                int offset = 0;
-                t_pcb *pcb = malloc(sizeof(t_pcb));
-                deserializar_pcb(pcb_buffer, pcb, &offset);
+                
+                t_pcb *pcb = deserializar_pcb(pcb_buffer);
                 log_info(logger, "pid: %d", pcb->pid);
                 eliminar_pcb(pcb);
                 break;
