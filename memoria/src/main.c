@@ -4,7 +4,7 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <utils/server.h>
-#include <utils/commons.h>
+#include <utils/model.h>
 
 t_log* logger; 
 t_config* config;
@@ -36,10 +36,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    // Esperar a que los hilos terminen
     pthread_join(hilo_servidor, NULL);
 
-    // TODO: Esperar a que los hilos den señal de terminado para limpiar la config.
     clean(config);
     return 0;
 }
@@ -51,6 +49,7 @@ int correr_servidor(void *arg) {
     log_info(logger, "Servidor listo para recibir al cliente");
 
     t_list* lista;
+    // TODO: While infinito para correr el servidor hasta signal SIGTERM/SIGINT
     int cliente_fd = esperar_cliente(server_fd);
     // TODO: Posiblemente esto va a ir en un thread separado por cada cliente que se conecte.
 	while (1) {
@@ -63,6 +62,7 @@ int correr_servidor(void *arg) {
             t_pcb *pcb = malloc(sizeof(t_pcb));
 			deserializar_pcb(pcb_buffer, pcb, &offset);
 			log_info(logger, "pid: %d",pcb->pid);
+            eliminar_pcb(pcb);
 			break;
 		case -1:
 			log_error(logger, "el cliente se desconecto. Terminando servidor");

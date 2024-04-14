@@ -4,9 +4,9 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <utils/server.h>
-#include <utils/commons.h>
+#include <utils/model.h>
 
-t_log* logger; 
+t_log* logger;
 t_config* config;
 
 void clean(t_config* config);
@@ -71,9 +71,6 @@ int correr_servidor(void *arg) {
 	while (1) {
         int cod_op = recibir_operacion(cliente_fd);
 		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(cliente_fd);
-			break;
 		case PAQUETE:
 			lista = recibir_paquete(cliente_fd);
 			log_info(logger, "Me llegaron los siguientes valores:\n");
@@ -91,26 +88,26 @@ int correr_servidor(void *arg) {
 }
 
 void *consola_interactiva(void *arg) {
-    log_info(logger, "Consola corriendo en hilo separado");
-    t_config *config = (t_config *) arg; // Castear el argumento de vuelta a t_config
+    log_debug(logger, "Consola corriendo en hilo separado");
+    t_config *config = (t_config *) arg;
     int conexion_memoria = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
     
-    t_pcb* pcb = nuevo_pcb();
+    t_pcb* pcb = nuevo_pcb(15);
 
-    uint8_t buffer[sizeof(t_pcb)];
+    uint8_t buffer[sizeof(t_pcb)]; // TODO: Chequear si usar este tipo u otro
     int offset = 0;
 
     // Serializa el PCB en el buffer
     serializar_pcb(pcb, buffer, &offset);
 
-	t_paquete* paquete = crear_paquete();
+	t_paquete* paquete = crear_paquete(PCB);
     agregar_a_paquete(paquete, buffer, offset);
-    free(pcb);
 
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
+    eliminar_pcb(pcb);
 
     liberar_conexion(conexion_memoria);
-    log_info(logger, "Conexion liberada");
+    log_debug(logger, "Conexion liberada");
     return NULL;
 }

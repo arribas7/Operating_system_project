@@ -9,6 +9,7 @@
 #include<netdb.h>
 #include<commons/string.h>
 #include<commons/log.h>
+#include <commons/config.h>
 
 typedef enum
 {
@@ -16,7 +17,6 @@ typedef enum
     PAQUETE,
     PCB
 } op_code;
-
 
 typedef struct
 {
@@ -35,7 +35,7 @@ typedef struct
 * @brief Crea una conexión hacia la ip y puerto indicados
 */
 int crear_conexion(char* ip, char* puerto);
-t_paquete* crear_paquete(void);
+t_paquete* crear_paquete(op_code op);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);

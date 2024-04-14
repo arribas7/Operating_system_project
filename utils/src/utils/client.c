@@ -52,6 +52,12 @@ int crear_conexion(char *ip, char* puerto)
     return socket_cliente;
 }
 
+int conexion_by_config(t_config *config, char *ip_config, char *puerto_config) {
+    char *ip = config_get_string_value(config, ip_config);
+    char *puerto = config_get_string_value(config, puerto_config);
+    return crear_conexion(ip, puerto);
+}
+
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
     t_paquete* paquete = malloc(sizeof(t_paquete));
@@ -80,10 +86,10 @@ void crear_buffer(t_paquete* paquete)
     paquete->buffer->stream = NULL;
 }
 
-t_paquete* crear_paquete(void)
+t_paquete* crear_paquete(op_code op)
 {
     t_paquete* paquete = malloc(sizeof(t_paquete));
-    paquete->codigo_operacion = PAQUETE;
+    paquete->codigo_operacion = op;
     crear_buffer(paquete);
     return paquete;
 }
