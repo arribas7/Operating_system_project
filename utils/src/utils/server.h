@@ -13,8 +13,6 @@
 
 extern t_log* logger;
 
-void* recibir_buffer(int*, int);
-
 /**
 * @fn    Iniciar servidor
 * @brief Inicia el servidor y devuelve el socket
@@ -24,5 +22,6 @@ int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
+void* recibir_buffer(int*, int);
 
 #endif /* UTILS_SERVER_H_ */
