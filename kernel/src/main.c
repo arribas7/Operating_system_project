@@ -4,7 +4,7 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <utils/server.h>
-#include <utils/model.h>
+#include <utils/kernel.h>
 
 t_log *logger;
 t_config *config;
