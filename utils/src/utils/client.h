@@ -1,5 +1,5 @@
-#ifndef UTILS_HELLO_H_
-#define UTILS_HELLO_H_
+#ifndef UTILS_CLIENT_H_
+#define UTILS_CLIENT_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -13,7 +13,8 @@
 typedef enum
 {
     MENSAJE,
-    PAQUETE
+    PAQUETE,
+    PCB
 } op_code;
 
 
@@ -39,5 +40,6 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+int conexion_by_config(t_config *config, char *ip_config, char *puerto_config);
 
 #endif

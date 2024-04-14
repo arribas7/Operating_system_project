@@ -10,7 +10,6 @@ t_log* logger;
 t_config* config;
 
 int correr_servidor(void *arg);
-void iterator(char* value);
 void clean(t_config* config);
 
 int main(int argc, char* argv[]) {
@@ -46,21 +45,18 @@ int main(int argc, char* argv[]) {
 }
 
 int correr_servidor(void *arg) {
-    char *puerto = (char *) arg; // Castear el argumento de vuelta a t_config
+    char *puerto = (char *) arg;
 
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Servidor listo para recibir al cliente");
 
-	//t_pcb* pcb;
     t_list* lista;
     int cliente_fd = esperar_cliente(server_fd);
+    // TODO: Posiblemente esto va a ir en un thread separado por cada cliente que se conecte.
 	while (1) {
         int cod_op = recibir_operacion(cliente_fd);
 		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(cliente_fd);
-			break;
-		case PAQUETE:
+		case PCB:
             lista = recibir_paquete(cliente_fd);
             void *pcb_buffer = list_get(lista, 0);
             int offset = 0;
@@ -77,10 +73,6 @@ int correr_servidor(void *arg) {
         }
     }
     return EXIT_SUCCESS;
-}
-
-void iterator(char* value) {
-    log_info(logger,"%s", value);
 }
 
 void

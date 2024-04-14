@@ -28,12 +28,9 @@ int crear_conexion(char *ip, char* puerto)
 
     getaddrinfo(ip, puerto, &hints, &server_info);
 
-    // Ahora vamos a crear el socket.
     int socket_cliente = 0;
 
     struct addrinfo *p;
-
-    // Ahora que tenemos el socket, vamos a conectarlo
     for (p = server_info; p != NULL; p = p->ai_next) {
         if ((socket_cliente = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
             continue;

@@ -36,7 +36,6 @@ void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset) {
 
 void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
     if (pcb == NULL || buffer == NULL) {
-        //log_trace(logger, "Puntero nulo proporcionado a deserializar_pcb");
         return;
     }
 
@@ -51,7 +50,6 @@ void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
 
     pcb->reg = malloc(sizeof(t_register));
     if (pcb->reg == NULL) {
-        //log_trace(logger, "Error al asignar memoria para t_register");
         return;
     }
 
@@ -65,28 +63,4 @@ int conexion_by_config(t_config *config, char *ip_config, char *puerto_config) {
     char *ip = config_get_string_value(config, ip_config);
     char *puerto = config_get_string_value(config, puerto_config);
     return crear_conexion(ip, puerto);
-}
-
-t_pcb* recibir_pcb(int socket_cliente) {
-    int size;
-    void *buffer = recibir_buffer(&size, socket_cliente);
-    
-    if (buffer == NULL) {
-        //log_trace(logger, "Error recibiendo el buffer");
-        return NULL;
-    }
-
-    // Iniciar deserialización de t_pcb
-    t_pcb *pcb = malloc(sizeof(t_pcb));
-    if (pcb == NULL) {
-        free(buffer);
-        //log_trace(logger, "Error al asignar memoria para pcb");
-        return NULL;
-    }
-
-    int offset = 0;
-    deserializar_pcb(buffer, pcb, &offset);
-    free(buffer); // Liberar el buffer una vez que hemos deserializado los datos
-
-    return pcb;
 }
