@@ -66,17 +66,17 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer){
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 
-    memcpy(buffer->stream + buffer->offset, &(pcb->pid), sizeof(u_int32_t));
+    memcpy((char*)buffer->stream + buffer->offset, &(pcb->pid), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy(buffer->stream + buffer->offset, &(pcb->pc), sizeof(u_int32_t));
+    memcpy((char*)buffer->stream + buffer->offset, &(pcb->pc), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy(buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
+    memcpy((char*)buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
     if (pcb->reg != NULL) {
-        memcpy(buffer->stream + buffer->offset, &(pcb->reg->dato), sizeof(u_int32_t));
+        memcpy((char*)buffer->stream + buffer->offset, &(pcb->reg->dato), sizeof(u_int32_t));
         buffer->offset += sizeof(u_int32_t);
     }
 }
@@ -84,20 +84,26 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer){
 t_pcb* deserializar_pcb(t_buffer* buffer) {
     t_pcb* pcb = nuevo_pcb(0);
 
-    void* stream = buffer->stream;
-    memcpy(&(pcb->pid), stream, sizeof(int));
-    stream += sizeof(int);
-    memcpy(&(pcb->pc), stream, sizeof(int));
-    stream += sizeof(int);
-    memcpy(&(pcb->quantum), stream, sizeof(int));
-    stream += sizeof(int);
+    //void* stream = buffer->stream;
+
+    char* stream = (char*) buffer->stream;  // Cast a char* para aritmética de punteros correcta
+    int offset = 0;
+
+    memcpy(&(pcb->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(pcb->pc), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+    
+    memcpy(&(pcb->quantum), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
 
     pcb->reg = malloc(sizeof(t_register));
     if (pcb->reg == NULL) {
         return;
     }
 
-    memcpy(&(pcb->reg->dato), stream, sizeof(int));
+    memcpy(&(pcb->reg->dato), stream + offset, sizeof(u_int32_t));
     //stream += sizeof(int);
 
     return pcb;
