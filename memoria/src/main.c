@@ -63,6 +63,9 @@ int correr_servidor(void *arg) {
                 t_pcb *pcb = malloc(sizeof(t_pcb));
                 deserializar_pcb(pcb_buffer, pcb, &offset);
                 log_info(logger, "pid: %d", pcb->pid);
+                log_info(logger, "pc: %d", pcb->pc);               
+                log_info(logger, "quantum: %d", pcb->quantum);
+                log_info(logger, "reg->dato: %d", pcb->reg->dato);
                 eliminar_pcb(pcb);
                 break;
             case -1:
