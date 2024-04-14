@@ -51,7 +51,8 @@ int correr_servidor(void *arg) {
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Servidor listo para recibir al cliente");
 
-	t_pcb* pcb;
+	//t_pcb* pcb;
+    t_list* lista;
     int cliente_fd = esperar_cliente(server_fd);
 	while (1) {
         int cod_op = recibir_operacion(cliente_fd);
@@ -60,8 +61,11 @@ int correr_servidor(void *arg) {
 			recibir_mensaje(cliente_fd);
 			break;
 		case PAQUETE:
-			pcb = recibir_pcb(cliente_fd);
-			log_info(logger, "Me llegaron los siguientes valores:\n");
+            lista = recibir_paquete(cliente_fd);
+            void *pcb_buffer = list_get(lista, 0);
+            int offset = 0;
+            t_pcb *pcb = malloc(sizeof(t_pcb));
+			deserializar_pcb(pcb_buffer, pcb, &offset);
 			log_info(logger, "pid: %d",pcb->pid);
 			break;
 		case -1:
