@@ -5,13 +5,13 @@
 #include <commons/config.h>
 #include <utils/client.h>
 
-t_pcb *nuevo_pcb(int pid){ // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
-    t_pcb* pcb = malloc(sizeof(t_pcb));
+t_pcb *nuevo_pcb(int pid) { // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
+    t_pcb *pcb = malloc(sizeof(t_pcb));
     pcb->pid = pid;
     pcb->pc = 0;
     pcb->quantum = 0;
 
-    t_register* reg = malloc(sizeof(t_register));
+    t_register *reg = malloc(sizeof(t_register));
     reg->dato = 0;
 
     pcb->reg = reg;
@@ -57,7 +57,7 @@ void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
     *offset += sizeof(int);
 }
 
-void eliminar_pcb(t_pcb *pcb){
+void eliminar_pcb(t_pcb *pcb) {
     free(pcb->reg);
     free(pcb);
 }

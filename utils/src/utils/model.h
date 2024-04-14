@@ -27,12 +27,15 @@ typedef struct {
 * @brief Serializa la estructura pcb para poder transportarla a otros servicios.
 */
 void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset);
+
 /**
 * @fn    deserializar_pcb
 * @brief Deserializa la estructura pcb para identificarla desde otros servicios.
 */
 void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset);
+
 t_pcb *nuevo_pcb(int pid);
+
 void eliminar_pcb(t_pcb *pcb);
 
 #endif

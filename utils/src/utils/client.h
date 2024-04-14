@@ -11,35 +11,38 @@
 #include<commons/log.h>
 #include <commons/config.h>
 
-typedef enum
-{
+typedef enum {
     MENSAJE,
     PAQUETE,
     PCB
 } op_code;
 
-typedef struct
-{
+typedef struct {
     int size;
-    void* stream;
+    void *stream;
 } t_buffer;
 
-typedef struct
-{
+typedef struct {
     op_code codigo_operacion;
-    t_buffer* buffer;
+    t_buffer *buffer;
 } t_paquete;
 
 /**
 * @fn    crear_conexion
 * @brief Crea una conexión hacia la ip y puerto indicados
 */
-int crear_conexion(char* ip, char* puerto);
-t_paquete* crear_paquete(op_code op);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void enviar_paquete(t_paquete* paquete, int socket_cliente);
+int crear_conexion(char *ip, char *puerto);
+
+t_paquete *crear_paquete(op_code op);
+
+void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio);
+
+void enviar_paquete(t_paquete *paquete, int socket_cliente);
+
 void liberar_conexion(int socket_cliente);
-void eliminar_paquete(t_paquete* paquete);
+
+void eliminar_paquete(t_paquete *paquete);
+
 int conexion_by_config(t_config *config, char *ip_config, char *puerto_config);
 
 #endif
