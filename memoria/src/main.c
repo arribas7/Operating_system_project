@@ -58,10 +58,14 @@ int correr_servidor(void *arg) {
         switch (cod_op) {
             case PCB:
                 lista = recibir_paquete(cliente_fd);
-                void *pcb_buffer = list_get(lista, 0);
-                
-                t_pcb *pcb = deserializar_pcb(pcb_buffer);
-                log_info(logger, "pid: %d", pcb->pid);
+                void *pcb_buffer;
+                t_pcb *pcb;
+                for(int i = 0; i< list_size(lista); i ++){
+                    pcb_buffer = list_get(lista, i);
+                    pcb = deserializar_pcb(pcb_buffer);
+                    log_info(logger, "pid: %d", pcb->pid);
+                }
+                free(pcb_buffer);
                 eliminar_pcb(pcb);
                 break;
             case -1:

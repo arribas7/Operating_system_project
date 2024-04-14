@@ -33,7 +33,7 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
 * @fn    deserializar_pcb
 * @brief Deserializa la estructura pcb para identificarla desde otros servicios.
 */
-t_pcb *deserializar_pcb(t_buffer* buffer);
+t_pcb* deserializar_pcb(void* stream);
 
 t_pcb *nuevo_pcb(int pid);
 

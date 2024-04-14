@@ -66,29 +66,25 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer){
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 
-    memcpy((char*)buffer->stream + buffer->offset, &(pcb->pid), sizeof(u_int32_t));
+    memcpy(buffer->stream + buffer->offset, &(pcb->pid), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy((char*)buffer->stream + buffer->offset, &(pcb->pc), sizeof(u_int32_t));
+    memcpy(buffer->stream + buffer->offset, &(pcb->pc), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy((char*)buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
+    memcpy(buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
     if (pcb->reg != NULL) {
-        memcpy((char*)buffer->stream + buffer->offset, &(pcb->reg->dato), sizeof(u_int32_t));
+        memcpy(buffer->stream + buffer->offset, &(pcb->reg->dato), sizeof(u_int32_t));
         buffer->offset += sizeof(u_int32_t);
     }
 }
 
-t_pcb* deserializar_pcb(t_buffer* buffer) {
+t_pcb* deserializar_pcb(void* stream) {
     t_pcb* pcb = nuevo_pcb(0);
 
-    //void* stream = buffer->stream;
-
-    char* stream = (char*) buffer->stream;  // Cast a char* para aritmética de punteros correcta
     int offset = 0;
-
     memcpy(&(pcb->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
@@ -104,7 +100,6 @@ t_pcb* deserializar_pcb(t_buffer* buffer) {
     }
 
     memcpy(&(pcb->reg->dato), stream + offset, sizeof(u_int32_t));
-    //stream += sizeof(int);
 
     return pcb;
 }
