@@ -18,7 +18,8 @@ typedef enum {
 } op_code;
 
 typedef struct {
-    int size;
+    u_int32_t size;
+    u_int32_t offset;
     void *stream;
 } t_buffer;
 

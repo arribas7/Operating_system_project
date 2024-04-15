@@ -58,14 +58,17 @@ int correr_servidor(void *arg) {
         switch (cod_op) {
             case PCB:
                 lista = recibir_paquete(cliente_fd);
-                void *pcb_buffer = list_get(lista, 0);
-                int offset = 0;
-                t_pcb *pcb = malloc(sizeof(t_pcb));
-                deserializar_pcb(pcb_buffer, pcb, &offset);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "reg->dato: %d", pcb->reg->dato);
+                void *pcb_buffer;
+                t_pcb *pcb;
+                for(int i = 0; i< list_size(lista); i ++){
+                    pcb_buffer = list_get(lista, i);
+                    pcb = deserializar_pcb(pcb_buffer);
+                    log_info(logger, "pid: %d", pcb->pid);
+                    log_info(logger, "pc: %d", pcb->pc);               
+                    log_info(logger, "quantum: %d", pcb->quantum);
+                    log_info(logger, "reg->dato: %d", pcb->reg->dato);
+                }
+                free(pcb_buffer);
                 eliminar_pcb(pcb);
                 break;
             case -1:
