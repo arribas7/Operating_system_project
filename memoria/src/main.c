@@ -70,6 +70,7 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
+                enviar_mensaje("ok", cliente_fd);
                 break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
