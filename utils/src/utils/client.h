@@ -46,4 +46,6 @@ void eliminar_paquete(t_paquete *paquete);
 
 int conexion_by_config(t_config *config, char *ip_config, char *puerto_config);
 
+void enviar_mensaje(char *mensaje, int socket_cliente);
+
 #endif
