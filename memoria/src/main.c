@@ -70,7 +70,6 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
-
                 enviar_mensaje("MEM: recibido OK",cliente_fd);
                 
                 break;
