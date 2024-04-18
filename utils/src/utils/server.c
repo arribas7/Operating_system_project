@@ -67,6 +67,34 @@ int recibir_operacion(int socket_cliente)
         close(socket_cliente);
         return -1;
     }
+    /* TO DO 
+         // Enviar el handshake al cliente
+       handshake = 1;
+       size_t bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
+       if (bytes != sizeof(int32_t)) {
+           // Manejar error en el envío del handshake
+           return HANDSHAKE_ERROR;
+       }
+
+
+       // Recibir la respuesta del cliente
+       bytes = recv(socket_cliente, &result, sizeof(int32_t), MSG_WAITALL);
+       if (bytes != sizeof(int32_t)) {
+           // Manejar error en la recepción de la respuesta
+           return HANDSHAKE_ERROR;
+       }
+
+
+       // Verificar el resultado del handshake
+       if (result == HANDSHAKE_OK) {
+           printf("Handshake exitoso\n");
+       } else {
+           printf("Error en el handshake\n");
+           close(socket_cliente);
+           return -1;
+       }
+
+    */
 }
 
 void* recibir_buffer(int* size, int socket_cliente)
