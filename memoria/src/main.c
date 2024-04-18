@@ -5,6 +5,7 @@
 #include <commons/config.h>
 #include <utils/server.h>
 #include <utils/kernel.h>
+#include <utils/cpu.h>
 
 t_log *logger;
 t_config *config;
@@ -51,9 +52,11 @@ int correr_servidor(void *arg) {
 
     t_list *lista;
     // TODO: While infinito para correr el servidor hasta signal SIGTERM/SIGINT
-    int cliente_fd = esperar_cliente(server_fd);
+    //int cliente_fd = esperar_cliente(server_fd);
     // TODO: Posiblemente esto va a ir en un thread separado por cada cliente que se conecte.
     while (1) {
+        int cliente_fd = esperar_cliente(server_fd); //SOLAMENTE PASANDO DESDE LA LINEA 55 HACIA AQUI LOGRO QUE EL SERVER QUEDE EN ESCUCHA PERMAMANENTE
+        //aqui iria el semaforo esperando que un modulo envie la señal de que se conecta, ya sea el kernel o el cpu
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
             case PCB:
@@ -73,8 +76,19 @@ int correr_servidor(void *arg) {
                 enviar_mensaje("MEM: recibido OK",cliente_fd);
                 
                 break;
-                
-            case  
+            case PC:
+                lista = recibir_paquete(cliente_fd);
+                void* reg_buffer;
+                t_reg_cpu* reg;
+                for(int i = 0; i< list_size(lista); i ++){
+                    reg_buffer = list_get(lista, i);
+                    reg = deserializar_reg(reg_buffer);
+                    log_info(logger, "PC: %d", reg->PC);
+                }
+                free(reg_buffer);
+                eliminar_reg(reg);
+                enviar_mensaje("MEM: recibido struct reg OK",cliente_fd);
+                break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
                 return EXIT_FAILURE;
