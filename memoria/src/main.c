@@ -59,7 +59,7 @@ int correr_servidor(void *arg) {
         //aqui iria el semaforo esperando que un modulo envie la señal de que se conecta, ya sea el kernel o el cpu
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
-            case PCB:
+            case CREAR_PROCESO:
                 lista = recibir_paquete(cliente_fd);
                 void *pcb_buffer;
                 t_pcb *pcb;
@@ -73,7 +73,7 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
-                enviar_mensaje("MEM: recibido OK",cliente_fd);
+                enviar_respuesta(cliente_fd,OK);
                 
                 break;
             case PC:

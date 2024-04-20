@@ -20,8 +20,14 @@ typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
+    //    char *path;  // Campo agregado para almacenar el PATH del proceso
     t_register *reg;
 } t_pcb;
+
+typedef struct {
+    u_int32_t id_dispositivo;
+    u_int32_t instruccion;
+} t_syscall;
 
 /**
 * @fn    serializar_pcb

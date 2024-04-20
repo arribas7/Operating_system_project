@@ -15,8 +15,25 @@ typedef enum {
     MENSAJE,
     PAQUETE,
     PCB,
-    PC
+    // Kernel -> Memoria
+    PC,
+    CREAR_PROCESO,
+    FINALIZAR_PROCESO,
+
+    // Kernel -> CPU
+    DISPATCH,
+    INTERRUPT, // INTERRUPT / QUANTUM_FINALIZADO / DESALOJO
+
+    // KERNEL ->  IO
+    SYSCALL,
 } op_code;
+
+typedef enum {
+    OK,
+    NO_ENCONTRADO,
+    NO_SOPORTADO,
+    ERROR_GENERAL,
+} response_code;
 
 typedef struct {
     u_int32_t size;

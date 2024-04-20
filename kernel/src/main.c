@@ -110,25 +110,23 @@ void *consola_interactiva(void *arg) {
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
-    t_paquete *paquete = crear_paquete(PCB);
+    t_paquete *paquete = crear_paquete(CREAR_PROCESO);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
 
     pcb = nuevo_pcb(16);
     buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
-
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
-	recibir_operacion(conexion_memoria); // va a ser cod_op: MEM ACK
-    recibir_mensaje(conexion_memoria);
+	response_code code = esperar_respuesta(conexion_memoria);
+    log_info(logger, "Código de respuesta: %d", code);
 
     liberar_conexion(conexion_memoria);
-    log_debug(logger, "Conexion liberada");
+    log_info(logger, "Conexion liberada");
     return NULL;
 }
 
