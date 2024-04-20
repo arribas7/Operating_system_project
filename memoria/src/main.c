@@ -74,7 +74,7 @@ int correr_servidor(void *arg) {
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
                 enviar_respuesta(cliente_fd,OK);
-                
+                                
                 break;
             case PC:
                 lista = recibir_paquete(cliente_fd);
