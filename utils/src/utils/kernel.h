@@ -25,7 +25,6 @@ typedef struct {
 } t_pcb;
 
 typedef struct {
-    u_int32_t id_dispositivo;
     u_int32_t instruccion;
 } t_syscall;
 

@@ -20,8 +20,6 @@ void* dispatch(void* arg);
 
 void *crear_proceso(void *arg);
 
-void* syscall(void* arg); // evento al IO
-
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
     t_config *config;
@@ -118,7 +116,7 @@ void *crear_proceso(void *arg) {
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
-    t_paquete *paquete = crear_paquete(CREAR_PROCESO);
+    t_paquete *paquete = crear_paquete(CREATE_PROCESS);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
     pcb = nuevo_pcb(16);
