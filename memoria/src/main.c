@@ -52,7 +52,7 @@ void *manejar_cliente(void *arg){
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
-            case PCB:
+            case CREATE_PROCESS:
                 lista = recibir_paquete(cliente_fd);
                 void *pcb_buffer;
                 t_pcb *pcb;
@@ -66,6 +66,21 @@ void *manejar_cliente(void *arg){
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
+                enviar_respuesta(cliente_fd,OK);
+
+                break;
+            case PC:
+                lista = recibir_paquete(cliente_fd);
+                void* reg_buffer;
+                t_reg_cpu* reg;
+                for(int i = 0; i< list_size(lista); i ++){
+                    reg_buffer = list_get(lista, i);
+                    reg = deserializar_reg(reg_buffer);
+                    log_info(logger, "PC: %d", reg->PC);
+                }
+                free(reg_buffer);
+                eliminar_reg(reg);
+                enviar_mensaje("MEM: recibido struct reg OK",cliente_fd);
                 break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
@@ -73,6 +88,7 @@ void *manejar_cliente(void *arg){
             default:
                 log_warning(logger, "Operacion desconocida. No quieras meter la pata");
                 break;
+            
         }
     }
  }   
