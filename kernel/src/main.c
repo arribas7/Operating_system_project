@@ -124,7 +124,7 @@ void *consola_interactiva(void *arg) {
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
-	recibir_operacion(conexion_memoria); // va a ser cod_op: MENSAJE
+	recibir_operacion(conexion_memoria); // va a ser cod_op: MEM ACK
     recibir_mensaje(conexion_memoria);
 
     liberar_conexion(conexion_memoria);
@@ -157,7 +157,7 @@ void* conexion_CPU (void* arg){
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
-    recibir_operacion(conexion_cpu);
+    recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
     recibir_mensaje(conexion_cpu);
 
     liberar_conexion(conexion_cpu);

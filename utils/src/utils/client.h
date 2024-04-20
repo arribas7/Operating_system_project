@@ -14,7 +14,8 @@
 typedef enum {
     MENSAJE,
     PAQUETE,
-    PCB
+    PCB,
+    PC
 } op_code;
 
 typedef struct {
