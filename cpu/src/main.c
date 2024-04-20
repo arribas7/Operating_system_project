@@ -69,7 +69,7 @@ int correr_servidor(void *arg) {
         int cliente_fd = esperar_cliente(server_fd);
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
-            case PCB:
+            case DISPATCH:
                 lista = recibir_paquete(cliente_fd);
                 printf("%d",lista);
                 void *pcb_buffer;
@@ -84,7 +84,7 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
-                enviar_mensaje("CPU: recibido pcb OK",cliente_fd);
+                enviar_respuesta(cliente_fd,OK);
 
                 break;
             case -1:

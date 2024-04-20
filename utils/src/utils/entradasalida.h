@@ -12,20 +12,6 @@
 #include <commons/log.h>
 #include "client.h"
 
-// ----- Instrucciones -----
-
-typedef enum 
-{
-    IO_GEN_SLEEP, // Interfaz generica
-    IO_STDIN_READ, // Interfaz STDIN
-    IO_STDOUT_WRITE, // Interfaz STDOUT
-    IO_FS_CREATE, // Interfaz dialFS (todas las siguientes)
-    IO_FS_DELETE,
-    IO_FS_TRUNCATE,
-    IO_FS_READ,
-    IO_FS_WRITE
-} instruction_code;
-
 // ----- Codigos de operacion -----
 
 /* NECESARIO: Incluir estos en un archivo comun con los demas codigos de operacion

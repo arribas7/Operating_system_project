@@ -16,9 +16,9 @@ int correr_servidor();
 
 void iterator(char *value);
 
-void* conexion_CPU (void* arg);
+void* dispatch(void* arg);
 
-void *consola_interactiva(void *arg);
+void *crear_proceso(void *arg);
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
@@ -43,13 +43,19 @@ int main(int argc, char *argv[]) {
     }
 
     // Creación y ejecución del hilo de la consola
-    if (pthread_create(&hilo_consola, NULL, consola_interactiva, config) != 0) {
+    if (pthread_create(&hilo_consola, NULL, crear_proceso, config) != 0) {
         log_error(logger, "Error al crear el hilo de la consola");
         return -1;
     }
 
     // Creación y ejecución del hilo de CPU
-    if (pthread_create(&hilo_cpu, NULL, conexion_CPU, config) != 0) {
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
+        log_error(logger, "Error al crear el hilo de la CPU");
+        return -1;
+    }
+
+    // Creación y ejecución del hilo de I/O
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
         log_error(logger, "Error al crear el hilo de la CPU");
         return -1;
     }
@@ -101,7 +107,7 @@ int correr_servidor(void *arg) {
     return EXIT_SUCCESS;
 }
 
-void *consola_interactiva(void *arg) {
+void *crear_proceso(void *arg) {
     log_debug(logger, "Consola corriendo en hilo separado");
     t_config *config = (t_config *) arg;
     int conexion_memoria = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
@@ -110,29 +116,27 @@ void *consola_interactiva(void *arg) {
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
-    t_paquete *paquete = crear_paquete(PCB);
+    t_paquete *paquete = crear_paquete(CREATE_PROCESS);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
 
     pcb = nuevo_pcb(16);
     buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
-
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
-	recibir_operacion(conexion_memoria); // va a ser cod_op: MEM ACK
-    recibir_mensaje(conexion_memoria);
+	response_code code = esperar_respuesta(conexion_memoria);
+    log_info(logger, "Código de respuesta: %d", code);
 
     liberar_conexion(conexion_memoria);
-    log_debug(logger, "Conexion liberada");
+    log_info(logger, "Conexion liberada");
     return NULL;
 }
 
-void* conexion_CPU (void* arg){
+void* dispatch(void* arg){
 
     log_debug(logger, "Conexion a CPU corriendo en hilo separado");
     
@@ -143,7 +147,7 @@ void* conexion_CPU (void* arg){
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
-    t_paquete *paquete = crear_paquete(PCB);
+    t_paquete *paquete = crear_paquete(DISPATCH);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
 
@@ -157,8 +161,8 @@ void* conexion_CPU (void* arg){
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
-    recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
-    recibir_mensaje(conexion_cpu);
+    response_code code = esperar_respuesta(conexion_cpu);
+    log_info(logger, "Código de respuesta: %d", code);
 
     liberar_conexion(conexion_cpu);
     log_debug(logger, "Conexion con CPU liberada");

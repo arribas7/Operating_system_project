@@ -14,9 +14,41 @@
 typedef enum {
     MENSAJE,
     PAQUETE,
-    PCB,
-    PC
+    // Kernel -> MEMORY
+    CREATE_PROCESS,
+    FINISH_PROCESS,
+
+    // Kernel -> CPU
+    DISPATCH,
+    INTERRUPT, // INTERRUPT / QUANTUM_FINISHED / DESALOJO
+
+    // CPU -> KERNEL
+    RELEASE,
+    
+    // CPU -> MEMORY
+    PC,
+
+    // CPU -> KERNEL -> IO -> MEMORY
+    IO_GEN_SLEEP,
+    IO_STDIN_READ,
+    IO_STDOUT_WRITE,
+    IO_FS_CREATE,
+    IO_FS_DELETE,
+    IO_FS_TRUNCATE,
+    IO_FS_WRITE,
+    IO_FS_READ,
+
+    // IO -> KERNEL
+    CONNECT_IO,
+    DISCONNECT_IO,
 } op_code;
+
+typedef enum {
+    OK,
+    NOT_FOUND,
+    NOT_SUPPORTED,
+    GENERAL_ERROR,
+} response_code;
 
 typedef struct {
     u_int32_t size;
