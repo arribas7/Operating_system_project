@@ -8,7 +8,6 @@
 #include <pthread.h>
 #include <utils/cpu.h>
 
-
 t_log *logger;
 t_config *config;
 
