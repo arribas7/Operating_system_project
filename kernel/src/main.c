@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Podemos usar un nuevo log y otro name para loggear en el server
-    if (pthread_create(&hilo_servidor, NULL, correr_servidor, puerto) != 0) {
+    if (pthread_create(&hilo_servidor, NULL, (void*) correr_servidor, puerto) != 0) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
