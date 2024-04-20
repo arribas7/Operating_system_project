@@ -5,6 +5,7 @@
 #include <commons/config.h>
 #include <utils/server.h>
 #include <utils/kernel.h>
+#include <pthread.h>
 
 t_log *logger;
 t_config *config;
@@ -15,7 +16,9 @@ int correr_servidor();
 
 void iterator(char *value);
 
-void *consola_interactiva(void *arg);
+void* dispatch(void* arg);
+
+void *crear_proceso(void *arg);
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
@@ -30,24 +33,38 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    pthread_t hilo_servidor, hilo_consola;
+    pthread_t hilo_servidor, hilo_consola, hilo_cpu;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Podemos usar un nuevo log y otro name para loggear en el server
-    if (pthread_create(&hilo_servidor, NULL, correr_servidor, puerto) != 0) {
+    if (pthread_create(&hilo_servidor, NULL, (void*) correr_servidor, puerto) != 0) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
 
     // Creación y ejecución del hilo de la consola
-    if (pthread_create(&hilo_consola, NULL, consola_interactiva, config) != 0) {
+    if (pthread_create(&hilo_consola, NULL, crear_proceso, config) != 0) {
         log_error(logger, "Error al crear el hilo de la consola");
         return -1;
     }
 
+    // Creación y ejecución del hilo de CPU
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
+        log_error(logger, "Error al crear el hilo de la CPU");
+        return -1;
+    }
+
+    // Creación y ejecución del hilo de I/O
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
+        log_error(logger, "Error al crear el hilo de la CPU");
+        return -1;
+    }
+
+
     // Esperar a que los hilos terminen
     pthread_join(hilo_servidor, NULL);
     pthread_join(hilo_consola, NULL);
+    pthread_join(hilo_cpu, NULL);
 
     // TODO: Esperar a que los hilos den señal de terminado para limpiar la config.
     clean(config);
@@ -90,7 +107,7 @@ int correr_servidor(void *arg) {
     return EXIT_SUCCESS;
 }
 
-void *consola_interactiva(void *arg) {
+void *crear_proceso(void *arg) {
     log_debug(logger, "Consola corriendo en hilo separado");
     t_config *config = (t_config *) arg;
     int conexion_memoria = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
@@ -99,21 +116,55 @@ void *consola_interactiva(void *arg) {
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
-    t_paquete *paquete = crear_paquete(PCB);
+    t_paquete *paquete = crear_paquete(CREATE_PROCESS);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
 
     pcb = nuevo_pcb(16);
     buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
-
     enviar_paquete(paquete, conexion_memoria);
     eliminar_paquete(paquete);
     eliminar_pcb(pcb);
 
+	response_code code = esperar_respuesta(conexion_memoria);
+    log_info(logger, "Código de respuesta: %d", code);
+
     liberar_conexion(conexion_memoria);
-    log_debug(logger, "Conexion liberada");
+    log_info(logger, "Conexion liberada");
+    return NULL;
+}
+
+void* dispatch(void* arg){
+
+    log_debug(logger, "Conexion a CPU corriendo en hilo separado");
+    
+    t_config *config = (t_config *) arg;
+    int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
+
+    t_pcb *pcb = nuevo_pcb(22);
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_pcb(pcb, buffer);
+
+    t_paquete *paquete = crear_paquete(DISPATCH);
+    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+
+
+    pcb = nuevo_pcb(9);
+    buffer = malloc(sizeof(t_buffer));
+    serializar_pcb(pcb, buffer);
+    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+
+
+    enviar_paquete(paquete, conexion_cpu);
+    eliminar_paquete(paquete);
+    eliminar_pcb(pcb);
+
+    response_code code = esperar_respuesta(conexion_cpu);
+    log_info(logger, "Código de respuesta: %d", code);
+
+    liberar_conexion(conexion_cpu);
+    log_debug(logger, "Conexion con CPU liberada");
     return NULL;
 }
