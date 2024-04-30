@@ -20,28 +20,28 @@ typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
-    //    char *path;  // Campo agregado para almacenar el PATH del proceso
+    //    char *path; 
     t_register *reg;
 } t_pcb;
 
 typedef struct {
-    u_int32_t instruccion;
+    u_int32_t instruction;
 } t_syscall;
 
 /**
-* @fn    serializar_pcb
-* @brief Serializa la estructura pcb para poder transportarla a otros servicios.
+* @fn    serialize_pcb
+* @brief Serialize pcb struct to be able to transport it to other services.
 */
-void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
+void serialize_pcb(t_pcb* pcb, t_buffer* buffer);
 
 /**
-* @fn    deserializar_pcb
-* @brief Deserializa la estructura pcb para identificarla desde otros servicios.
+* @fn    deserialize_pcb
+* @brief Deserialize pcb struct to be recognized in all the services.
 */
-t_pcb* deserializar_pcb(void* stream);
+t_pcb* deserialize_pcb(void* stream);
 
-t_pcb *nuevo_pcb(int pid);
+t_pcb *new_pcb(int pid);
 
-void eliminar_pcb(t_pcb *pcb);
+void delete_pcb(t_pcb *pcb);
 
 #endif
