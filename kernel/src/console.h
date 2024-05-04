@@ -1,5 +1,8 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
+#include<commons/log.h>
+
+extern t_log* logger;
 
 typedef enum {
     CMD_EJECUTAR_SCRIPT,

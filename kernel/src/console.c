@@ -20,37 +20,37 @@ console_command get_command_type(const char *input) {
 }
 
 void handle_script_execution(const char *args) {
-    log_info("Executing script from path: %s\n", args);
+    log_info(logger, "Executing script from path: %s\n", args);
     // Add the actual script execution logic here
 }
 
 void handle_start_process(const char *args) {
-    log_info("Se crea el proceso <%s> en NEW: %s\n", args);
+    log_info(logger, "Se crea el proceso <%s> en NEW: %s\n", args);
     start_process(args);
 }
 
 void handle_stop_process(const char *args) {
-    log_info("Stopping process with PID: %s\n", args);
+    log_info(logger, "Stopping process with PID: %s\n", args);
     // Add the process stopping logic here
 }
 
 void start_scheduler() {
-    log_info("Starting scheduler.\n");
+    log_info(logger, "Starting scheduler.\n");
     // Add the scheduler start logic here
 }
 
 void stop_scheduler() {
-    log_info("Stopping scheduler.\n");
+    log_info(logger, "Stopping scheduler.\n");
     // Add the scheduler stop logic here
 }
 
 void multiprogramming_grade(const char *args) {
-    log_info("New multiprogramming grade: %s\n", args);
+    log_info(logger, "New multiprogramming grade: %s\n", args);
     // Add the logic to adjust multiprogramming grade here
 }
 
 void handle_process_state() {
-    log_info("Listing processes by state.\n");
+    log_info(logger, "Listing processes by state.\n");
     // Add logic to display process states here
 }
 

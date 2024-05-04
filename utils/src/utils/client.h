@@ -24,6 +24,8 @@ typedef enum {
 
     // CPU -> KERNEL
     RELEASE,
+    TIMEOUT,
+    WAIT,
     
     // CPU -> MEMORY
     PC,
