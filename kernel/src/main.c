@@ -10,6 +10,13 @@
 #include <readline/readline.h>
 #include <console.h>
 
+#include <state_lists.h>
+extern t_list *list_NEW;
+extern t_list *list_READY;
+extern t_list *list_RUNNING;
+extern t_list *list_BLOCKED;
+extern t_list *list_EXIT;
+
 t_log *logger;
 t_config *config;
 
@@ -32,6 +39,20 @@ int main(int argc, char *argv[]) {
     if (logger == NULL) {
         return -1;
     }
+
+    //Lists testing (delete later)
+    initialize_lists();
+
+    t_pcb *testpcb = new_pcb(1);
+    t_pcb *testpcb2 = new_pcb(2);
+
+    list_push(list_NEW, &testpcb);
+    list_push(list_NEW, &testpcb);
+    list_push(list_NEW, &testpcb);
+    list_push(list_NEW, &testpcb2);
+
+    log_list_contents(logger, list_NEW);
+    
 
     config = config_create("kernel.config");
     if (config == NULL) {
