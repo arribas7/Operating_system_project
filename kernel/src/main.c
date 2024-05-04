@@ -40,18 +40,20 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    //Lists testing (delete later)
+    /* ---------------- Lists Testing (Delete Later) ---------------- */
     initialize_lists();
 
     t_pcb *testpcb = new_pcb(1);
     t_pcb *testpcb2 = new_pcb(2);
 
     list_push(list_NEW, &testpcb);
-    list_push(list_NEW, &testpcb);
-    list_push(list_NEW, &testpcb);
     list_push(list_NEW, &testpcb2);
 
+    t_pcb *testpcb3 = list_pop(list_NEW);
+
     log_list_contents(logger, list_NEW);
+    log_info(logger, "Popped element pid: %u", testpcb3->pid);
+    /* ---------------- End of Lists Testing (Delete Later) ---------------- */
     
 
     config = config_create("kernel.config");

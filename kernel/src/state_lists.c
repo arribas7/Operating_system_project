@@ -30,13 +30,14 @@ void *list_pop(t_list *list) {
 
     if (list == NULL || list->elements_count == 0) {return NULL;}
     
-    void *popped_element = list_get(list, list->elements_count - 1);
+    t_link_element *popped_element = (t_link_element*)list_get(list, list->elements_count - 1);
+	t_pcb *pcb = (t_pcb *)popped_element->data;
 
     bool success = list_remove_element(list, popped_element);
 
 	if (success)
 	{
-		return popped_element;
+		return pcb;
 	}
 	else
 	{
@@ -46,7 +47,7 @@ void *list_pop(t_list *list) {
 
 void *log_list_contents(t_log *logger, t_list *list) {
     if (list == NULL) {
-        log_info(logger, "List is NULL");
+        log_info(logger, "List is NULL. It needs to be initialized with initialize_lists();");
         return;
     }
 
@@ -68,10 +69,10 @@ void *log_list_contents(t_log *logger, t_list *list) {
         }
 		
 		log_info(logger, "***************************");
-        log_info(logger, "-PCB #%d", i);
-		log_info(logger, "--pid: %d", pcb->pid);
-		log_info(logger, "--pc: %d", pcb->pc);
-		log_info(logger, "--quantum: %d", pcb->quantum);
+        log_info(logger, "--PCB #%d", i);
+		log_info(logger, "---pid: %d", pcb->pid);
+		log_info(logger, "---pc: %d", pcb->pc);
+		log_info(logger, "---quantum: %d", pcb->quantum);
     }
 }
 
