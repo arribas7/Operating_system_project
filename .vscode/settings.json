@@ -4,6 +4,8 @@
         "log.h": "c",
         "stdio.h": "c",
         "stdlib.h": "c",
-        "config.h": "c"
+        "config.h": "c",
+        "unistd.h": "c",
+        "socket.h": "c"
     }
 }

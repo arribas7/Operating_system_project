@@ -41,8 +41,7 @@ typedef enum {
     IO_FS_READ,
 
     // IO -> KERNEL
-    CONNECT_IO,
-    DISCONNECT_IO,
+    IO
 } op_code;
 
 typedef enum {
