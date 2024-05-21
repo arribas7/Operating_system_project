@@ -27,4 +27,9 @@ bool list_has_pid(t_list* list, int pid);
 //Returns -1 in the case of error or not finding the pid
 int list_pid_element_index(t_list* list, int pid);
 
+//Searches for the element with the provided pid on the list and removes it from the list adequately
+//Returns the removed element
+//Returns NULL if the element wasn't found
+void *list_remove_by_pid(t_list* list, int pid);
+
 #endif

@@ -57,6 +57,7 @@ void *log_list_contents(t_log *logger, t_list *list) {
 	}
 
 	log_info(logger, "-The list is %d elements long", list->elements_count);
+	log_info(logger, "-----------List Start-----------");
 
     for (int i = 0; i < list->elements_count; i++) {
 
@@ -74,6 +75,7 @@ void *log_list_contents(t_log *logger, t_list *list) {
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
+	log_info(logger, "-----------List End-----------");
 }
 
 bool list_has_pid(t_list* list, int pid) {
@@ -116,6 +118,16 @@ int list_pid_element_index(t_list* list, int pid) {
         }
 	}
 	return -1;
+}
+
+void *list_remove_by_pid(t_list* list, int pid) {
+	int position = list_pid_element_index(list, pid);
+
+	if (position == -1) {
+		return NULL;
+	}
+
+	return list_remove(list, position);
 }
 
 /*
