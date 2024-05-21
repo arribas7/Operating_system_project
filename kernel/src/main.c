@@ -10,6 +10,13 @@
 #include <readline/readline.h>
 #include <console.h>
 
+#include <state_lists.h>
+extern t_list *list_NEW;
+extern t_list *list_READY;
+extern t_list *list_RUNNING;
+extern t_list *list_BLOCKED;
+extern t_list *list_EXIT;
+
 t_log *logger;
 t_config *config;
 
@@ -32,6 +39,34 @@ int main(int argc, char *argv[]) {
     if (logger == NULL) {
         return -1;
     }
+
+    /* ---------------- Lists Testing (Delete Later) ---------------- */
+    initialize_lists();
+
+    t_pcb *testpcb = new_pcb(1);
+    t_pcb *testpcb2 = new_pcb(2);
+    t_pcb *testpcb3 = new_pcb(3);
+
+    list_push(list_NEW, &testpcb);
+    list_push(list_NEW, &testpcb2);
+    list_push(list_NEW, &testpcb3);
+
+    t_pcb *testpcb4 = list_pop(list_NEW);
+
+    log_list_contents(logger, list_NEW);
+    log_info(logger, "Popped element pid: %u", testpcb4->pid);
+
+    bool has_pid_1 = list_has_pid(list_NEW, 1);
+    //0 For False, 1 For True, apparently. Trust me I've looked it up.
+    log_info(logger, "The list having a pid==1 is %d. (true being 1 and false being 0)", has_pid_1);
+
+    int index_address_for_1 = list_pid_element_index(list_NEW, 1);
+    log_info(logger, "The index of pid==1 is %d", index_address_for_1);
+
+    list_remove_by_pid(list_NEW, 1);
+    log_list_contents(logger, list_NEW);
+    /* ---------------- End of Lists Testing (Delete Later) ---------------- */
+    
 
     config = config_create("kernel.config");
     if (config == NULL) {
