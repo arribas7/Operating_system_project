@@ -12,7 +12,7 @@ t_config *config;
 
 void clean(t_config *config);
 
-int correr_servidor();
+int correr_servidor(void*);
 
 void iterator(char *value);
 
@@ -41,23 +41,22 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
-
+/*
     // Creación y ejecución del hilo de la consola
     if (pthread_create(&hilo_consola, NULL, consola_interactiva, config) != 0) {
         log_error(logger, "Error al crear el hilo de la consola");
         return -1;
     }
-
+*/
     // Creación y ejecución del hilo de CPU
     if (pthread_create(&hilo_cpu, NULL, conexion_CPU, config) != 0) {
         log_error(logger, "Error al crear el hilo de la CPU");
         return -1;
     }
 
-
     // Esperar a que los hilos terminen
     pthread_join(hilo_servidor, NULL);
-    pthread_join(hilo_consola, NULL);
+    //pthread_join(hilo_consola, NULL);
     pthread_join(hilo_cpu, NULL);
 
     // TODO: Esperar a que los hilos den señal de terminado para limpiar la config.
@@ -90,6 +89,10 @@ int correr_servidor(void *arg) {
                 log_info(logger, "Me llegaron los siguientes valores:\n");
                 list_iterate(lista, (void *) iterator);
                 break;
+            case IOSLEEP:
+                lista = recibir_paquete(cliente_fd);
+                log_info(logger, "Me llegaron los siguientes valores:\n");
+                list_iterate(lista, (void *) iterator);
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
                 return EXIT_FAILURE;
@@ -100,7 +103,7 @@ int correr_servidor(void *arg) {
     }
     return EXIT_SUCCESS;
 }
-
+/*
 void *consola_interactiva(void *arg) {
     log_debug(logger, "Consola corriendo en hilo separado");
     t_config *config = (t_config *) arg;
@@ -131,7 +134,7 @@ void *consola_interactiva(void *arg) {
     log_debug(logger, "Conexion liberada");
     return NULL;
 }
-
+*/
 void* conexion_CPU (void* arg){
 
     log_debug(logger, "Conexion a CPU corriendo en hilo separado");
@@ -139,26 +142,39 @@ void* conexion_CPU (void* arg){
     t_config *config = (t_config *) arg;
     int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
-    t_pcb *pcb = nuevo_pcb(22);
+    char* instrucciones[] = {"MOV", "ADD", "SUB"};
+    int instruccionesLength = 3;
+    t_pcb *pcb = nuevo_pcb(123, 0, 10, instrucciones, instruccionesLength);
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_pcb(pcb, buffer);
 
+    
     t_paquete *paquete = crear_paquete(PCB);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
-
-    pcb = nuevo_pcb(9);
-    buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
-
     enviar_paquete(paquete, conexion_cpu);
     eliminar_paquete(paquete);
-    eliminar_pcb(pcb);
+    //eliminar_pcb(pcb);
 
     recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
     recibir_mensaje(conexion_cpu);
+
+    while (1) {
+        int cod_op = recibir_operacion(conexion_cpu);
+        switch (cod_op) {
+            case IOSLEEP:
+                t_list* lista = recibir_paquete(conexion_cpu);
+                log_info(logger, "Me llegaron los siguientes valores:\n");
+                list_iterate(lista, (void *) iterator);
+            case -1:
+                log_error(logger, "el cliente se desconecto. Terminando servidor");
+                return EXIT_FAILURE;
+            default:
+                log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+                break;
+        }
+        sleep(15);
+    }
 
     liberar_conexion(conexion_cpu);
     log_debug(logger, "Conexion con CPU liberada");

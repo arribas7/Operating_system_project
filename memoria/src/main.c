@@ -10,6 +10,7 @@
 t_log *logger;
 t_config *config;
 
+
 int correr_servidor(void *arg);
 
 void clean(t_config *config);
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+
     pthread_join(hilo_servidor, NULL);
 
     clean(config);
@@ -57,6 +59,7 @@ int correr_servidor(void *arg) {
     while (1) {
         int cliente_fd = esperar_cliente(server_fd); //SOLAMENTE PASANDO DESDE LA LINEA 55 HACIA AQUI LOGRO QUE EL SERVER QUEDE EN ESCUCHA PERMAMANENTE
         //aqui iria el semaforo esperando que un modulo envie la señal de que se conecta, ya sea el kernel o el cpu
+
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
             case PCB:
@@ -72,9 +75,8 @@ int correr_servidor(void *arg) {
                     log_info(logger, "reg->dato: %d", pcb->reg->dato);
                 }
                 free(pcb_buffer);
-                eliminar_pcb(pcb);
+                //eliminar_pcb(pcb);
                 enviar_mensaje("MEM: recibido OK",cliente_fd);
-                
                 break;
             case PC:
                 lista = recibir_paquete(cliente_fd);
@@ -85,9 +87,14 @@ int correr_servidor(void *arg) {
                     reg = deserializar_reg(reg_buffer);
                     log_info(logger, "PC: %d", reg->PC);
                 }
+
+                //aqui en base al PC recibido el modulo memoria debera buscar en los PCBs recibidos desde el kernel, para devolver a cpu en el siguiente enviar mensaje la proxima instruccion a ejecutar
+
                 free(reg_buffer);
                 eliminar_reg(reg);
-                enviar_mensaje("MEM: recibido struct reg OK",cliente_fd);
+                //enviar_mensaje("SET AX 1",cliente_fd); //simulo una instruccion cualquiera 
+                //enviar_mensaje("JNZ AX 4",cliente_fd);
+                enviar_mensaje("IO_GEN_SLEEP XXX 10",cliente_fd); //reemp las XXX por alguna interfaz, preg a nico q nombre les puso
                 break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
@@ -100,8 +107,8 @@ int correr_servidor(void *arg) {
     return EXIT_SUCCESS;
 }
 
-void
-clean(t_config *config) {
+void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
 }
+

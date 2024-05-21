@@ -13,7 +13,7 @@
 #include "client.h"
 
 typedef struct {
-    u_int32_t dato; // TODO: TBD
+    u_int32_t dato; // TODO: TBD, aqui deberia esta la lista de instrucciones a ejecutar
 } t_register;
 
 typedef struct {
@@ -21,6 +21,8 @@ typedef struct {
     u_int32_t pc;
     u_int32_t quantum;
     t_register *reg;
+    u_int32_t instruccionesLength;
+    char** instrucciones; //instrucciones a ejecutar, ej: MOV, RESIZE
 } t_pcb;
 
 /**
@@ -35,8 +37,8 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
 */
 t_pcb* deserializar_pcb(void* stream);
 
-t_pcb *nuevo_pcb(int pid);
+t_pcb* nuevo_pcb(int pid, int pc, int quantum, char** instrucciones, int instruccionesLength);
 
-void eliminar_pcb(t_pcb *pcb);
+//void eliminar_pcb(t_pcb *pcb);
 
 #endif

@@ -15,7 +15,12 @@ typedef enum {
     MENSAJE,
     PAQUETE,
     PCB,
-    PC
+    PC,
+    PCB_FROM_MEM,
+    WRITE,
+    INSTRUCTION,
+    TLBMISS,
+    IOSLEEP
 } op_code;
 
 typedef struct {
