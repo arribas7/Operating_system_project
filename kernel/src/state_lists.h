@@ -20,4 +20,11 @@ void *list_pop(t_list *list);
 //Doesn't return anything
 void *log_list_contents(t_log *logger, t_list *list);
 
+//Returns true if there exists a pcb with the given pid anywhere on the list
+bool list_has_pid(t_list* list, int pid);
+
+//Searches for a specific pid in a given list of pcbs and returns the index where it's been found
+//Returns -1 in the case of error or not finding the pid
+int list_pid_element_index(t_list* list, int pid);
+
 #endif
