@@ -44,4 +44,7 @@ t_pcb *new_pcb(int pid);
 
 void delete_pcb(t_pcb *pcb);
 
+//Does exactly what it says it does. Doesn't validate input so make sure it's valid beforehand.
+uint32_t string_to_uint32(const char *str);
+
 #endif

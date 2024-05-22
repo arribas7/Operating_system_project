@@ -23,6 +23,10 @@ void delete_pcb(t_pcb *pcb) {
     free(pcb);
 }
 
+uint32_t string_to_uint32(const char *str) {
+    return (uint32_t)strtoul(str, NULL, 10);
+}
+
 void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
     void* aux;
 
