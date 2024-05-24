@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     //TODO: Maybe change the logger for this?
     // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
-    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, logger) != 0) {
+    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, get_quantum_params_struct(logger, config)) != 0) {
         log_error(logger, "Error creating console thread");
         return -1;
     }
