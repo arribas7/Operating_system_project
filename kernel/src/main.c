@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_lists(); 
+    t_pcb *testpcb = new_pcb(999,0,"my/test/path");
 
     config = config_create("kernel.config");
     if (config == NULL) {

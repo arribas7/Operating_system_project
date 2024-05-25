@@ -13,21 +13,21 @@
 #include "client.h"
 
 typedef struct {
-    u_int32_t PC; 
-    u_int8_t AX;
-    u_int8_t BX;
-    u_int_8_t CX;
-    u_int_8_t DX;
-    u_int_32_t EAX;
-    u_int_32_t EBX;
-    u_int_32_t ECX;
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
 } t_register;
 
 typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
-    //char* path; 
+    char* path; 
     t_register *reg;
 } t_pcb;
 
