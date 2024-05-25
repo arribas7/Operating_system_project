@@ -13,7 +13,14 @@
 #include "client.h"
 
 typedef struct {
-    u_int32_t dato; // TODO: TBD
+    u_int32_t PC; 
+    u_int8_t AX;
+    u_int8_t BX;
+    u_int_8_t CX;
+    u_int_8_t DX;
+    u_int_32_t EAX;
+    u_int_32_t EBX;
+    u_int_32_t ECX;
 } t_register;
 
 typedef struct {

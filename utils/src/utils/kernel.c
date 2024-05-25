@@ -13,7 +13,14 @@ t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path) {
     //pcb->path = path;
 
     t_register *reg = malloc(sizeof(t_register));
-    reg->dato = 0;
+    reg->PC = 0;
+    reg->AX = 0;
+    reg->BX = 0;
+    reg->CX = 0;
+    reg->DX = 0;
+    reg->EAX = 0;
+    reg->EBX = 0;
+    reg->ECX = 0;
 
     pcb->reg = reg;
     return pcb;
