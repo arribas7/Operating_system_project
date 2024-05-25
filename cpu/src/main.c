@@ -6,6 +6,7 @@
 #include <utils/server.h>
 #include <utils/kernel.h>
 #include <pthread.h>
+#include <utils/cpu.h>
 
 t_log *logger;
 t_config *config;
@@ -47,6 +48,7 @@ int main(int argc, char *argv[]) {
     }
 
     pthread_join(hilo_servidor, NULL);
+    pthread_join(hilo_cliente, NULL);
 
     clean(config);
     return 0;
@@ -60,16 +62,18 @@ int correr_servidor(void *arg) {
 
     t_list *lista;
     // TODO: While infinito para correr el servidor hasta signal SIGTERM/SIGINT
-    int cliente_fd = esperar_cliente(server_fd);
+    //int cliente_fd = esperar_cliente(server_fd);
     // TODO: Posiblemente esto va a ir en un thread separado por cada cliente que se conecte.
     while (1) {
+        int cliente_fd = esperar_cliente(server_fd);
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
-            case PCB:
+            case DISPATCH:
                 lista = recibir_paquete(cliente_fd);
+                printf("%d",lista);
                 void *pcb_buffer;
                 t_pcb *pcb;
-                for(int i = 0; i< list_size(lista); i ++){
+                for(int i = 0; i< list_size(lista); i ++){ // DESERIALIZO LA CANTIDAD DE PCB QUE RECIBI DESDE EL KERNEL OSEA LAS QUE TENDRE EN LA LISTA
                     pcb_buffer = list_get(lista, i);
                     pcb = deserializar_pcb(pcb_buffer);
                     log_info(logger, "pid: %d", pcb->pid);
@@ -79,6 +83,8 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 eliminar_pcb(pcb);
+                enviar_respuesta(cliente_fd,OK);
+
                 break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
@@ -99,30 +105,25 @@ void* conexion_MEM (void* arg){
     int conexion_mem = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
 
 
-    //cambiar lo que esta a continuacion y enviar a memoria lo que corresponda desde cpu, pero la conexion funciona
-    t_pcb *pcb = nuevo_pcb(98);
+    //a continuacion genero, serializo y envio el registro T_REG_CPU
+    t_reg_cpu* registros = nuevo_reg(12);
+
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
+    serializar_reg(registros, buffer);
 
-    t_paquete *paquete = crear_paquete(PCB);
+    t_paquete *paquete = crear_paquete(PC);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
-
-    pcb = nuevo_pcb(1);
-    buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
 
     enviar_paquete(paquete, conexion_mem);
     eliminar_paquete(paquete);
-    eliminar_pcb(pcb);
+    eliminar_reg(registros);
 
     recibir_operacion(conexion_mem); //sera MENSAJE DESDE MEMORIA
     recibir_mensaje(conexion_mem);
 
     liberar_conexion(conexion_mem);
     log_debug(logger, "Conexion con CPU liberada");
+
     return NULL;
 }
 

@@ -13,30 +13,24 @@
 #include "client.h"
 
 typedef struct {
-    u_int32_t dato; // TODO: TBD
-} t_register;
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t EAX;
+    uint8_t EBX;
+    uint8_t ECX;
+    uint8_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+} t_reg_cpu;
 
-typedef struct {
-    u_int32_t pid;
-    u_int32_t pc;
-    u_int32_t quantum;
-    t_register *reg;
-} t_pcb;
+t_reg_cpu* nuevo_reg(uint8_t pc);
 
-/**
-* @fn    serializar_pcb
-* @brief Serializa la estructura pcb para poder transportarla a otros servicios.
-*/
-void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
+void serializar_reg(t_reg_cpu* reg, t_buffer* buffer);
 
-/**
-* @fn    deserializar_pcb
-* @brief Deserializa la estructura pcb para identificarla desde otros servicios.
-*/
-t_pcb* deserializar_pcb(void* stream);
+t_reg_cpu* deserializar_reg(void* stream);
 
-t_pcb *nuevo_pcb(int pid);
-
-void eliminar_pcb(t_pcb *pcb);
+void eliminar_reg(t_reg_cpu *reg);
 
 #endif
