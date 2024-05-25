@@ -6,6 +6,7 @@
 #include <utils/server.h>
 #include <utils/kernel.h>
 #include <pthread.h>
+#include <utils/cpu.h>
 
 t_log *logger;
 t_config *config;
@@ -89,10 +90,6 @@ int correr_servidor(void *arg) {
                 log_info(logger, "Me llegaron los siguientes valores:\n");
                 list_iterate(lista, (void *) iterator);
                 break;
-            case IOSLEEP:
-                lista = recibir_paquete(cliente_fd);
-                log_info(logger, "Me llegaron los siguientes valores:\n");
-                list_iterate(lista, (void *) iterator);
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
                 return EXIT_FAILURE;
@@ -164,8 +161,15 @@ void* conexion_CPU (void* arg){
         switch (cod_op) {
             case IOSLEEP:
                 t_list* lista = recibir_paquete(conexion_cpu);
-                log_info(logger, "Me llegaron los siguientes valores:\n");
-                list_iterate(lista, (void *) iterator);
+                void *instruction_buffer;
+                t_instruction* instruction;
+                for(int i = 0; i< list_size(lista); i ++){
+                    instruction_buffer = list_get(lista, i);
+                    instruction = deserializar_instruction_IO(instruction_buffer);
+                    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
+                }
+                free(instruction_buffer);
+                
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
                 return EXIT_FAILURE;

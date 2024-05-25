@@ -25,6 +25,7 @@ typedef struct {
     char** instrucciones; //instrucciones a ejecutar, ej: MOV, RESIZE
 } t_pcb;
 
+
 /**
 * @fn    serializar_pcb
 * @brief Serializa la estructura pcb para poder transportarla a otros servicios.
@@ -38,6 +39,8 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer);
 t_pcb* deserializar_pcb(void* stream);
 
 t_pcb* nuevo_pcb(int pid, int pc, int quantum, char** instrucciones, int instruccionesLength);
+
+
 
 //void eliminar_pcb(t_pcb *pcb);
 
