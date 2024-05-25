@@ -74,6 +74,19 @@ void *log_list_contents(t_log *logger, t_list *list) {
 	log_debug(logger, "-----------List End-----------");
 }
 
+void list_element_destroyer(void *element) {
+    t_pcb *pcb = (t_pcb*)element;
+    delete_pcb(pcb);
+}
+
+void state_list_clean(t_list * list) {
+	list_clean_and_destroy_elements(list, list_element_destroyer);
+}
+
+void state_list_destroy(t_list * list) {
+	list_destroy_and_destroy_elements(list, list_element_destroyer);
+}
+
 bool list_has_pid(t_list* list, int pid) {
 
 	if (list == NULL || list_is_empty(list)) {
