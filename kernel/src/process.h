@@ -2,12 +2,14 @@
 #define PROCESS_H
 
 #include <commons/config.h>
+#include <commons/log.h>
+#include <stdatomic.h>
+#include <semaphore.h>
 
-typedef struct {
-    char* pid;
-    t_config* config;
-} process_args;
+extern t_log* logger;
+extern atomic_int pid_count;
+extern t_list *list_NEW;
 
-void *start_process(void *arg);
+void *start_process_on_new(char *path, t_config *config);
 
 #endif

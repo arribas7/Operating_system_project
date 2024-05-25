@@ -9,14 +9,13 @@
 
 t_list *list_NEW = NULL;
 t_list *list_READY = NULL;
-t_list *list_RUNNING = NULL;
+t_pcb *pcb_running = NULL;
 t_list *list_BLOCKED = NULL;
 t_list *list_EXIT = NULL;
 
 void initialize_lists() {
     list_NEW = list_create();
     list_READY = list_create();
-    list_RUNNING = list_create();
     list_BLOCKED = list_create();
     list_EXIT = list_create();
 }
@@ -30,14 +29,13 @@ void *list_pop(t_list *list) {
 
     if (list == NULL || list->elements_count == 0) {return NULL;}
     
-    t_link_element *popped_element = (t_link_element*)list_get(list, list->elements_count - 1);
-	t_pcb *pcb = (t_pcb *)popped_element->data;
+    t_pcb *popped_element = (t_pcb *)list_get(list, list->elements_count - 1);
 
     bool success = list_remove_element(list, popped_element);
 
 	if (success)
 	{
-		return pcb;
+		return popped_element;
 	}
 	else
 	{
@@ -47,35 +45,33 @@ void *list_pop(t_list *list) {
 
 void *log_list_contents(t_log *logger, t_list *list) {
     if (list == NULL) {
-        log_info(logger, "List is NULL. It needs to be initialized with initialize_lists();");
+        log_debug(logger, "List is NULL. It needs to be initialized with initialize_lists();");
         return NULL;
     }
 
 	if (list->elements_count == 0) {
-		log_info(logger, "List is empty");
+		log_debug(logger, "List is empty");
 		return NULL;
 	}
 
-	log_info(logger, "-The list is %d elements long", list->elements_count);
-	log_info(logger, "-----------List Start-----------");
+	log_debug(logger, "-The list is %d elements long", list->elements_count);
+	log_debug(logger, "-----------List Start-----------");
 
     for (int i = 0; i < list->elements_count; i++) {
-
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) {
             log_error(logger, "Data of element at index %d is NULL", i);
             continue; // Skip to the next iteration
         }
 		
-		log_info(logger, "***************************");
-        log_info(logger, "--PCB #%d", i);
-		log_info(logger, "---pid: %d", pcb->pid);
+		log_debug(logger, "***************************");
+        log_debug(logger, "--PCB #%d", i);
+		log_debug(logger, "---pid: %d", pcb->pid);
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
-	log_info(logger, "-----------List End-----------");
+	log_debug(logger, "-----------List End-----------");
 }
 
 bool list_has_pid(t_list* list, int pid) {
@@ -85,8 +81,7 @@ bool list_has_pid(t_list* list, int pid) {
 	}
 	
 	for (int i = 0; i < list->elements_count; i++) {
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) { //Invalid pcb for some reason
             continue; // Skip to the next iteration
@@ -106,8 +101,7 @@ int list_pid_element_index(t_list* list, int pid) {
 	}
 	
 	for (int i = 0; i < list->elements_count; i++) {
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) { //Invalid pcb for some reason
             continue; // Skip to the next iteration
