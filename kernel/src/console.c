@@ -4,7 +4,7 @@
 #include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <process.h>
+#include <long_term_scheduler.h>
 #include <commons/log.h>
 #include <state_lists.h>
 
@@ -27,7 +27,7 @@ void handle_script_execution(const char *cmd_args) {
 
 void handle_start_process(const char *cmd_args, t_config* config) {
     char *path = strdup(cmd_args);
-    start_process_on_new(path, config);
+    start_process(path, config);
     free(path);
 }
 

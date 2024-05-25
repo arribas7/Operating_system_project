@@ -45,17 +45,17 @@ void *list_pop(t_list *list) {
 
 void *log_list_contents(t_log *logger, t_list *list) {
     if (list == NULL) {
-        log_debug(logger, "List is NULL. It needs to be initialized with initialize_lists();");
+        log_info(logger, "List is NULL. It needs to be initialized with initialize_lists();");
         return NULL;
     }
 
 	if (list->elements_count == 0) {
-		log_debug(logger, "List is empty");
+		log_info(logger, "List is empty");
 		return NULL;
 	}
 
-	log_debug(logger, "-The list is %d elements long", list->elements_count);
-	log_debug(logger, "-----------List Start-----------");
+	log_info(logger, "-The list is %d elements long", list->elements_count);
+	log_info(logger, "-----------List Start-----------");
 
     for (int i = 0; i < list->elements_count; i++) {
 		t_pcb *pcb = (t_pcb *)list_get(list, i);
@@ -65,13 +65,13 @@ void *log_list_contents(t_log *logger, t_list *list) {
             continue; // Skip to the next iteration
         }
 		
-		log_debug(logger, "***************************");
-        log_debug(logger, "--PCB #%d", i);
-		log_debug(logger, "---pid: %d", pcb->pid);
+		log_info(logger, "***************************");
+        log_info(logger, "--PCB #%d", i);
+		log_info(logger, "---pid: %d", pcb->pid);
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
-	log_debug(logger, "-----------List End-----------");
+	log_info(logger, "-----------List End-----------");
 }
 
 void list_element_destroyer(void *element) {
@@ -125,6 +125,25 @@ int list_pid_element_index(t_list* list, int pid) {
         }
 	}
 	return -1;
+}
+
+void* list_pid_element(t_list* list, int pid) {
+	if (list == NULL || list_is_empty(list)) {
+		return -1;
+	}
+	
+	for (int i = 0; i < list->elements_count; i++) {
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
+
+		if (pcb == NULL) { //Invalid pcb for some reason
+            continue; // Skip to the next iteration
+        }
+
+		if (pcb->pid == pid) {
+            return pcb;
+        }
+	}
+	return NULL;
 }
 
 void *list_remove_by_pid(t_list* list, int pid) {

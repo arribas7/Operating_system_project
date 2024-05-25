@@ -27,6 +27,10 @@ bool list_has_pid(t_list* list, int pid);
 //Returns -1 in the case of error or not finding the pid
 int list_pid_element_index(t_list* list, int pid);
 
+//Searches for a specific pid in a given list of pcbs and returns the t_pcb where it's been found
+//Returns NULL in the case of error or not finding the pid
+void* list_pid_element(t_list* list, int pid);
+
 //Searches for the element with the provided pid on the list and removes it from the list adequately
 //Returns the removed element
 //Returns NULL if the element wasn't found
@@ -64,7 +68,9 @@ void state_list_destroy(t_list * list);
     log_info(logger, "The index of pid==1 is %d", index_address_for_1);
 
     list_remove_by_pid(list_NEW, 1);
-    log_list_contents(logger, list_NEW);*/
+    log_list_contents(logger, list_NEW);
+    state_list_destroy(list_NEW);
+    */
 /* ---------------- End of List Usage example ---------------- */
 
 #endif
