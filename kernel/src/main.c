@@ -46,21 +46,7 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_lists(); 
-
-    t_pcb *testpcb = new_pcb(1,0,"");
-    t_pcb *testpcb2 = new_pcb(2,0,"");
-    t_pcb *testpcb3 = new_pcb(3,0,"");
-
-    list_push(list_NEW, testpcb);
-    list_push(list_NEW, testpcb2);
-    list_push(list_NEW, testpcb3);
-
-    //state_list_clean(list_NEW);
-    state_list_destroy(list_NEW);
-
-    log_info(logger, "Tested list");
-    log_list_contents(logger, list_NEW);
-    log_info(logger, "End of tested list");
+    t_pcb *testpcb = new_pcb(999,0,"my/test/path");
 
     config = config_create("kernel.config");
     if (config == NULL) {

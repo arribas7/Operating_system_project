@@ -68,9 +68,13 @@ void *log_list_contents(t_log *logger, t_list *list) {
 		log_debug(logger, "***************************");
         log_debug(logger, "--PCB #%d", i);
 		log_debug(logger, "---pid: %d", pcb->pid);
+		//log_debug(logger, "---path size: %zu", strlen(pcb->path));
+		log_debug(logger, "---path: %s", pcb->path);
+
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
+	log_debug(logger, "***************************");
 	log_debug(logger, "-----------List End-----------");
 }
 
