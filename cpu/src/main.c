@@ -167,6 +167,9 @@ void fetch(t_pcb *pcb)
 
     recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR)
     recibir_instruccion(conexion_mem); // LA INSTRUCCION
+
+    //“PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”
+    log_info(logger, "PID: <%d> - <%s> - Program Counter: <%d>", pcb->pid, "FETCH", pcb->pc);
 }
 
 void decode(t_pcb *pcb)

@@ -6,40 +6,62 @@
 #include <utils/server.h>
 #include <utils/kernel.h>
 #include <pthread.h>
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <console.h>
+#include <state_lists.h>
+#include <stdatomic.h>
+#include <semaphore.h>
+#include <utils/inout.h>
 #include <utils/cpu.h>
+
+extern t_list *list_NEW;
+extern t_list *list_READY;
+extern t_list *list_BLOCKED;
+extern t_list *list_EXIT;
+t_pcb *pcb_RUNNING;
+
+atomic_int pid_count;
+sem_t sem_multiprogramming;
 
 t_log *logger;
 t_config *config;
 
 void clean(t_config *config);
 
-int correr_servidor(void*);
+int run_server();
 
 void iterator(char *value);
 
-void* dispatch (void* arg);
+void* dispatch(void* arg);
 
-void *consola_interactiva(void *arg);
+void *lt_sched_new_ready(void *arg);
 
 int main(int argc, char *argv[]) {
-    /* ---------------- Setup inicial  ---------------- */
+    /* ---------------- Initial Setup ---------------- */
     t_config *config;
-    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_INFO);
+    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
         return -1;
     }
+
+    initialize_lists(); 
 
     config = config_create("kernel.config");
     if (config == NULL) {
         return -1;
     }
 
-    pthread_t hilo_servidor, hilo_consola, hilo_cpu;
+    atomic_init(&pid_count, 0);
+    int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+    sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
+
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread,hilo_cpu;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    // TODO: Podemos usar un nuevo log y otro name para loggear en el server
-    if (pthread_create(&hilo_servidor, NULL, correr_servidor, puerto) != 0) {
-        log_error(logger, "Error al crear el hilo del servidor");
+    // TODO: Use a new log with other name for each thread?
+    if (pthread_create(&server_thread, NULL, (void*) run_server, puerto) != 0) {
+        log_error(logger, "Error creating server thread");
         return -1;
     }
 /*
@@ -56,7 +78,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Esperar a que los hilos terminen
-    pthread_join(hilo_servidor, NULL);
+    pthread_join(server_thread, NULL);
     //pthread_join(hilo_consola, NULL);
     pthread_join(hilo_cpu, NULL);
 
@@ -68,17 +90,23 @@ int main(int argc, char *argv[]) {
 void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
+    sem_destroy(&sem_multiprogramming);
+    state_list_destroy(list_NEW);
+    state_list_destroy(list_READY);
+    state_list_destroy(list_BLOCKED);
+    state_list_destroy(list_EXIT);
+    free(pcb_RUNNING);
 }
 
 void iterator(char *value) {
     log_info(logger, "%s", value);
 }
 
-int correr_servidor(void *arg) {
-    char *puerto = (char *) arg; // Castear el argumento de vuelta a t_config
+int run_server(void *arg) {
+    char *puerto = (char *) arg;
 
     int server_fd = iniciar_servidor(puerto);
-    log_info(logger, "Servidor listo para recibir al cliente");
+    log_info(logger, "Server ready to receive clients...");
 
     t_list *lista;
     int cliente_fd = esperar_cliente(server_fd);
@@ -87,51 +115,28 @@ int correr_servidor(void *arg) {
         switch (cod_op) {
             case PAQUETE:
                 lista = recibir_paquete(cliente_fd);
-                log_info(logger, "Me llegaron los siguientes valores:\n");
+                log_info(logger, "I receive the following values:\n");
                 list_iterate(lista, (void *) iterator);
                 break;
+            case IO:
+                lista = recibir_paquete(cliente_fd);
+                t_interface* new_io = list_to_IO(lista);
+                char* name = get_IO_name(new_io);
+                char* type = get_IO_type(new_io);
+                log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
+                delete_IO(new_io);
+                log_info(logger, "IO Device disconnected");
+                break;
             case -1:
-                log_error(logger, "el cliente se desconecto. Terminando servidor");
+                log_error(logger, "Client disconnected. Finishing server...");
                 return EXIT_FAILURE;
             default:
-                log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+                log_warning(logger, "Unknown operation.");
                 break;
         }
     }
     return EXIT_SUCCESS;
 }
-/*
-void *consola_interactiva(void *arg) {
-    log_debug(logger, "Consola corriendo en hilo separado");
-    t_config *config = (t_config *) arg;
-    int conexion_memoria = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
-
-    t_pcb *pcb = nuevo_pcb(15);
-    t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
-
-    t_paquete *paquete = crear_paquete(PCB);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
-
-    pcb = nuevo_pcb(16);
-    buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
-
-    enviar_paquete(paquete, conexion_memoria);
-    eliminar_paquete(paquete);
-    eliminar_pcb(pcb);
-
-	recibir_operacion(conexion_memoria); // va a ser cod_op: MEM ACK
-    recibir_mensaje(conexion_memoria);
-
-    liberar_conexion(conexion_memoria);
-    log_debug(logger, "Conexion liberada");
-    return NULL;
-}
-*/
 
 void* dispatch(void* arg){
     log_debug(logger, "CPU connection running in a thread");
@@ -181,58 +186,3 @@ void* dispatch(void* arg){
     log_debug(logger, "CPU connection released");
     return NULL;
 }
-
-/*
-void* conexion_CPU (void* arg){
-
-    log_debug(logger, "Conexion a CPU corriendo en hilo separado");
-    
-    t_config *config = (t_config *) arg;
-    int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
-
-    char* instrucciones[] = {"MOV", "ADD", "SUB"};
-    int instruccionesLength = 3;
-    t_pcb *pcb = nuevo_pcb(123, 0, 10, instrucciones, instruccionesLength);
-    t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
-
-    
-    t_paquete *paquete = crear_paquete(PCB);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
-    enviar_paquete(paquete, conexion_cpu);
-    eliminar_paquete(paquete);
-    //eliminar_pcb(pcb);
-
-    recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
-    recibir_mensaje(conexion_cpu);
-
-    while (1) {
-        int cod_op = recibir_operacion(conexion_cpu);
-        switch (cod_op) {
-            case IOSLEEP:
-                t_list* lista = recibir_paquete(conexion_cpu);
-                void *instruction_buffer;
-                t_instruction* instruction;
-                for(int i = 0; i< list_size(lista); i ++){
-                    instruction_buffer = list_get(lista, i);
-                    instruction = deserializar_instruction_IO(instruction_buffer);
-                    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
-                }
-                free(instruction_buffer);
-                
-            case -1:
-                log_error(logger, "el cliente se desconecto. Terminando servidor");
-                return EXIT_FAILURE;
-            default:
-                log_warning(logger, "Operacion desconocida. No quieras meter la pata");
-                break;
-        }
-        sleep(15);
-    }
-
-    liberar_conexion(conexion_cpu);
-    log_debug(logger, "Conexion con CPU liberada");
-    return NULL;
-}
-*/

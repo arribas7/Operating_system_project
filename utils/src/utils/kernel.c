@@ -190,17 +190,46 @@ t_pcb* nuevo_pcb(int pid, int pc, int quantum, char** instrucciones, int instruc
 */
 /*
 t_pcb *nuevo_pcb(int pid) { // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
+
     t_pcb *pcb = malloc(sizeof(t_pcb));
+    if (pcb == NULL)
+    {
+        return NULL;
+    }
+
     pcb->pid = pid;
     pcb->pc = 0;
-    pcb->quantum = 0;
+    pcb->quantum = quantum;
+
+    pcb->path = malloc(strlen(path) + 1);
+    if (pcb->path == NULL)
+    {
+        free(pcb);
+        return NULL;
+    }
+    strcpy(pcb->path, path);
 
     t_register *reg = malloc(sizeof(t_register));
-    reg->dato = 0;
+    if (reg == NULL)
+    {
+        free(pcb->path);
+        free(pcb);
+        return NULL;
+    }
+
+    reg->PC = 0;
+    reg->AX = 0;
+    reg->BX = 0;
+    reg->CX = 0;
+    reg->DX = 0;
+    reg->EAX = 0;
+    reg->EBX = 0;
+    reg->ECX = 0;
 
     pcb->reg = reg;
     return pcb;
 }
+
 */
 /*void serializar_pcb(t_pcb *pcb, uint8_t *buffer, int *offset) {
     memcpy(buffer + *offset, &(pcb->pid), sizeof(int));
@@ -215,13 +244,24 @@ t_pcb *nuevo_pcb(int pid) { // TODO: Una vez bien definida la struct. Pasar por 
     if (pcb->reg != NULL) {
         memcpy(buffer + *offset, &(pcb->reg->dato), sizeof(int));
         *offset += sizeof(int);
+
+
+void delete_pcb(t_pcb *pcb)
+{
+    if (pcb != NULL)
+    {
+        free(pcb->path);
+        free(pcb->reg);
+        free(pcb);
+
     }
 }
 
-void deserializar_pcb(uint8_t *buffer, t_pcb *pcb, int *offset) {
-    memcpy(&(pcb->pid), buffer + *offset, sizeof(int));
-    *offset += sizeof(int);
+void serialize_pcb(t_pcb *pcb, t_buffer *buffer)
+{
+    void *aux;
 
+<<<<<<< HEAD
     memcpy(&(pcb->pc), buffer + *offset, sizeof(int));
     *offset += sizeof(int);
 
@@ -255,6 +295,12 @@ void eliminar_pcb(t_pcb *pcb) {
 */
 /*
 void serializar_pcb(t_pcb* pcb, t_buffer* buffer) {
+
+    // Calculate the size needed for serialization
+    buffer->size = sizeof(u_int32_t) * 4  // pid, pc, quantum, and path length
+                    + strlen(pcb->path) + 1 // path string and null terminator
+                    + sizeof(t_register); // entire t_register structure
+
     buffer->offset = 0;
 
     // Calcula el tamaño total necesario para serializar el pcb
@@ -278,6 +324,7 @@ void serializar_pcb(t_pcb* pcb, t_buffer* buffer) {
 
     memcpy(buffer->stream + buffer->offset, &(pcb->quantum), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
+
 
     memcpy(buffer->stream + buffer->offset, &(pcb->instruccionesLength), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
@@ -359,24 +406,60 @@ t_pcb* deserializar_pcb(void* stream) {
 t_pcb* deserializar_pcb(void* stream) {
     t_pcb* pcb = nuevo_pcb(0);
 
+    // Serialize the length of the path string
+    u_int32_t path_length = strlen(pcb->path) + 1; // include null terminator
+    memcpy(buffer->stream + buffer->offset, &path_length, sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    // Serialize the path string
+    memcpy(buffer->stream + buffer->offset, pcb->path, path_length);
+    buffer->offset += path_length;
+
+    // Serialize the registers
+    memcpy(buffer->stream + buffer->offset, pcb->reg, sizeof(t_register));
+    buffer->offset += sizeof(t_register);
+}
+
+t_pcb *deserialize_pcb(void *stream)
+{
+    t_pcb *pcb = malloc(sizeof(t_pcb));
+
     int offset = 0;
     memcpy(&(pcb->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
     memcpy(&(pcb->pc), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
-    
+
     memcpy(&(pcb->quantum), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
+    // Deserialize the length of the path string
+    u_int32_t path_length;
+    memcpy(&path_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    // Allocate memory and deserialize the path string
+    pcb->path = malloc(path_length);
+    if (pcb->path == NULL) {
+        free(pcb);
+        return NULL;
+    }
+    memcpy(pcb->path, stream + offset, path_length);
+    offset += path_length;
+
+    // Allocate memory for the registers
     pcb->reg = malloc(sizeof(t_register));
-    if (pcb->reg == NULL) {
-        return;
+    if (pcb->reg == NULL)
+    {
+        free(pcb->path);
+        free(pcb);
+        return NULL;
     }
 
-    memcpy(&(pcb->reg->dato), stream + offset, sizeof(u_int32_t));
+    // Deserialize the registers
+    memcpy(pcb->reg, stream + offset, sizeof(t_register));
+    offset += sizeof(t_register);
 
     return pcb;
-}
-*/
-
+}*/
