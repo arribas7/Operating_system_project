@@ -4,9 +4,11 @@
 #include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <process.h>
+#include <long_term_scheduler.h>
 #include <commons/log.h>
 #include <state_lists.h>
+#include <errno.h>
+#include <limits.h>
 
 console_command get_command_type(const char *input) {
     if (strncmp(input, "EJECUTAR_SCRIPT", 15) == 0) return CMD_EJECUTAR_SCRIPT;
@@ -27,13 +29,31 @@ void handle_script_execution(const char *cmd_args) {
 
 void handle_start_process(const char *cmd_args, t_config* config) {
     char *path = strdup(cmd_args);
-    start_process_on_new(path, config);
+    start_process(path, config);
     free(path);
 }
 
 void handle_stop_process(const char *cmd_args) {
-    log_info(logger, "Stopping process with PID: %s\n", cmd_args);
-    // Add the process stopping logic here
+    char *endptr;
+    errno = 0; // To distinguish success/failure after the call
+    long val = strtol(cmd_args, &endptr, 10);
+
+    // Check for various possible errors
+    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0)) {
+        log_error(logger, "Error parsing arg.");
+    }
+
+    if (endptr == cmd_args) {
+        log_error(logger, "No digits were found.");
+    }
+
+    // If we got here, strtol() successfully parsed a number
+    if (*endptr != '\0') { // If there are trailing characters left in the string
+        log_error(logger, "Trailing characters after number: %s", endptr);
+    }
+
+    int pid = (int)val;
+    exit_process(pid, INTERRUPTED_BY_USER);
 }
 
 void start_scheduler() {
@@ -101,7 +121,7 @@ void *interactive_console(void *arg) {
                     free(line);
                     return NULL;
                 default:
-                    printf("Unknown command or invalid syntax: %s\n", line);
+                    log_error(logger, "Unknown command or invalid syntax: %s", line);
                     break;
             }
         }

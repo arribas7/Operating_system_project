@@ -16,9 +16,9 @@
 
 extern t_list *list_NEW;
 extern t_list *list_READY;
-extern t_pcb *pcb_RUNNING;
 extern t_list *list_BLOCKED;
 extern t_list *list_EXIT;
+t_pcb *pcb_RUNNING;
 
 atomic_int pid_count;
 sem_t sem_multiprogramming;
@@ -34,8 +34,6 @@ void iterator(char *value);
 
 void* dispatch(void* arg);
 
-void *create_process(void *arg);
-
 void *lt_sched_new_ready(void *arg);
 
 int main(int argc, char *argv[]) {
@@ -47,7 +45,6 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_lists(); 
-    t_pcb *testpcb = new_pcb(999,0,"my/test/path");
 
     config = config_create("kernel.config");
     if (config == NULL) {
@@ -72,7 +69,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, config) != 0) {
+    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
         return -1;
     }
@@ -89,6 +86,11 @@ void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
+    state_list_destroy(list_NEW);
+    state_list_destroy(list_READY);
+    state_list_destroy(list_BLOCKED);
+    state_list_destroy(list_EXIT);
+    free(pcb_RUNNING);
 }
 
 void iterator(char *value) {
