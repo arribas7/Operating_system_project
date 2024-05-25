@@ -5,11 +5,12 @@
 #include <commons/config.h>
 #include <utils/client.h>
 
-t_pcb *new_pcb(int pid) { // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
+t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path) {
     t_pcb *pcb = malloc(sizeof(t_pcb));
     pcb->pid = pid;
     pcb->pc = 0;
-    pcb->quantum = 0;
+    pcb->quantum = quantum;
+    //pcb->path = path;
 
     t_register *reg = malloc(sizeof(t_register));
     reg->dato = 0;
@@ -47,7 +48,7 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
 }
 
 t_pcb* deserialize_pcb(void* stream) {
-    t_pcb* pcb = new_pcb(0);
+    t_pcb* pcb = new_pcb(0, 0, "");
 
     int offset = 0;
     memcpy(&(pcb->pid), stream + offset, sizeof(u_int32_t));

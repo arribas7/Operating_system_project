@@ -9,13 +9,18 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <console.h>
-
 #include <state_lists.h>
+#include <stdatomic.h>
+#include <semaphore.h>
+
 extern t_list *list_NEW;
 extern t_list *list_READY;
-extern t_list *list_RUNNING;
+extern t_pcb *pcb_RUNNING;
 extern t_list *list_BLOCKED;
 extern t_list *list_EXIT;
+
+atomic_int pid_count;
+sem_t sem_multiprogramming;
 
 t_log *logger;
 t_config *config;
@@ -30,50 +35,28 @@ void* dispatch(void* arg);
 
 void *create_process(void *arg);
 
-void *interactive_console(void *arg);
+void *lt_sched_new_ready(void *arg);
 
 int main(int argc, char *argv[]) {
     /* ---------------- Initial Setup ---------------- */
     t_config *config;
-    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_INFO);
+    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
         return -1;
     }
 
-    /* ---------------- Lists Testing (Delete Later) ---------------- */
-    initialize_lists();
-
-    t_pcb *testpcb = new_pcb(1);
-    t_pcb *testpcb2 = new_pcb(2);
-    t_pcb *testpcb3 = new_pcb(3);
-
-    list_push(list_NEW, &testpcb);
-    list_push(list_NEW, &testpcb2);
-    list_push(list_NEW, &testpcb3);
-
-    t_pcb *testpcb4 = list_pop(list_NEW);
-
-    log_list_contents(logger, list_NEW);
-    log_info(logger, "Popped element pid: %u", testpcb4->pid);
-
-    bool has_pid_1 = list_has_pid(list_NEW, 1);
-    //0 For False, 1 For True, apparently. Trust me I've looked it up.
-    log_info(logger, "The list having a pid==1 is %d. (true being 1 and false being 0)", has_pid_1);
-
-    int index_address_for_1 = list_pid_element_index(list_NEW, 1);
-    log_info(logger, "The index of pid==1 is %d", index_address_for_1);
-
-    list_remove_by_pid(list_NEW, 1);
-    log_list_contents(logger, list_NEW);
-    /* ---------------- End of Lists Testing (Delete Later) ---------------- */
-    
+    initialize_lists(); 
 
     config = config_create("kernel.config");
     if (config == NULL) {
         return -1;
     }
 
-    pthread_t server_thread, console_thread;
+    atomic_init(&pid_count, 0);
+    int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+    sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
+
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Use a new log with other name for each thread?
@@ -87,8 +70,14 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, config) != 0) {
+        log_error(logger, "Error creating long term scheduler thread");
+        return -1;
+    }
+
     pthread_join(server_thread, NULL);
     pthread_join(console_thread, NULL);
+    pthread_join(lt_sched_new_ready_thread, NULL);
 
     clean(config);
     return 0;
@@ -97,6 +86,7 @@ int main(int argc, char *argv[]) {
 void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
+    sem_destroy(&sem_multiprogramming);
 }
 
 void iterator(char *value) {
@@ -136,7 +126,7 @@ void* dispatch(void* arg){
     t_config *config = (t_config *) arg;
     int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
-    t_pcb *pcb = new_pcb(22);
+    t_pcb *pcb = new_pcb(22, 0, "");
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serialize_pcb(pcb, buffer);
 
@@ -144,7 +134,7 @@ void* dispatch(void* arg){
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
 
-    pcb = new_pcb(9);
+    pcb = new_pcb(9, 0, "");
     buffer = malloc(sizeof(t_buffer));
     serialize_pcb(pcb, buffer);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);

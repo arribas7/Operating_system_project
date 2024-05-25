@@ -6,6 +6,7 @@
 #include <readline/history.h>
 #include <process.h>
 #include <commons/log.h>
+#include <state_lists.h>
 
 console_command get_command_type(const char *input) {
     if (strncmp(input, "EJECUTAR_SCRIPT", 15) == 0) return CMD_EJECUTAR_SCRIPT;
@@ -19,18 +20,19 @@ console_command get_command_type(const char *input) {
     return CMD_UNKNOWN;
 }
 
-void handle_script_execution(const char *args) {
-    log_info(logger, "Executing script from path: %s\n", args);
+void handle_script_execution(const char *cmd_args) {
+    log_info(logger, "Executing script from path: %s\n", cmd_args);
     // Add the actual script execution logic here
 }
 
-void handle_start_process(const char *args) {
-    log_info(logger, "Se crea el proceso <%s> en NEW: %s\n", args);
-    start_process(args);
+void handle_start_process(const char *cmd_args, t_config* config) {
+    char *path = strdup(cmd_args);
+    start_process_on_new(path, config);
+    free(path);
 }
 
-void handle_stop_process(const char *args) {
-    log_info(logger, "Stopping process with PID: %s\n", args);
+void handle_stop_process(const char *cmd_args) {
+    log_info(logger, "Stopping process with PID: %s\n", cmd_args);
     // Add the process stopping logic here
 }
 
@@ -44,9 +46,11 @@ void stop_scheduler() {
     // Add the scheduler stop logic here
 }
 
-void multiprogramming_grade(const char *args) {
-    log_info(logger, "New multiprogramming grade: %s\n", args);
-    // Add the logic to adjust multiprogramming grade here
+void multiprogramming_grade(const char *cmd_args) {
+    log_info(logger, "New multiprogramming grade: %s\n", cmd_args);
+    // You need to count running_pcb + length Ready + actual sem_val
+    // use mutex.
+    // sem_post the difference.
 }
 
 void handle_process_state() {
@@ -76,10 +80,7 @@ void *interactive_console(void *arg) {
                     handle_script_execution(cmd_args);
                     break;
                 case CMD_INICIAR_PROCESO:
-                    process_args *proc_args = malloc(sizeof(process_args));
-                    proc_args->pid = strdup(cmd_args);
-                    proc_args->config = config;
-                    handle_start_process(proc_args);
+                    handle_start_process(cmd_args, config);
                     break;
                 case CMD_FINALIZAR_PROCESO:
                     handle_stop_process(cmd_args);

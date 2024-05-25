@@ -20,7 +20,7 @@ typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
-    //    char *path; 
+    //char* path; 
     t_register *reg;
 } t_pcb;
 
@@ -40,7 +40,7 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer);
 */
 t_pcb* deserialize_pcb(void* stream);
 
-t_pcb *new_pcb(int pid);
+t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path);
 
 void delete_pcb(t_pcb *pcb);
 
