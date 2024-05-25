@@ -32,6 +32,16 @@ int list_pid_element_index(t_list* list, int pid);
 //Returns NULL if the element wasn't found
 void *list_remove_by_pid(t_list* list, int pid);
 
+//Empties the state list and deletes every single pcb contained in it with delete_pcb()
+//The list itself is not destroyed so it can be reutilized
+//Broke the usual naming convention to specify that this isn't from list.h but state_list.h
+void state_list_clean(t_list * list);
+
+//Deletes all pcbs contained within the list itself with delete_pcb() and then deletes the list itself
+//The list is destroyed so it cannot be reutilized without reinitializing
+//Broke the usual naming convention to specify that this isn't from list.h but state_list.h
+void state_list_destroy(t_list * list);
+
 /* ---------------- Lists Usage example ---------------- */
     /*t_pcb *testpcb = new_pcb(1,0,"");
     t_pcb *testpcb2 = new_pcb(2,0,"");
