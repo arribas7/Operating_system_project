@@ -12,6 +12,7 @@
 #include <state_lists.h>
 #include <stdatomic.h>
 #include <semaphore.h>
+#include <utils/inout.h>
 
 extern t_list *list_NEW;
 extern t_list *list_READY;
@@ -109,6 +110,15 @@ int run_server(void *arg) {
                 lista = recibir_paquete(cliente_fd);
                 log_info(logger, "I receive the following values:\n");
                 list_iterate(lista, (void *) iterator);
+                break;
+            case IO:
+                lista = recibir_paquete(cliente_fd);
+                t_interface* new_io = list_to_IO(lista);
+                char* name = get_IO_name(new_io);
+                char* type = get_IO_type(new_io);
+                log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
+                delete_IO(new_io);
+                log_info(logger, "IO Device disconnected");
                 break;
             case -1:
                 log_error(logger, "Client disconnected. Finishing server...");

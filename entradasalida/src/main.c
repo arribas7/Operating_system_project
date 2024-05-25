@@ -58,14 +58,39 @@ int main(int argc, char* argv[]) {
     enviar_paquete(package, connection);
     eliminar_paquete(package);
 
-    /*
-
     while(1) 
     {
-        // ----- De acuerdo a la interfaz hago x cosa
-    }
+        // -- I hope I get an instruction from the Kernel
+        int client_fd = esperar_cliente(connection);
+        int cod_op = recibir_operacion(client_fd);
 
-    */
+        // -- I manage the operation received
+        if (is_valid_instruction(cod_op, config))
+        {
+            // -- I log the PID and the instruction
+            log_info(logger, "PID: %s - Operación: %d", "", cod_op);
+            
+            // -- Once the instruction has been validated and logged in, we execute it
+
+            switch(cod_op) 
+            {
+                // -- Generic IO
+                case IO_GEN_SLEEP:
+                    int ret = generic_IO_wait(10, config);
+                    IO_inform_kernel(client_fd, ret);
+                    break;
+                default:
+                    // Here is the implementation of the other interfaces
+                    // (For now we only build the generic interface)
+                    break;
+            }
+        } else {
+            log_error(logger, "Invalid Instruction");
+            enviar_mensaje("Invalid Instruction", client_fd);
+            break;
+        }
+
+    }
 
     liberar_conexion(connection);
 
