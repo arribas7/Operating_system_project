@@ -17,7 +17,7 @@ int correr_servidor(void*);
 
 void iterator(char *value);
 
-void* conexion_CPU (void* arg);
+void* dispatch (void* arg);
 
 void *consola_interactiva(void *arg);
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
 */
     // Creación y ejecución del hilo de CPU
-    if (pthread_create(&hilo_cpu, NULL, conexion_CPU, config) != 0) {
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
         log_error(logger, "Error al crear el hilo de la CPU");
         return -1;
     }
@@ -132,6 +132,57 @@ void *consola_interactiva(void *arg) {
     return NULL;
 }
 */
+
+void* dispatch(void* arg){
+    log_debug(logger, "CPU connection running in a thread");
+    
+    t_config *config = (t_config *) arg;
+    int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
+
+    t_pcb *pcb = new_pcb(22, 0, "/home/utn/");
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serialize_pcb(pcb, buffer);
+
+    t_paquete *paquete = crear_paquete(DISPATCH);
+    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+
+    enviar_paquete(paquete, conexion_cpu);
+    eliminar_paquete(paquete);
+    delete_pcb(pcb);
+
+    recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
+    recibir_mensaje(conexion_cpu);
+
+    while (1) {
+        int cod_op = recibir_operacion(conexion_cpu);
+        switch (cod_op) {
+            case IO_GEN_SLEEP:
+                t_list* lista = recibir_paquete(conexion_cpu);
+                void *instruction_buffer;
+                t_instruction* instruction;
+                for(int i = 0; i< list_size(lista); i ++){
+                    instruction_buffer = list_get(lista, i);
+                    instruction = deserializar_instruction_IO(instruction_buffer);
+                    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
+                }
+                free(instruction_buffer);
+                
+            case -1:
+                log_error(logger, "el cliente se desconecto. Terminando servidor");
+                return EXIT_FAILURE;
+            default:
+                log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+                break;
+        }
+        sleep(15);
+    }
+
+    liberar_conexion(conexion_cpu);
+    log_debug(logger, "CPU connection released");
+    return NULL;
+}
+
+/*
 void* conexion_CPU (void* arg){
 
     log_debug(logger, "Conexion a CPU corriendo en hilo separado");
@@ -184,3 +235,4 @@ void* conexion_CPU (void* arg){
     log_debug(logger, "Conexion con CPU liberada");
     return NULL;
 }
+*/

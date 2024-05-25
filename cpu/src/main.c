@@ -59,47 +59,47 @@ t_instruction* new_instruction_IO(u_int32_t pid,char* interfaz, char* job_unit);
 
 typedef enum
 {
-    SET,
-    MOV_IN,
-    MOV_OUT,
-    SUM,
-    SUB,
-    JNZ,
-    RESIZE,
-    COPY_STRING,
-    WAIT,
-    SIGNAL,
-    IO_GEN_SLEEP,
-    IO_STDIN_READ,
-    IO_STDOUT_WRITE,
-    IO_FS_CREATE,
-    IO_FS_DELETE,
-    IO_FS_TRUNCATE,
-    IO_FS_WRITE,
-    IO_FS_READ,
-    EXIT
+    _SET,
+    _MOV_IN,
+    _MOV_OUT,
+    _SUM,
+    _SUB,
+    _JNZ,
+    _RESIZE,
+    _COPY_STRING,
+    _WAIT,
+    _SIGNAL,
+    _IO_GEN_SLEEP,
+    _IO_STDIN_READ,
+    _IO_STDOUT_WRITE,
+    _IO_FS_CREATE,
+    _IO_FS_DELETE,
+    _IO_FS_TRUNCATE,
+    _IO_FS_WRITE,
+    _IO_FS_READ,
+    _EXIT
 } t_comando;
 
 char *listaComandos[] = {
-    [SET] = "SET",
-    [MOV_IN] = "MOV_IN",
-    [MOV_OUT] = "MOV_OUT",
-    [SUM] = "SUM",
-    [SUB] = "SUB",
-    [JNZ] = "JNZ",
-    [RESIZE] = "RESIZE",
-    [COPY_STRING] = "COPY_STRING",
-    [WAIT] = "WAIT",
-    [SIGNAL] = "SIGNAL",
-    [IO_GEN_SLEEP] = "IO_GEN_SLEEP",
-    [IO_STDIN_READ] = "IO_STDIN_READ",
-    [IO_STDOUT_WRITE] = "IO_STDOUT_WRITE",
-    [IO_FS_CREATE] = "IO_FS_CREATE",
-    [IO_FS_DELETE] = "IO_FS_DELETE",
-    [IO_FS_TRUNCATE] = "IO_FS_TRUNCATE",
-    [IO_FS_WRITE] = "IO_FS_WRITE",
-    [IO_FS_READ] = "IO_FS_READ",
-    [EXIT] = "EXIT"
+    [_SET] = "SET",
+    [_MOV_IN] = "MOV_IN",
+    [_MOV_OUT] = "MOV_OUT",
+    [_SUM] = "SUM",
+    [_SUB] = "SUB",
+    [_JNZ] = "JNZ",
+    [_RESIZE] = "RESIZE",
+    [_COPY_STRING] = "COPY_STRING",
+    [_WAIT] = "WAIT",
+    [_SIGNAL] = "SIGNAL",
+    [_IO_GEN_SLEEP] = "IO_GEN_SLEEP",
+    [_IO_STDIN_READ] = "IO_STDIN_READ",
+    [_IO_STDOUT_WRITE] = "IO_STDOUT_WRITE",
+    [_IO_FS_CREATE] = "IO_FS_CREATE",
+    [_IO_FS_DELETE] = "IO_FS_DELETE",
+    [_IO_FS_TRUNCATE] = "IO_FS_TRUNCATE",
+    [_IO_FS_WRITE] = "IO_FS_WRITE",
+    [_IO_FS_READ] = "IO_FS_READ",
+    [_EXIT] = "EXIT"
 };
 
 //DEFINIENDO LA TLB:
@@ -157,7 +157,7 @@ void escucharAlKernel(void)
 void fetch(t_pcb *pcb)
 {
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_pcb(pcb, buffer);
+    serialize_pcb(pcb, buffer);
 
     t_paquete *paquete = crear_paquete(PC);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
@@ -202,58 +202,58 @@ void execute(t_pcb *pcb)
 
     switch (instruccion_decodificada)
     {
-        case SET:
+        case _SET:
             set(instr_decode[1],instr_decode[2]);
         break;
-        case MOV_IN:
+        case _MOV_IN:
              
         break;
-        case MOV_OUT:
+        case _MOV_OUT:
              
         break;
-        case SUM:
+        case _SUM:
             sum(instr_decode[1],instr_decode[2]);
         break;
-        case SUB:
+        case _SUB:
             sub(instr_decode[1],instr_decode[2]);
         break;
-        case JNZ:
+        case _JNZ:
              jnz(instr_decode[1],instr_decode[2]);
         break;
-        case COPY_STRING:
+        case _COPY_STRING:
              
         break;
-        case WAIT:
+        case _WAIT:
              
         break;   
-        case SIGNAL:
+        case _SIGNAL:
              
         break;
-        case IO_GEN_SLEEP:
+        case _IO_GEN_SLEEP:
             io_gen_sleep(instr_decode[1],instr_decode[2]);
         break;
-        case IO_STDIN_READ:
+        case _IO_STDIN_READ:
              
         break;
-        case IO_STDOUT_WRITE:
+        case _IO_STDOUT_WRITE:
              
         break;
-        case IO_FS_CREATE:
+        case _IO_FS_CREATE:
              
         break;
-        case IO_FS_DELETE:
+        case _IO_FS_DELETE:
              
         break;
-        case IO_FS_TRUNCATE:
+        case _IO_FS_TRUNCATE:
              
         break;
-        case IO_FS_WRITE:
+        case _IO_FS_WRITE:
              
         break;
-        case IO_FS_READ:
+        case _IO_FS_READ:
              
         break;
-        case EXIT:
+        case _EXIT:
         
         break;
         default:
@@ -292,12 +292,12 @@ int ejecutarServidorCPU(int server_fd)
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op)
         {
-        case PCB:
+        case DISPATCH:
             t_list *lista = recibir_paquete(cliente_fd);
             for (int i = 0; i < list_size(lista); i++)
             {
                 void *pcb_buffer = list_get(lista, i);
-                t_pcb *pcb = deserializar_pcb(pcb_buffer);
+                t_pcb *pcb = deserialize_pcb(pcb_buffer);
                 free(pcb_buffer);
                 if (pcb != NULL)
                 {
@@ -527,7 +527,7 @@ void resize(int tamanio){
 //ejemplo de interfaz: GENERICA
 void io_gen_sleep(char* interfaz, char* job_unit){
 
-    t_paquete* peticion = crear_paquete(IOSLEEP); //this opcode receive in KERNEL
+    t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
     int tamInterfaz = string_length(interfaz);
     int tamJobUnit = string_length(job_unit);
     t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid,interfaz,job_unit);
@@ -540,7 +540,7 @@ void io_gen_sleep(char* interfaz, char* job_unit){
     enviar_paquete(peticion, cliente_fd);
     eliminar_paquete(peticion);
 
-    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
+    //log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
     /*
     recibir_operacion(cliente_fd);
     recibir_mensaje(cliente_fd); //receive ack from kermel

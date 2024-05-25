@@ -10,18 +10,48 @@
 #include<commons/string.h>
 #include<commons/log.h>
 #include <commons/config.h>
-
 typedef enum {
     MENSAJE,
     PAQUETE,
-    PCB,
+    // Kernel -> MEMORY
+    CREATE_PROCESS,
+    FINISH_PROCESS,
+
+    // Kernel -> CPU
+    DISPATCH,
+    INTERRUPT, // INTERRUPT / QUANTUM_FINISHED / DESALOJO
+
+    // CPU -> KERNEL
+    RELEASE,
+    TIMEOUT,
+    WAIT,
+    
+    // CPU -> MEMORY
     PC,
-    PCB_FROM_MEM,
     WRITE,
-    INSTRUCTION,
     TLBMISS,
-    IOSLEEP
+    INSTRUCTION,
+
+    // CPU -> KERNEL -> IO -> MEMORY
+    IO_GEN_SLEEP,
+    IO_STDIN_READ,
+    IO_STDOUT_WRITE,
+    IO_FS_CREATE,
+    IO_FS_DELETE,
+    IO_FS_TRUNCATE,
+    IO_FS_WRITE,
+    IO_FS_READ,
+
+    // IO -> KERNEL
+    IO
 } op_code;
+
+typedef enum {
+    OK,
+    NOT_FOUND,
+    NOT_SUPPORTED,
+    GENERAL_ERROR,
+} response_code;
 
 typedef struct {
     u_int32_t size;
