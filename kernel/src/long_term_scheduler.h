@@ -16,10 +16,10 @@ typedef enum {
     NUM_REASONS // This helps in determining the number of reasons
 } exit_reason;
 
-// lt scheduler doesn't use list_blocked;
 extern t_log* logger;
 extern t_list *list_NEW;
 extern t_list *list_READY;
+extern t_list *list_BLOCKED;
 extern t_pcb *pcb_RUNNING;
 extern t_list *list_EXIT;
 extern sem_t sem_multiprogramming;

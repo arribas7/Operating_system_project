@@ -69,12 +69,12 @@ void *log_list_contents(t_log *logger, t_list *list) {
         log_info(logger, "--PCB #%d", i);
 		log_info(logger, "---pid: %d", pcb->pid);
 		//log_debug(logger, "---path size: %zu", strlen(pcb->path));
-		log_debug(logger, "---path: %s", pcb->path);
+		log_info(logger, "---path: %s", pcb->path);
 
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
-	log_debug(logger, "***************************");
+	log_info(logger, "***************************");
 	log_info(logger, "-----------List End-----------");
 }
 
@@ -133,7 +133,7 @@ int list_pid_element_index(t_list* list, int pid) {
 
 void* list_pid_element(t_list* list, int pid) {
 	if (list == NULL || list_is_empty(list)) {
-		return -1;
+		return NULL;
 	}
 	
 	for (int i = 0; i < list->elements_count; i++) {

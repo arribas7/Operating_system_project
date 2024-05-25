@@ -38,30 +38,53 @@ void start_process(char* path, t_config *config) {
     free(buffer);
 
 	response_code code = esperar_respuesta(mem_conn);
-    log_info(logger, "Response code: %d", code);
+    log_debug(logger, "Response code: %d", code);
     // TODO: Manage error response codes.
     liberar_conexion(mem_conn);
-    log_info(logger, "Connection released");
+    log_debug(logger, "Connection released");
     atomic_fetch_add(&pid_count, 1); // Increment after a successful response
     list_push(list_NEW, pcb);
 }
 
+void move_to_exit(t_pcb* pcb, char* status_prev, exit_reason reason){
+    log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
+    log_info(logger, "“PID: <%d> - Estado Anterior: <%s> - Estado Actual: <EXIT>”", pcb->pid, status_prev);
+    list_push(list_EXIT, pcb);
+}
+
 void exit_process(int pid, exit_reason reason){
-    log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pid, get_exit_reason_str(reason));
-    
-    switch (reason) {
-        case SUCCESS:
-            if(pcb_RUNNING != NULL) {
-                list_push(list_EXIT, pcb_RUNNING);
-            } else {
-                // return error;
-            }
-            break;
+    // Check in all lists
+    t_pcb *pcb = pcb_RUNNING;
+    if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
+        pcb_RUNNING = NULL;
+        move_to_exit(pcb, "RUNNING", reason);
+        sem_post(&sem_multiprogramming);
+        return;
+    } 
+
+    pcb = list_pid_element(list_READY, pid);
+    if (pcb != NULL){
+        list_remove_by_pid(list_READY, pid);
+        move_to_exit(pcb, "READY", reason);
+        sem_post(&sem_multiprogramming);
+        return;
     }
-    
 
-    sem_post(&sem_multiprogramming);
+    pcb = list_pid_element(list_BLOCKED, pid);
+    if (pcb != NULL){
+        list_remove_by_pid(list_BLOCKED, pid);
+        move_to_exit(pcb, "BLOCKED", reason);
+        sem_post(&sem_multiprogramming);
+        return;
+    }
 
+    pcb = list_pid_element(list_NEW, pid);
+    if (pcb != NULL){
+        list_remove_by_pid(list_NEW, pid);
+        move_to_exit(pcb, "NEW", reason);
+        return;
+    }
+    log_error(logger, "Process with pid: <%d> doesn't exist or it is already finished.", pid);
 }
 
 void lt_sched_new_ready() {
