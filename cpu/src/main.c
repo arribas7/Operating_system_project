@@ -54,6 +54,8 @@ int valueOfReg (char* reg);
 //INSTRUCCIONES EXECUTE:
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
+t_instruction* new_instruction_IO(u_int32_t pid,char* interfaz, char* job_unit);
+
 
 typedef enum
 {
@@ -517,7 +519,35 @@ void resize(int tamanio){
 }
 */
 
+//-------------------------------------
+//IO GEN SLEEP A KERNEL
+
+
+
 //ejemplo de interfaz: GENERICA
+void io_gen_sleep(char* interfaz, char* job_unit){
+
+    t_paquete* peticion = crear_paquete(IOSLEEP); //this opcode receive in KERNEL
+    int tamInterfaz = string_length(interfaz);
+    int tamJobUnit = string_length(job_unit);
+    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid,interfaz,job_unit);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_instruccion_IO(IO,buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
+
+    enviar_paquete(peticion, cliente_fd);
+    eliminar_paquete(peticion);
+
+    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
+    /*
+    recibir_operacion(cliente_fd);
+    recibir_mensaje(cliente_fd); //receive ack from kermel
+    */
+}
+
+/*
 void io_gen_sleep(char* interfaz, char* job_unit){
 
     t_paquete* peticion = crear_paquete(IOSLEEP); //this opcode receive in KERNEL
@@ -532,13 +562,16 @@ void io_gen_sleep(char* interfaz, char* job_unit){
     eliminar_paquete(peticion);
 
     log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
-    /*
-    recibir_operacion(cliente_fd);
-    recibir_mensaje(cliente_fd); //receive ack from kermel
-    */
+    
+    //recibir_operacion(cliente_fd);
+    //recibir_mensaje(cliente_fd); //receive ack from kermel
+    
 }
+*/
 //ARMAR FUNCION DESERIALIZADORA EN EL KERNEL:
 
+
+//------------------------------------
 
 int valueOfReg (char* reg){
     if (strcmp(reg, "AX") == 0)
@@ -620,6 +653,7 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         tlb_index = (tlb_index + 1) % cant_entradas_tlb(); // Incremento circular del índice
     }
 }
+
 
 
 void putRegValueToMem(int fisicalAddress, int valor){
