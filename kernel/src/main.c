@@ -23,6 +23,8 @@ t_pcb *pcb_RUNNING;
 atomic_int pid_count;
 sem_t sem_multiprogramming;
 
+#include <quantum.h>
+
 t_log *logger;
 t_config *config;
 
@@ -44,7 +46,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    initialize_lists(); 
+    initialize_lists();
+
 
     config = config_create("kernel.config");
     if (config == NULL) {
@@ -69,6 +72,16 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+
+    //TODO: Maybe change the logger for this?
+    // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
+    t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
+
+    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
+        log_error(logger, "Error creating console thread");
+        return -1;
+    }
+
     if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
         return -1;
@@ -76,6 +89,7 @@ int main(int argc, char *argv[]) {
 
     pthread_join(server_thread, NULL);
     pthread_join(console_thread, NULL);
+    pthread_join(quantum_counter_thread, NULL);
     pthread_join(lt_sched_new_ready_thread, NULL);
 
     clean(config);

@@ -63,9 +63,12 @@ void delete_pcb(t_pcb *pcb)
     }
 }
 
-void serialize_pcb(t_pcb *pcb, t_buffer *buffer)
-{
-    void *aux;
+uint32_t string_to_uint32(const char *str) {
+    return (uint32_t)strtoul(str, NULL, 10);
+}
+
+void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
+    void* aux;
 
     // Calculate the size needed for serialization
     buffer->size = sizeof(u_int32_t) * 4  // pid, pc, quantum, and path length
