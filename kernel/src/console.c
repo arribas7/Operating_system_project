@@ -84,8 +84,23 @@ void multiprogramming_grade(const char *cmd_args) {
 }
 
 void handle_process_state() {
-    log_info(logger, "Listing processes by state.\n");
-    // Add logic to display process states here
+    log_info(logger, "RUNNING state process:");
+    if(pcb_RUNNING != NULL) {
+        log_info(logger, "---pid: %d", pcb_RUNNING->pid);
+    } else {
+        log_info(logger, "No process running.");
+    }
+
+    log_info(logger, "NEW state processes:");
+    log_list_contents(logger, list_NEW);
+
+    log_info(logger, "READY state processes:");
+    log_list_contents(logger, list_READY);
+
+    log_info(logger, "BLOCKED state processes:");
+    log_list_contents(logger, list_BLOCKED);
+
+    // TODO: Confirm if we need to show EXIT list too.
 }
 
 void *interactive_console(void *arg) {
