@@ -22,6 +22,8 @@ t_pcb *pcb_RUNNING;
 
 atomic_int pid_count;
 sem_t sem_multiprogramming;
+sem_t sem_all_scheduler;
+int scheduler_paused = 0;
 
 #include <quantum.h>
 
@@ -57,8 +59,9 @@ int main(int argc, char *argv[]) {
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
     sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
+    sem_init(&sem_all_scheduler, 0, 1);
 
-    pthread_t server_thread, console_thread, lt_sched_new_ready_thread;
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread, quantum_counter_thread;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Use a new log with other name for each thread?
@@ -75,12 +78,12 @@ int main(int argc, char *argv[]) {
 
     //TODO: Maybe change the logger for this?
     // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
-    t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
+    /*t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
 
     if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
         log_error(logger, "Error creating console thread");
         return -1;
-    }
+    }*/
 
     if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
@@ -100,6 +103,7 @@ void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
+    sem_destroy(&sem_all_scheduler);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
