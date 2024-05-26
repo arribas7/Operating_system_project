@@ -7,7 +7,10 @@
 #include <utils/server.h>
 #include <utils/kernel.h>
 #include <pthread.h>
-
+#include <stdint.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <utils/cpu.h>
 // Estructura para representar una página de memoria
 typedef struct {
     uint32_t pagina_id; 
