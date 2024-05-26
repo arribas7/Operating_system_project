@@ -1,8 +1,10 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 #include<commons/log.h>
+#include <state_lists.h>
 
 extern t_log* logger;
+extern t_list *list_NEW;
 
 typedef enum {
     CMD_EJECUTAR_SCRIPT,

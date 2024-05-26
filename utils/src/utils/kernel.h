@@ -13,14 +13,21 @@
 #include "client.h"
 
 typedef struct {
-    u_int32_t dato; // TODO: TBD
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
 } t_register;
 
 typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
-    //    char *path; 
+    char* path; 
     t_register *reg;
 } t_pcb;
 
@@ -40,7 +47,7 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer);
 */
 t_pcb* deserialize_pcb(void* stream);
 
-t_pcb *new_pcb(int pid);
+t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path);
 
 void delete_pcb(t_pcb *pcb);
 

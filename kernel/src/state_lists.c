@@ -9,14 +9,13 @@
 
 t_list *list_NEW = NULL;
 t_list *list_READY = NULL;
-t_list *list_RUNNING = NULL;
+t_pcb *pcb_running = NULL;
 t_list *list_BLOCKED = NULL;
 t_list *list_EXIT = NULL;
 
 void initialize_lists() {
     list_NEW = list_create();
     list_READY = list_create();
-    list_RUNNING = list_create();
     list_BLOCKED = list_create();
     list_EXIT = list_create();
 }
@@ -30,14 +29,13 @@ void *list_pop(t_list *list) {
 
     if (list == NULL || list->elements_count == 0) {return NULL;}
     
-    t_link_element *popped_element = (t_link_element*)list_get(list, list->elements_count - 1);
-	t_pcb *pcb = (t_pcb *)popped_element->data;
+    t_pcb *popped_element = (t_pcb *)list_get(list, list->elements_count - 1);
 
     bool success = list_remove_element(list, popped_element);
 
 	if (success)
 	{
-		return pcb;
+		return popped_element;
 	}
 	else
 	{
@@ -60,9 +58,7 @@ void *log_list_contents(t_log *logger, t_list *list) {
 	log_info(logger, "-----------List Start-----------");
 
     for (int i = 0; i < list->elements_count; i++) {
-
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) {
             log_error(logger, "Data of element at index %d is NULL", i);
@@ -72,10 +68,27 @@ void *log_list_contents(t_log *logger, t_list *list) {
 		log_info(logger, "***************************");
         log_info(logger, "--PCB #%d", i);
 		log_info(logger, "---pid: %d", pcb->pid);
+		//log_debug(logger, "---path size: %zu", strlen(pcb->path));
+		log_info(logger, "---path: %s", pcb->path);
+
 		//log_info(logger, "---pc: %d", pcb->pc);
 		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
+	log_info(logger, "***************************");
 	log_info(logger, "-----------List End-----------");
+}
+
+void list_element_destroyer(void *element) {
+    t_pcb *pcb = (t_pcb*)element;
+    delete_pcb(pcb);
+}
+
+void state_list_clean(t_list * list) {
+	list_clean_and_destroy_elements(list, list_element_destroyer);
+}
+
+void state_list_destroy(t_list * list) {
+	list_destroy_and_destroy_elements(list, list_element_destroyer);
 }
 
 bool list_has_pid(t_list* list, int pid) {
@@ -85,8 +98,7 @@ bool list_has_pid(t_list* list, int pid) {
 	}
 	
 	for (int i = 0; i < list->elements_count; i++) {
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) { //Invalid pcb for some reason
             continue; // Skip to the next iteration
@@ -106,8 +118,7 @@ int list_pid_element_index(t_list* list, int pid) {
 	}
 	
 	for (int i = 0; i < list->elements_count; i++) {
-		t_link_element *element = (t_link_element*)list_get(list, i);
-		t_pcb *pcb = (t_pcb *)element->data;
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
 
 		if (pcb == NULL) { //Invalid pcb for some reason
             continue; // Skip to the next iteration
@@ -118,6 +129,25 @@ int list_pid_element_index(t_list* list, int pid) {
         }
 	}
 	return -1;
+}
+
+void* list_pid_element(t_list* list, int pid) {
+	if (list == NULL || list_is_empty(list)) {
+		return NULL;
+	}
+	
+	for (int i = 0; i < list->elements_count; i++) {
+		t_pcb *pcb = (t_pcb *)list_get(list, i);
+
+		if (pcb == NULL) { //Invalid pcb for some reason
+            continue; // Skip to the next iteration
+        }
+
+		if (pcb->pid == pid) {
+            return pcb;
+        }
+	}
+	return NULL;
 }
 
 void *list_remove_by_pid(t_list* list, int pid) {
