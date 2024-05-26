@@ -2,9 +2,12 @@
 #define CONSOLE_H
 #include<commons/log.h>
 #include <state_lists.h>
+#include <semaphore.h>
 
 extern t_log* logger;
 extern t_list *list_NEW;
+extern sem_t sem_all_scheduler;
+extern int scheduler_paused;
 
 typedef enum {
     CMD_EJECUTAR_SCRIPT,

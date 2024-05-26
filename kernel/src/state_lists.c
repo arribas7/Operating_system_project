@@ -26,21 +26,10 @@ t_list *list_push(t_list *list, void *element) {
 }
 
 void *list_pop(t_list *list) {
-
     if (list == NULL || list->elements_count == 0) {return NULL;}
-    
-    t_pcb *popped_element = (t_pcb *)list_get(list, list->elements_count - 1);
 
-    bool success = list_remove_element(list, popped_element);
-
-	if (success)
-	{
-		return popped_element;
-	}
-	else
-	{
-		return NULL;
-	}
+    t_pcb *popped_element = (t_pcb *)list_remove(list, 0);
+    return popped_element;
 }
 
 void *log_list_contents(t_log *logger, t_list *list) {
@@ -66,7 +55,7 @@ void *log_list_contents(t_log *logger, t_list *list) {
         }
 		
 		log_info(logger, "***************************");
-        log_info(logger, "--PCB #%d", i);
+        log_info(logger, "--PCB #%d", i + 1);
 		log_info(logger, "---pid: %d", pcb->pid);
 		//log_debug(logger, "---path size: %zu", strlen(pcb->path));
 		log_info(logger, "---path: %s", pcb->path);

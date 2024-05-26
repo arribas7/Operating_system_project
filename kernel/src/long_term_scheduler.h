@@ -23,6 +23,8 @@ extern t_list *list_BLOCKED;
 extern t_pcb *pcb_RUNNING;
 extern t_list *list_EXIT;
 extern sem_t sem_multiprogramming;
+extern sem_t sem_all_scheduler;
+extern int scheduler_paused;
 extern atomic_int pid_count;
 
 void lt_sched_new_ready();

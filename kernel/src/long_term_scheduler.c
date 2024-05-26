@@ -90,7 +90,9 @@ void exit_process(int pid, exit_reason reason){
 void lt_sched_new_ready() {
     log_debug(logger, "Initializing long term scheduler (new->ready)...");
     while (1) {
-        if (!list_is_empty(list_NEW)) {
+        sem_wait(&sem_all_scheduler); // Wait for the semaphore to be available
+        sem_post(&sem_all_scheduler); // Immediately release it for the next iteration
+        if (!list_is_empty(list_NEW)) { // TODO: Do we need to improve it to avoid intensive busy-waiting polling?
             sem_wait(&sem_multiprogramming);
        
             int sem_value;
@@ -106,6 +108,11 @@ void lt_sched_new_ready() {
 
             log_info(logger, "Cola Ready <%d>:", pcb->pid);
             log_list_contents(logger, list_READY);
+        }
+        // Check if planning is paused
+        if (scheduler_paused) {
+            sem_wait(&sem_all_scheduler); // Block until planning is resumed
+            sem_post(&sem_all_scheduler);
         }
     }
 }

@@ -57,13 +57,15 @@ void handle_stop_process(const char *cmd_args) {
 }
 
 void start_scheduler() {
-    log_info(logger, "Starting scheduler.\n");
-    // Add the scheduler start logic here
+    scheduler_paused = 0;
+    sem_post(&sem_all_scheduler);
+    log_info(logger, "Scheduler started.");
 }
 
 void stop_scheduler() {
-    log_info(logger, "Stopping scheduler.\n");
-    // Add the scheduler stop logic here
+    sem_wait(&sem_all_scheduler);
+    scheduler_paused = 1;
+    log_info(logger, "Scheduler stopped...");
 }
 
 void multiprogramming_grade(const char *cmd_args) {
