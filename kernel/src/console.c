@@ -56,7 +56,7 @@ void handle_stop_process(const char *cmd_args) {
     exit_process(pid, INTERRUPTED_BY_USER);
 }
 
-void start_scheduler() {
+void handle_start_scheduler() {
     if(scheduler_paused) {
         scheduler_paused = 0;
         sem_post(&sem_all_scheduler);
@@ -66,7 +66,7 @@ void start_scheduler() {
     }
 }
 
-void stop_scheduler() {
+void handle_stop_scheduler() {
     if(!scheduler_paused){
         sem_wait(&sem_all_scheduler);
         scheduler_paused = 1;
@@ -76,11 +76,49 @@ void stop_scheduler() {
     }
 }
 
-void multiprogramming_grade(const char *cmd_args) {
-    log_info(logger, "New multiprogramming grade: %s\n", cmd_args);
-    // You need to count running_pcb + length Ready + actual sem_val
-    // use mutex.
-    // sem_post the difference.
+void handle_multiprogramming_grade(const char *cmd_args) {
+    char *endptr;
+    errno = 0;
+    long new_grade = strtol(cmd_args, &endptr, 10);
+
+    // Check for various possible errors
+    if ((errno == ERANGE && (new_grade == LONG_MAX || new_grade == LONG_MIN)) || (errno != 0 && new_grade == 0)) {
+        log_error(logger, "Error parsing new multiprogramming grade.");
+        return;
+    }
+
+    if (endptr == cmd_args) {
+        log_error(logger, "No digits were found.");
+        return;
+    }
+
+    if (*endptr != '\0') {
+        log_error(logger, "Trailing characters after number: %s", endptr);
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_multiprogramming); // Lock the mutex
+    int current_grade = atomic_load(&current_multiprogramming_grade);
+    int difference = (int)new_grade - current_grade;
+
+    log_info(logger, "Changing multiprogramming grade from %d to %ld\n", current_grade, new_grade);
+
+    if (difference > 0) {
+        // Increase the semaphore value
+        for (int i = 0; i < difference; i++) {
+            sem_post(&sem_multiprogramming);
+        }
+    } else if (difference < 0) {
+        // Decrease the semaphore value
+        for (int i = 0; i < -difference; i++) {
+            sem_wait(&sem_multiprogramming);
+        }
+    }
+
+    atomic_store(&current_multiprogramming_grade, new_grade);
+    log_info(logger, "New multiprogramming grade set to %ld\n", new_grade);
+
+    pthread_mutex_unlock(&mutex_multiprogramming); // Unlock the mutex
 }
 
 void handle_process_state() {
@@ -131,13 +169,13 @@ void *interactive_console(void *arg) {
                     handle_stop_process(cmd_args);
                     break;
                 case CMD_DETENER_PLANIFICACION:
-                    stop_scheduler();
+                    handle_stop_scheduler();
                     break;
                 case CMD_INICIAR_PLANIFICACION:
-                    start_scheduler();
+                    handle_start_scheduler();
                     break;
                 case CMD_MULTIPROGRAMACION:
-                    multiprogramming_grade(cmd_args);
+                    handle_multiprogramming_grade(cmd_args);
                     break;
                 case CMD_PROCESO_ESTADO:
                     handle_process_state();

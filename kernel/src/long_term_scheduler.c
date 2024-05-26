@@ -52,13 +52,19 @@ void move_to_exit(t_pcb* pcb, char* status_prev, exit_reason reason){
     list_push(list_EXIT, pcb);
 }
 
+void sem_post_multiprogramming(){
+    pthread_mutex_lock(&mutex_multiprogramming);
+    sem_post(&sem_multiprogramming);
+    pthread_mutex_unlock(&mutex_multiprogramming);
+}
+
 void exit_process(int pid, exit_reason reason){
-    // Check in all lists
+    // Check in all lists 
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
         pcb_RUNNING = NULL;
         move_to_exit(pcb, "RUNNING", reason);
-        sem_post(&sem_multiprogramming);
+        sem_post_multiprogramming();
         return;
     } 
 
@@ -66,7 +72,7 @@ void exit_process(int pid, exit_reason reason){
     if (pcb != NULL){
         list_remove_by_pid(list_READY, pid);
         move_to_exit(pcb, "READY", reason);
-        sem_post(&sem_multiprogramming);
+        sem_post_multiprogramming();
         return;
     }
 
@@ -74,7 +80,7 @@ void exit_process(int pid, exit_reason reason){
     if (pcb != NULL){
         list_remove_by_pid(list_BLOCKED, pid);
         move_to_exit(pcb, "BLOCKED", reason);
-        sem_post(&sem_multiprogramming);
+        sem_post_multiprogramming();
         return;
     }
 
@@ -95,8 +101,10 @@ void lt_sched_new_ready() {
         if (!list_is_empty(list_NEW)) { // TODO: Do we need to improve it to avoid intensive busy-waiting polling?
             sem_wait(&sem_multiprogramming);
        
+            pthread_mutex_lock(&mutex_multiprogramming);
             int sem_value;
             sem_getvalue(&sem_multiprogramming, &sem_value);
+            pthread_mutex_unlock(&mutex_multiprogramming);
             log_debug(logger, "Current semaphore value: %d", sem_value);  // Log the value
 
             t_pcb *pcb = (t_pcb*) list_pop(list_NEW);

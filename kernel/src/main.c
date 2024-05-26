@@ -13,6 +13,7 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
+#include <quantum.h>
 
 extern t_list *list_NEW;
 extern t_list *list_READY;
@@ -22,10 +23,10 @@ t_pcb *pcb_RUNNING;
 
 atomic_int pid_count;
 sem_t sem_multiprogramming;
+pthread_mutex_t mutex_multiprogramming;
 sem_t sem_all_scheduler;
 int scheduler_paused = 0;
-
-#include <quantum.h>
+atomic_int current_multiprogramming_grade;
 
 t_log *logger;
 t_config *config;
@@ -58,8 +59,11 @@ int main(int argc, char *argv[]) {
 
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+    atomic_init(&current_multiprogramming_grade, multiprogramming_grade);
     sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
     sem_init(&sem_all_scheduler, 0, 1);
+    pthread_mutex_init(&mutex_multiprogramming, NULL);
+
 
     pthread_t server_thread, console_thread, lt_sched_new_ready_thread, quantum_counter_thread;
 
@@ -104,6 +108,7 @@ void clean(t_config *config) {
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
     sem_destroy(&sem_all_scheduler);
+    pthread_mutex_destroy(&mutex_multiprogramming);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
