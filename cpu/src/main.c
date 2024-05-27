@@ -44,18 +44,41 @@ void agregar_a_TLB(int pid, int pagina, int marco);
 uint32_t mmu(char* logicalAddress);
 void init_reg_proceso_actual();
 int requestFrameToMem (int numPag);
-int recibir_frame(int socket_cliente);
+int recibir_req(int socket_cliente);
 void putRegValueToMem(int fisicalAddress, int valor);
 int valueOfReg (char* reg);
 
 #define cant_entradas_tlb() config_get_int_value("cpu.config","CANTIDAD_ENTRADAS_TLB")
-#define tam_pag 32 //ESTO BORRAR, SE LO DEBO PEDIR A MEMORIA
+//#define tam_pag 32 //ESTO BORRAR, SE LO DEBO PEDIR A MEMORIA
 
 //INSTRUCCIONES EXECUTE:
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
 t_instruction* new_instruction_IO(u_int32_t pid,char* interfaz, char* job_unit);
 
+
+//-----------------26-5:
+typedef struct{
+    u_int32_t pid;
+    int req;
+} t_request;
+
+/*typedef struct{
+    u_int32_t pid;
+    char* reg;
+} t_request_reg;
+*/
+
+t_request* deserializar_request(void* stream);
+void serializar_request(t_request* request, t_buffer* buffer);
+
+t_request* new_request (u_int32_t pid, int req);
+
+void io_gen_sleep(char* interfaz, char* job_unit);
+/*
+t_request_reg* deserializar_request_reg(void* stream);
+void serializar_request_reg(t_request_reg* request, t_buffer* buffer);
+*/
 
 typedef enum
 {
@@ -116,6 +139,10 @@ int tlb_index = 0; //indice para el algoritmo FIFO
 
 TLBEntry* buscar_en_TLB(int pid, int pagina);
 
+
+
+
+
 int main(int argc, char *argv[])
 {
     /* ---------------- Setup inicial  ---------------- */
@@ -165,7 +192,7 @@ void fetch(t_pcb *pcb)
     enviar_paquete(paquete, conexion_mem);
     eliminar_paquete(paquete);
 
-    recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR)
+    recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR) //PROBAR SI FUNCIONA SIN ESTA LINEA YA QUE LA INSTRUCCION VIENE EN UN MENSAJE
     recibir_instruccion(conexion_mem); // LA INSTRUCCION
 
     //“PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”
@@ -433,11 +460,72 @@ void set(char* registro, char* valor){
     log_info(logger, "%s in actual process: %d", registro, reg_proceso_actual->AX); //funciona
 }
 
+int requestRegToMem (int fisicalAddr){
+    t_paquete* peticion = crear_paquete(REG_REQUEST); //this opcode receive in mem
+    t_request* request = new_request(pcb_en_ejecucion->pid, fisicalAddr);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_request(request, buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
+ 
+    enviar_paquete(peticion, conexion_mem);
+    eliminar_paquete(peticion);
+
+    recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
+    return recibir_req(conexion_mem); //receive VALOR DEL REG
+}
+
+/*
+void serializar_request_reg(t_request_reg* request, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t); //uno para pid 
+    if(request->reg != NULL){
+        size+= sizeof(u_int32_t); //largo reg
+        size+= string_length(request->reg) + 1;
+    }
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(request->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    u_int32_t reg_length = strlen(request->reg) + 1;
+    memcpy(buffer->stream + buffer->offset, &(request->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, request->reg, reg_length);
+    buffer->offset += reg_length;
+}
+
+t_request_reg* deserializar_request_reg(void* stream){
+    t_request_reg* request = malloc(sizeof(t_request_reg));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    u_int32_t reg_length;
+    memcpy(&reg_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    request->reg = malloc(reg_length);
+    memcpy(&(request->reg), stream + offset, reg_length);
+    offset += reg_length;
+
+    return request;
+}
+
+*/
 void mov_in(char* registro, char* logicalAddress){
-    int valor = 0; //quitar luego de hacer el siguiente TO DO
+    //int valor = 0; //quitar luego de hacer el siguiente TO DO
     int fisicalAddr = mmu(logicalAddress);
+    
     //request to mem
     //int valor = requestRegToMem(fisicalAddr); //TO DO
+    int valor = requestRegToMem(fisicalAddr);
 
     if (strcmp(registro, "AX") == 0)
         reg_proceso_actual->AX = valor;
@@ -454,6 +542,8 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "EDX") == 0)
         reg_proceso_actual->EDX = valor;
 }
+
+//-----------------------------------
 
 void mov_out(char* logicalAddr, char* reg){
 
@@ -475,7 +565,7 @@ void mov_out(char* logicalAddr, char* reg){
     if (strcmp(reg, "EDX") == 0)
         valor = reg_proceso_actual->EDX;
 
-    putRegValueToMem(fisicalAddress,valor); 
+    putRegValueToMem(fisicalAddress,valor); //TO DO
 }
 
 void sum(char* destReg, char* origReg){                 
@@ -598,12 +688,29 @@ int valueOfReg (char* reg){
 
 //-------------MMU con la TLB:
 
+int recibir_tam_pag(int socket_cliente)
+{
+    int size;
+    int* tam_pag = recibir_buffer(&size, socket_cliente);
+    log_debug(logger, "Tam pag received.. %d", *tam_pag);
+
+    return *tam_pag;
+}
+
+int solicitar_tam_pag_a_mem(void){
+    t_paquete* peticion = crear_paquete(TAM_PAG);
+    enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
+
+    return recibir_tam_pag(conexion_mem);
+}
+
 uint32_t mmu(char* logicalAddress){
     int direccion_fisica;
     int direccion_logica = atoi(logicalAddress);
     TLBEntry* tlbEntry;
 
     //int tam_pag = solicitar_tam_pag();//a memoria (32)  TO DO
+    int tam_pag = solicitar_tam_pag_a_mem();
 
     numero_pagina = floor(direccion_logica / tam_pag);
     int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
@@ -616,9 +723,7 @@ uint32_t mmu(char* logicalAddress){
 
     if (tlbEntry == NULL){ //actualizo la TLB
         log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-        //aqui no la calculo sino que se la pido a memoria
         direccion_fisica = requestFrameToMem(numero_pagina);
-        //direccion_fisica = (numero_pagina * tam_pag) + desplazamiento;
         agregar_a_TLB(pcb_en_ejecucion->pid,numero_pagina,direccion_fisica);
     }
     else{
@@ -717,26 +822,72 @@ void init_reg_proceso_actual(){
     reg_proceso_actual->SI = 0;
 }
 
-int requestFrameToMem (int numPag){
-    t_paquete* peticion = crear_paquete(TLBMISS); //this opcode receive in mem
+t_request* new_request (u_int32_t pid, int req){
+    t_request* new_req = malloc(sizeof(t_request));
+    if (new_req == NULL) {
+        return NULL; 
+    }
 
-    agregar_a_paquete(peticion, &(pcb_en_ejecucion->pid), sizeof(uint32_t));
-    agregar_a_paquete(peticion, &numPag, sizeof(int));
+    new_req->pid = pid;
+    new_req->req = req;
+
+    return new_req;
+}
+
+int requestFrameToMem (int numPag){
+    t_paquete* peticion = crear_paquete(TLB_MISS); //this opcode receive in mem
+    t_request* request = new_request(pcb_en_ejecucion->pid, numPag);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_request(request, buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
     //armar la funcion deserializadora de este paquete para recibirlo bien en memoria
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
 
-    recibir_operacion(conexion_mem); //OPCODE: FRAME
-    return recibir_frame(conexion_mem); //receive ack from mem "guarde lo q me pediste"
+    recibir_operacion(conexion_mem); //FRAME O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
+    return recibir_req(conexion_mem); //receive ack from mem "guarde lo q me pediste"
 }
 
-int recibir_frame(int socket_cliente)
+
+void serializar_request(t_request* request, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) + sizeof(int);
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(request->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(request->req), sizeof(int));
+    buffer->offset += sizeof(int);
+}
+
+t_request* deserializar_request(void* stream){
+    t_request* request = malloc(sizeof(t_request));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(request->req), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return request;
+}
+
+//hacer funcion serializadora y deserializadora de requestFrame
+//
+
+int recibir_req(int socket_cliente)
 {
     int size;
-    char* frame;
-    frame = recibir_buffer(&size, socket_cliente);
-    log_info(logger, "Frame received... %s", frame);
-    return atoi(frame);
+    char* req;
+    req = recibir_buffer(&size, socket_cliente);
+    log_info(logger, "REQ received... %s", req);
+    return atoi(req);
 }
 
 /*

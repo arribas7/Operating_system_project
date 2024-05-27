@@ -29,8 +29,10 @@ typedef enum {
     // CPU -> MEMORY
     PC,
     WRITE,
-    TLBMISS,
+    TLB_MISS,
     INSTRUCTION,
+    TAM_PAG,
+    REG_REQUEST,
 
     // CPU -> KERNEL -> IO -> MEMORY
     IO_GEN_SLEEP,
