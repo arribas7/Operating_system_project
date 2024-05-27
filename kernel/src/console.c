@@ -22,9 +22,36 @@ console_command get_command_type(const char *input) {
     return CMD_UNKNOWN;
 }
 
-void handle_script_execution(const char *cmd_args) {
-    log_info(logger, "Executing script from path: %s\n", cmd_args);
-    // Add the actual script execution logic here
+void handle_script_execution(const char *cmd_args, t_config* config) {
+    FILE *file = fopen(cmd_args, "r");
+    if (file == NULL) {
+        log_error(logger, "Failed to open script file: %s", strerror(errno));
+        return;
+    }
+
+    log_info(logger, "Executing script from path: %s", cmd_args);
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char *newline = strchr(line, '\n');
+        if (newline) {
+            *newline = '\0';
+        }
+
+        // Get the command type and arguments
+        console_command cmd = get_command_type(line);
+        char *cmd_args = strchr(line, ' ');
+        if (cmd_args) {
+            *cmd_args++ = '\0';
+        }
+
+        // Execute the command
+        if (execute_command(cmd, cmd_args, config)) {
+            break;
+        }
+    }
+
+    fclose(file);
 }
 
 void handle_start_process(const char *cmd_args, t_config* config) {
@@ -141,6 +168,39 @@ void handle_process_state() {
     // TODO: Confirm if we need to show EXIT list too.
 }
 
+int execute_command(console_command cmd, const char *cmd_args, t_config* config) {
+    switch (cmd) {
+        case CMD_EJECUTAR_SCRIPT:
+            handle_script_execution(cmd_args, config);
+            break;
+        case CMD_INICIAR_PROCESO:
+            handle_start_process(cmd_args, config);
+            break;
+        case CMD_FINALIZAR_PROCESO:
+            handle_stop_process(cmd_args);
+            break;
+        case CMD_DETENER_PLANIFICACION:
+            handle_stop_scheduler();
+            break;
+        case CMD_INICIAR_PLANIFICACION:
+            handle_start_scheduler();
+            break;
+        case CMD_MULTIPROGRAMACION:
+            handle_multiprogramming_grade(cmd_args);
+            break;
+        case CMD_PROCESO_ESTADO:
+            handle_process_state();
+            break;
+        case CMD_EXIT:
+            log_info(logger, "Exiting console.");
+            return 1;
+        default:
+            log_error(logger, "Unknown command or invalid syntax: %s", cmd_args);
+            break;
+    }
+    return 0;
+}
+
 void *interactive_console(void *arg) {
     t_config *config = (t_config *) arg;
     char *line;
@@ -155,37 +215,12 @@ void *interactive_console(void *arg) {
             cmd = get_command_type(line);
             cmd_args = strchr(line, ' ');
             if (cmd_args) {
-                *cmd_args++ = '\0'; // Split the command from the arguments
+                *cmd_args++ = '\0';
             }
 
-            switch (cmd) {
-                case CMD_EJECUTAR_SCRIPT:
-                    handle_script_execution(cmd_args);
-                    break;
-                case CMD_INICIAR_PROCESO:
-                    handle_start_process(cmd_args, config);
-                    break;
-                case CMD_FINALIZAR_PROCESO:
-                    handle_stop_process(cmd_args);
-                    break;
-                case CMD_DETENER_PLANIFICACION:
-                    handle_stop_scheduler();
-                    break;
-                case CMD_INICIAR_PLANIFICACION:
-                    handle_start_scheduler();
-                    break;
-                case CMD_MULTIPROGRAMACION:
-                    handle_multiprogramming_grade(cmd_args);
-                    break;
-                case CMD_PROCESO_ESTADO:
-                    handle_process_state();
-                    break;
-                case CMD_EXIT:
-                    free(line);
-                    return NULL;
-                default:
-                    log_error(logger, "Unknown command or invalid syntax: %s", line);
-                    break;
+            if (execute_command(cmd, cmd_args, config)) {
+                free(line);
+                break; // Exit interactive console if CMD_EXIT is encountered
             }
         }
         free(line);
