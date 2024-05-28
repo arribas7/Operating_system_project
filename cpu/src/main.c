@@ -69,6 +69,8 @@ typedef struct{
 } t_request_reg;
 */
 
+//commit vacio
+
 t_request* deserializar_request(void* stream);
 void serializar_request(t_request* request, t_buffer* buffer);
 
