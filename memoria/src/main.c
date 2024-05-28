@@ -12,6 +12,11 @@ int correr_servidor(void *arg);
 
 void clean(t_config *config);
 
+
+int correr_servidor(void *arg);
+
+void clean(t_config *config);
+
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
     t_config *config;
@@ -37,13 +42,12 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
+
     pthread_join(hilo_servidor, NULL);
     clean(config);
          
     return 0;
 }
-
-
 
 void handle_create_process(const char *file_path, uint32_t pid){
 //OPEN FILE THAT CORRESPONDS TO PATH_INFO - PID FROM KERNEL
@@ -107,7 +111,10 @@ int correr_servidor(void *arg) {
     while (1) {
         int cliente_fd = esperar_cliente(server_fd); //SOLAMENTE PASANDO DESDE LA LINEA 55 HACIA AQUI LOGRO QUE EL SERVER QUEDE EN ESCUCHA PERMAMANENTE
         //aqui iria el semaforo esperando que un modulo envie la señal de que se conecta, ya sea el kernel o el cpu
+        void* pcb_buffer;
+        t_pcb* pcb;
         sleep(5);
+      
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
             case CREATE_PROCESS:
@@ -132,25 +139,9 @@ int correr_servidor(void *arg) {
                 }
                 free(pcb_buffer);
                 break;
-            /*
-            case PCB:
-                lista = recibir_paquete(cliente_fd);
-                void *pcb_buffer;
-                t_pcb *pcb;
-                for(int i = 0; i< list_size(lista); i ++){
-                    pcb_buffer = list_get(lista, i);
-                    pcb = deserializar_pcb(pcb_buffer);
-                    log_info(logger, "pid: %d", pcb->pid);
-                    log_info(logger, "pc: %d", pcb->pc);               
-                    log_info(logger, "quantum: %d", pcb->quantum);
-                    log_info(logger, "reg->dato: %d", pcb->reg->dato);
-                }
-                free(pcb_buffer);
-                //eliminar_pcb(pcb);
-                enviar_mensaje("MEM: recibido OK",cliente_fd);
-                break;*/
             case PC:
                 lista = recibir_paquete(cliente_fd);
+
                 void* reg_buffer;
                 t_reg_cpu* reg;
                 for(int i = 0; i< list_size(lista); i ++){
@@ -166,6 +157,7 @@ int correr_servidor(void *arg) {
                // obtenerinstruccion(PC); //CONTAINS PC TO MEMORY      
                 free(reg_buffer);
                 eliminar_reg(reg);
+            
                 //enviar_mensaje("SET AX 1",cliente_fd); //simulo una instruccion cualquiera 
                 //enviar_mensaje("JNZ AX 4",cliente_fd);
                 enviar_mensaje("IO_GEN_SLEEP XXX 10",cliente_fd); //reemp las XXX por alguna interfaz, preg a nico q nombre les puso
