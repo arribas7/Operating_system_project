@@ -14,6 +14,7 @@
 #include <semaphore.h>
 #include <utils/inout.h>
 #include <utils/cpu.h>
+#include <quantum.h>
 
 extern t_list *list_NEW;
 extern t_list *list_READY;
@@ -23,6 +24,10 @@ t_pcb *pcb_RUNNING;
 
 atomic_int pid_count;
 sem_t sem_multiprogramming;
+pthread_mutex_t mutex_multiprogramming;
+sem_t sem_all_scheduler;
+int scheduler_paused = 0;
+atomic_int current_multiprogramming_grade;
 
 t_log *logger;
 t_config *config;
@@ -45,7 +50,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    initialize_lists(); 
+    initialize_lists();
+
 
     config = config_create("kernel.config");
     if (config == NULL) {
@@ -54,9 +60,12 @@ int main(int argc, char *argv[]) {
 
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+    atomic_init(&current_multiprogramming_grade, multiprogramming_grade);
     sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
+    sem_init(&sem_all_scheduler, 0, 1);
+    pthread_mutex_init(&mutex_multiprogramming, NULL);
 
-    pthread_t server_thread, console_thread, lt_sched_new_ready_thread,hilo_cpu;
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread,hilo_cpu, quantum_counter_thread;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Use a new log with other name for each thread?
@@ -74,13 +83,28 @@ int main(int argc, char *argv[]) {
     // Creación y ejecución del hilo de CPU
     if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
         log_error(logger, "Error al crear el hilo de la CPU");
+
+
+    //TODO: Maybe change the logger for this?
+    // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
+    /*t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
+
+    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
+        log_error(logger, "Error creating console thread");
+        return -1;
+    }*/
+
+    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
+        log_error(logger, "Error creating long term scheduler thread");
         return -1;
     }
 
     // Esperar a que los hilos terminen
     pthread_join(server_thread, NULL);
-    //pthread_join(hilo_consola, NULL);
     pthread_join(hilo_cpu, NULL);
+    pthread_join(console_thread, NULL);
+    pthread_join(quantum_counter_thread, NULL);
+    pthread_join(lt_sched_new_ready_thread, NULL);
 
     // TODO: Esperar a que los hilos den señal de terminado para limpiar la config.
     clean(config);
@@ -91,6 +115,8 @@ void clean(t_config *config) {
     log_destroy(logger);
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
+    sem_destroy(&sem_all_scheduler);
+    pthread_mutex_destroy(&mutex_multiprogramming);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);

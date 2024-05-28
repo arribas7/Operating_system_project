@@ -2,9 +2,16 @@
 #define CONSOLE_H
 #include<commons/log.h>
 #include <state_lists.h>
+#include <semaphore.h>
+#include <stdatomic.h>
+#include <pthread.h>
 
 extern t_log* logger;
 extern t_list *list_NEW;
+extern sem_t sem_all_scheduler;
+extern pthread_mutex_t mutex_multiprogramming;
+extern int scheduler_paused;
+extern atomic_int current_multiprogramming_grade;
 
 typedef enum {
     CMD_EJECUTAR_SCRIPT,

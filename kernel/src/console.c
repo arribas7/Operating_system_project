@@ -22,9 +22,36 @@ console_command get_command_type(const char *input) {
     return CMD_UNKNOWN;
 }
 
-void handle_script_execution(const char *cmd_args) {
-    log_info(logger, "Executing script from path: %s\n", cmd_args);
-    // Add the actual script execution logic here
+void handle_script_execution(const char *cmd_args, t_config* config) {
+    FILE *file = fopen(cmd_args, "r");
+    if (file == NULL) {
+        log_error(logger, "Failed to open script file: %s", strerror(errno));
+        return;
+    }
+
+    log_info(logger, "Executing script from path: %s", cmd_args);
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char *newline = strchr(line, '\n');
+        if (newline) {
+            *newline = '\0';
+        }
+
+        // Get the command type and arguments
+        console_command cmd = get_command_type(line);
+        char *cmd_args = strchr(line, ' ');
+        if (cmd_args) {
+            *cmd_args++ = '\0';
+        }
+
+        // Execute the command
+        if (execute_command(cmd, cmd_args, config)) {
+            break;
+        }
+    }
+
+    fclose(file);
 }
 
 void handle_start_process(const char *cmd_args, t_config* config) {
@@ -56,26 +83,122 @@ void handle_stop_process(const char *cmd_args) {
     exit_process(pid, INTERRUPTED_BY_USER);
 }
 
-void start_scheduler() {
-    log_info(logger, "Starting scheduler.\n");
-    // Add the scheduler start logic here
+void handle_start_scheduler() {
+    if(scheduler_paused) {
+        scheduler_paused = 0;
+        sem_post(&sem_all_scheduler);
+        log_info(logger, "Scheduler started.");
+    } else {
+        log_info(logger, "Scheduler is already running.");
+    }
 }
 
-void stop_scheduler() {
-    log_info(logger, "Stopping scheduler.\n");
-    // Add the scheduler stop logic here
+void handle_stop_scheduler() {
+    if(!scheduler_paused){
+        sem_wait(&sem_all_scheduler);
+        scheduler_paused = 1;
+        log_info(logger, "Scheduler stopped.");
+    } else {
+        log_info(logger, "Scheduler is already stopped.");
+    }
 }
 
-void multiprogramming_grade(const char *cmd_args) {
-    log_info(logger, "New multiprogramming grade: %s\n", cmd_args);
-    // You need to count running_pcb + length Ready + actual sem_val
-    // use mutex.
-    // sem_post the difference.
+void handle_multiprogramming_grade(const char *cmd_args) {
+    char *endptr;
+    errno = 0;
+    long new_grade = strtol(cmd_args, &endptr, 10);
+
+    // Check for various possible errors
+    if ((errno == ERANGE && (new_grade == LONG_MAX || new_grade == LONG_MIN)) || (errno != 0 && new_grade == 0)) {
+        log_error(logger, "Error parsing new multiprogramming grade.");
+        return;
+    }
+
+    if (endptr == cmd_args) {
+        log_error(logger, "No digits were found.");
+        return;
+    }
+
+    if (*endptr != '\0') {
+        log_error(logger, "Trailing characters after number: %s", endptr);
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_multiprogramming); // Lock the mutex
+    int current_grade = atomic_load(&current_multiprogramming_grade);
+    int difference = (int)new_grade - current_grade;
+
+    log_info(logger, "Changing multiprogramming grade from %d to %ld\n", current_grade, new_grade);
+
+    if (difference > 0) {
+        // Increase the semaphore value
+        for (int i = 0; i < difference; i++) {
+            sem_post(&sem_multiprogramming);
+        }
+    } else if (difference < 0) {
+        // Decrease the semaphore value
+        for (int i = 0; i < -difference; i++) {
+            sem_wait(&sem_multiprogramming);
+        }
+    }
+
+    atomic_store(&current_multiprogramming_grade, new_grade);
+    log_info(logger, "New multiprogramming grade set to %ld\n", new_grade);
+
+    pthread_mutex_unlock(&mutex_multiprogramming); // Unlock the mutex
 }
 
 void handle_process_state() {
-    log_info(logger, "Listing processes by state.\n");
-    // Add logic to display process states here
+    log_info(logger, "RUNNING state process:");
+    if(pcb_RUNNING != NULL) {
+        log_info(logger, "---pid: %d", pcb_RUNNING->pid);
+    } else {
+        log_info(logger, "No process running.");
+    }
+
+    log_info(logger, "NEW state processes:");
+    log_list_contents(logger, list_NEW);
+
+    log_info(logger, "READY state processes:");
+    log_list_contents(logger, list_READY);
+
+    log_info(logger, "BLOCKED state processes:");
+    log_list_contents(logger, list_BLOCKED);
+
+    // TODO: Confirm if we need to show EXIT list too.
+}
+
+int execute_command(console_command cmd, const char *cmd_args, t_config* config) {
+    switch (cmd) {
+        case CMD_EJECUTAR_SCRIPT:
+            handle_script_execution(cmd_args, config);
+            break;
+        case CMD_INICIAR_PROCESO:
+            handle_start_process(cmd_args, config);
+            break;
+        case CMD_FINALIZAR_PROCESO:
+            handle_stop_process(cmd_args);
+            break;
+        case CMD_DETENER_PLANIFICACION:
+            handle_stop_scheduler();
+            break;
+        case CMD_INICIAR_PLANIFICACION:
+            handle_start_scheduler();
+            break;
+        case CMD_MULTIPROGRAMACION:
+            handle_multiprogramming_grade(cmd_args);
+            break;
+        case CMD_PROCESO_ESTADO:
+            handle_process_state();
+            break;
+        case CMD_EXIT:
+            log_info(logger, "Exiting console.");
+            return 1;
+        default:
+            log_error(logger, "Unknown command or invalid syntax: %s", cmd_args);
+            break;
+    }
+    return 0;
 }
 
 void *interactive_console(void *arg) {
@@ -92,37 +215,12 @@ void *interactive_console(void *arg) {
             cmd = get_command_type(line);
             cmd_args = strchr(line, ' ');
             if (cmd_args) {
-                *cmd_args++ = '\0'; // Split the command from the arguments
+                *cmd_args++ = '\0';
             }
 
-            switch (cmd) {
-                case CMD_EJECUTAR_SCRIPT:
-                    handle_script_execution(cmd_args);
-                    break;
-                case CMD_INICIAR_PROCESO:
-                    handle_start_process(cmd_args, config);
-                    break;
-                case CMD_FINALIZAR_PROCESO:
-                    handle_stop_process(cmd_args);
-                    break;
-                case CMD_DETENER_PLANIFICACION:
-                    stop_scheduler();
-                    break;
-                case CMD_INICIAR_PLANIFICACION:
-                    start_scheduler();
-                    break;
-                case CMD_MULTIPROGRAMACION:
-                    multiprogramming_grade(cmd_args);
-                    break;
-                case CMD_PROCESO_ESTADO:
-                    handle_process_state();
-                    break;
-                case CMD_EXIT:
-                    free(line);
-                    return NULL;
-                default:
-                    log_error(logger, "Unknown command or invalid syntax: %s", line);
-                    break;
+            if (execute_command(cmd, cmd_args, config)) {
+                free(line);
+                break; // Exit interactive console if CMD_EXIT is encountered
             }
         }
         free(line);
