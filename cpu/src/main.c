@@ -3,25 +3,35 @@
 #include <utils/client.h>
 #include <commons/log.h>
 #include <commons/config.h>
-#include <utils/server.h>
-#include <utils/kernel.h>
+//#include <utils/server.h>
+//#include <utils/kernel.h>
 #include <pthread.h>
-#include <utils/cpu.h>
+//#include <utils/cpu.h>
 #include <semaphore.h>
-#include <math.h>
+//#include <math.h>
 #include <commons/collections/queue.h>
+#include "connections.h"
+#include "instructions.h"
 
 t_log *logger;
 t_log *loggerError;
 t_config *config;
-t_pcb *pcb_cpug;
+
+//t_pcb *pcb_cpug;
 char *instruccion_actual;
 int instruccion_decodificada;
 char **instr_decode;
 int cant_parametros;
+
 t_reg_cpu* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
 int cliente_fd; //el kenel
+
+
+
+
+
+
 
 int correr_servidor(void *arg);
 void *conexion_MEM(void *arg);
@@ -30,7 +40,7 @@ void ejecutar_ciclo_instruccion(t_pcb *pcb);
 // void gestionesCPU (void* arg);
 int conexion_mem = 0;
 int conexionMemoria(t_config *config);
-int numero_pagina = 0;
+//int numero_pagina = 0;
 
 t_pcb *pcb_cpug;
 t_log *cambiarNombre(t_log *logger, char *nuevoNombre);
@@ -40,28 +50,30 @@ void fetch(t_pcb *pcb);
 void recibir_instruccion(int socket_cliente);
 int buscar(char *elemento, char **lista);
 
-void agregar_a_TLB(int pid, int pagina, int marco);
-uint32_t mmu(char* logicalAddress);
-void init_reg_proceso_actual();
-int requestFrameToMem (int numPag);
-int recibir_req(int socket_cliente);
-void putRegValueToMem(int fisicalAddress, int valor);
-int valueOfReg (char* reg);
+//void agregar_a_TLB(int pid, int pagina, int marco);
+//uint32_t mmu(char* logicalAddress);
+//void init_reg_proceso_actual();
+//int requestFrameToMem (int numPag);
+//int recibir_req(int socket_cliente);
+//void putRegValueToMem(int fisicalAddress, int valor);
+//int valueOfReg (char* reg);
 
-#define cant_entradas_tlb() config_get_int_value("cpu.config","CANTIDAD_ENTRADAS_TLB")
+//#define cant_entradas_tlb() config_get_int_value("cpu.config","CANTIDAD_ENTRADAS_TLB")
 //#define tam_pag 32 //ESTO BORRAR, SE LO DEBO PEDIR A MEMORIA
 
 //INSTRUCCIONES EXECUTE:
+/*
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
 t_instruction* new_instruction_IO(u_int32_t pid,char* interfaz, char* job_unit);
-
+*/
 
 //-----------------26-5:
+/*
 typedef struct{
     u_int32_t pid;
     int req;
-} t_request;
+} t_request;*/
 
 /*typedef struct{
     u_int32_t pid;
@@ -70,18 +82,19 @@ typedef struct{
 */
 
 //commit vacio
-
+/*
 t_request* deserializar_request(void* stream);
 void serializar_request(t_request* request, t_buffer* buffer);
 
 t_request* new_request (u_int32_t pid, int req);
 
 void io_gen_sleep(char* interfaz, char* job_unit);
+*/
 /*
 t_request_reg* deserializar_request_reg(void* stream);
 void serializar_request_reg(t_request_reg* request, t_buffer* buffer);
 */
-
+/*
 typedef enum
 {
     _SET,
@@ -104,7 +117,8 @@ typedef enum
     _IO_FS_READ,
     _EXIT
 } t_comando;
-
+*/
+/*
 char *listaComandos[] = {
     [_SET] = "SET",
     [_MOV_IN] = "MOV_IN",
@@ -126,8 +140,10 @@ char *listaComandos[] = {
     [_IO_FS_READ] = "IO_FS_READ",
     [_EXIT] = "EXIT"
 };
+*/
 
 //DEFINIENDO LA TLB:
+/*
 typedef struct tlb{
     int pid;
     int pagina;
@@ -141,7 +157,7 @@ int tlb_index = 0; //indice para el algoritmo FIFO
 
 TLBEntry* buscar_en_TLB(int pid, int pagina);
 
-
+*/
 
 
 
@@ -182,7 +198,7 @@ void escucharAlKernel(void)
 
 //-------------------
 // CICLO INSTRUCCION::
-
+/*
 void fetch(t_pcb *pcb)
 {
     t_buffer *buffer = malloc(sizeof(t_buffer));
@@ -200,7 +216,8 @@ void fetch(t_pcb *pcb)
     //“PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”
     log_info(logger, "PID: <%d> - <%s> - Program Counter: <%d>", pcb->pid, "FETCH", pcb->pc);
 }
-
+*/
+/*
 void decode(t_pcb *pcb)
 {
     instr_decode = string_n_split(instruccion_actual, 4, " ");
@@ -211,9 +228,10 @@ void decode(t_pcb *pcb)
     instr_decode = strtok(instruccion_actual, " ");
     instruccion_decodificada = buscar(instr_decode,listaComandos);
     log_info(logger, "Decode instruction fetched.. %s", instruccion_actual);
-    */
+    
 }
-
+*/
+/*
 void execute(t_pcb *pcb)
 {
     pcb_en_ejecucion = pcb;
@@ -250,7 +268,7 @@ void execute(t_pcb *pcb)
             sub(instr_decode[1],instr_decode[2]);
         break;
         case _JNZ:
-             jnz(instr_decode[1],instr_decode[2]);
+            jnz(instr_decode[1],instr_decode[2]);
         break;
         case _COPY_STRING:
              
@@ -292,7 +310,7 @@ void execute(t_pcb *pcb)
         break;
     }
 }
-
+*/
 void procesar_pcb(t_pcb *pcb)
 {
     fetch(pcb);
@@ -312,6 +330,8 @@ void *procesar_pcb_thread(void *arg)
     procesar_pcb(pcb);
     // Liberar memoria del PCB
     free(pcb);
+    //hacer hilo para checkear las interrupciones, envio el pcb actualizado y el motivo del desalojo
+    //el motivo sera el codeop del paquete que contenga el pcb actualizado
     return NULL;
 }
 
@@ -410,7 +430,7 @@ t_log *cambiarNombre(t_log* logger, char *nuevoNombre) {
 }*/
 
 //---------------
-
+/*
 int buscar(char *elemento, char **lista)
 {
     int i = 0;
@@ -425,18 +445,19 @@ int buscar(char *elemento, char **lista)
     }
     return (i > string_array_size(lista)) ? -1 : i;
 }
-
+*/
+/*
 void recibir_instruccion(int socket_cliente)
 {
     int size;
     instruccion_actual = recibir_buffer(&size, socket_cliente);
     log_info(logger, "Before fetching instruction.. %s", instruccion_actual);
 }
-
+*/
 
 //------- FUNCIONES DE EXECUTE:
 
-
+/*
 
 void set(char* registro, char* valor){
 
@@ -462,6 +483,8 @@ void set(char* registro, char* valor){
     log_info(logger, "%s in actual process: %d", registro, reg_proceso_actual->AX); //funciona
 }
 
+*/
+/*
 int requestRegToMem (int fisicalAddr){
     t_paquete* peticion = crear_paquete(REG_REQUEST); //this opcode receive in mem
     t_request* request = new_request(pcb_en_ejecucion->pid, fisicalAddr);
@@ -477,7 +500,7 @@ int requestRegToMem (int fisicalAddr){
     recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
     return recibir_req(conexion_mem); //receive VALOR DEL REG
 }
-
+*/
 /*
 void serializar_request_reg(t_request_reg* request, t_buffer* buffer){
     buffer->offset = 0;
@@ -521,6 +544,7 @@ t_request_reg* deserializar_request_reg(void* stream){
 }
 
 */
+/*
 void mov_in(char* registro, char* logicalAddress){
     //int valor = 0; //quitar luego de hacer el siguiente TO DO
     int fisicalAddr = mmu(logicalAddress);
@@ -544,9 +568,9 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "EDX") == 0)
         reg_proceso_actual->EDX = valor;
 }
-
+*/
 //-----------------------------------
-
+/*
 void mov_out(char* logicalAddr, char* reg){
 
     int valor;
@@ -569,7 +593,8 @@ void mov_out(char* logicalAddr, char* reg){
 
     putRegValueToMem(fisicalAddress,valor); //TO DO
 }
-
+*/
+/*
 void sum(char* destReg, char* origReg){                 
 
     int valor1,valor2,suma;
@@ -602,6 +627,7 @@ void jnz(char* reg, char* inst){
 
     //log_info(logger, "PC in actual process after: %d", reg_proceso_actual->PC); //funciona probe init reg proceso actual con AX = 1
 }
+*/
 /*
 void resize(int tamanio){
     //solicitar a mem ajustar el tamaño del proceso a tamanio, deberia ser un opCode que reciba mem
@@ -620,6 +646,7 @@ void resize(int tamanio){
 
 
 //ejemplo de interfaz: GENERICA
+/*
 void io_gen_sleep(char* interfaz, char* job_unit){
 
     t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
@@ -639,9 +666,9 @@ void io_gen_sleep(char* interfaz, char* job_unit){
     /*
     recibir_operacion(cliente_fd);
     recibir_mensaje(cliente_fd); //receive ack from kermel
-    */
+    
 }
-
+*/
 /*
 void io_gen_sleep(char* interfaz, char* job_unit){
 
@@ -667,7 +694,7 @@ void io_gen_sleep(char* interfaz, char* job_unit){
 
 
 //------------------------------------
-
+/*
 int valueOfReg (char* reg){
     if (strcmp(reg, "AX") == 0)
         return reg_proceso_actual->AX;
@@ -685,11 +712,11 @@ int valueOfReg (char* reg){
         return reg_proceso_actual->EDX;
 
     return 0;
-}
+}*/
 
 
 //-------------MMU con la TLB:
-
+/*
 int recibir_tam_pag(int socket_cliente)
 {
     int size;
@@ -698,14 +725,16 @@ int recibir_tam_pag(int socket_cliente)
 
     return *tam_pag;
 }
-
+*/
+/*
 int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
 
     return recibir_tam_pag(conexion_mem);
 }
-
+*/
+/*
 uint32_t mmu(char* logicalAddress){
     int direccion_fisica;
     int direccion_logica = atoi(logicalAddress);
@@ -763,8 +792,8 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         tlb_index = (tlb_index + 1) % cant_entradas_tlb(); // Incremento circular del índice
     }
 }
-
-
+*/
+/*
 
 void putRegValueToMem(int fisicalAddress, int valor){
     t_paquete* peticion = crear_paquete(WRITE); //this opcode receive in mem
@@ -782,7 +811,7 @@ void putRegValueToMem(int fisicalAddress, int valor){
 
     log_info(logger, "PID: <%d> - Accion: <%s> - Pagina: <%d> - Direccion Fisica: <%d> - Valor: <%s>", pcb_en_ejecucion->pid, "WRITE", numero_pagina, fisicalAddress, (char *)valor);
 }
-
+*/
 /*
 	int size, desplazamiento=0, pid, tamanio;
 	int32_t direccionFisica;
@@ -804,7 +833,7 @@ int obtenerTamanioReg(char* registro){
     if(string_starts_with(registro, "E")) return 3;
     else return 2;
 }
-
+/*
 void init_reg_proceso_actual(){
     reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
     if (reg_proceso_actual == NULL) {
@@ -823,7 +852,7 @@ void init_reg_proceso_actual(){
     reg_proceso_actual->PC = 0;
     reg_proceso_actual->SI = 0;
 }
-
+/*
 t_request* new_request (u_int32_t pid, int req){
     t_request* new_req = malloc(sizeof(t_request));
     if (new_req == NULL) {
@@ -835,7 +864,8 @@ t_request* new_request (u_int32_t pid, int req){
 
     return new_req;
 }
-
+*/
+/*
 int requestFrameToMem (int numPag){
     t_paquete* peticion = crear_paquete(TLB_MISS); //this opcode receive in mem
     t_request* request = new_request(pcb_en_ejecucion->pid, numPag);
@@ -850,10 +880,9 @@ int requestFrameToMem (int numPag){
 
     recibir_operacion(conexion_mem); //FRAME O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
     return recibir_req(conexion_mem); //receive ack from mem "guarde lo q me pediste"
-}
+}*/
 
-
-void serializar_request(t_request* request, t_buffer* buffer){
+/*_request(t_request* request, t_buffer* buffer){
     buffer->offset = 0;
     size_t size = sizeof(u_int32_t) + sizeof(int);
     buffer->size = size;
@@ -879,10 +908,10 @@ t_request* deserializar_request(void* stream){
 
     return request;
 }
-
+*/
 //hacer funcion serializadora y deserializadora de requestFrame
 //
-
+/*
 int recibir_req(int socket_cliente)
 {
     int size;
@@ -891,7 +920,7 @@ int recibir_req(int socket_cliente)
     log_info(logger, "REQ received... %s", req);
     return atoi(req);
 }
-
+/*
 /*
 case WRITE:
     recibir_paquete();
