@@ -3,22 +3,21 @@
 TLBEntry TLB[32];
 int tlb_size = 0; //para ir sabiendo cuantas entradas hay en la tlb
 int tlb_index = 0; 
-int numero_pagina = 0;
+//int numero_pagina = 0;
 
 uint32_t mmu(char* logicalAddress){
     int direccion_fisica;
     int direccion_logica = atoi(logicalAddress);
     TLBEntry* tlbEntry;
 
-    //int tam_pag = solicitar_tam_pag();//a memoria (32)  TO DO
     int tam_pag = solicitar_tam_pag_a_mem();
 
-    numero_pagina = floor(direccion_logica / tam_pag);
+    double numero_pagina = floor(direccion_logica / tam_pag);
     int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
 
+    log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
     log_debug(logger, "desplazamiento: %d", desplazamiento);
-
 
     tlbEntry = buscar_en_TLB(pcb_en_ejecucion->pid,numero_pagina);
 
@@ -53,7 +52,7 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         tlb_size++;        // Incrementar el tamaño de la TLB
     } else {
         // Si la TLB está llena, se necesita aplicar un algoritmo de reemplazo
-        // En este caso, utilizaremos FIFO (Primero en entrar, primero en salir)
+        // En este caso, utilizaremos FIFO 
         // Se sobrescribirá la entrada más antigua (la que está en el índice tlb_index)
         TLB[tlb_index].pid = pid;
         TLB[tlb_index].pagina = pagina;
@@ -68,7 +67,7 @@ int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
 
-    return recibir_tam_pag(conexion_mem);
+    return recibir_tam_pag(conexion_mem); //mensaje desde memoria
 }
 
 

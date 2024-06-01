@@ -7,6 +7,7 @@
 #include "utils/kernel.h"
 #include <utils/server.h>
 #include "math.h"
+#include "connections.h"
 
 extern t_log *logger;
 extern t_log *loggerError;

@@ -2,6 +2,7 @@
 #define INSTRUCTIONS_H
 
 #include "mmu_tlb.h"
+#include "connections.h"
 
 void fetch(t_pcb *pcb);
 void decode(t_pcb *pcb);
@@ -47,6 +48,21 @@ typedef enum
 
 extern char *listaComandos[];
 
+typedef struct{
+    u_int32_t pid;
+    int tamaño;
+    int fisical_si;
+    int fisical_di;
+} t_copy_string;
+
+typedef struct{
+    u_int32_t pid;
+    int tamanio;
+    int fisical_dir;
+    u_int32_t interfaz_length;
+    char* interfaz;    
+} t_io_stdin;
+
 void init_reg_proceso_actual(void);
 void io_gen_sleep(char* interfaz, char* job_unit);
 void set(char* registro, char* valor);
@@ -64,11 +80,19 @@ void jnz(char* reg, char* inst);
 int buscar(char *elemento, char **lista); //to find comando decode
 
 //TO DO:
-/, COPY_STRING, IO_STDIN_READ, IO_STDOUT_WRITE.
+//IO_STDIN_READ, IO_STDOUT_WRITE.
 void resize(int tamanio);
 char* recibir_ack_resize(int conexion_mem);
+t_copy_string* new_copy_string(int tamanio);
+void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer);
+t_copy_string* deserializar_copy_string(void* stream);
 
+void serializar_io_stdin(t_io_stdin* io_stdin, t_buffer* buffer);
+t_io_stdin* deserialize_io_stdin(void* stream);
+t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address);
 
+void io_stdin_read(char* interfaz, char* logicalAdress, int tamanio);
+void io_stdin_write(char* interfaz, char* logicalAdress, int tamanio);
 
 //from long term scheduler (to sincronize):
 
@@ -80,5 +104,8 @@ typedef enum {
     INTERRUPTED_BY_USER,
     NUM_REASONS // This helps in determining the number of reasons
 } exit_reason;
+
+
+void check_interrupt (void);
 
 #endif

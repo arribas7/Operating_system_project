@@ -34,6 +34,7 @@ typedef enum {
     TAM_PAG,
     REG_REQUEST,
     RESIZE,
+    COPY_STRING,
 
     // CPU -> KERNEL -> IO -> MEMORY
     IO_GEN_SLEEP,

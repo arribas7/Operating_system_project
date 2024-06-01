@@ -62,7 +62,11 @@ int requestFrameToMem (int numPag){
     eliminar_paquete(peticion);
 
     recibir_operacion(conexion_mem); //FRAME O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
-    return recibir_req(conexion_mem); //receive ack from mem "guarde lo q me pediste"
+    int marco = recibir_req(conexion_mem); 
+
+    log_info(logger, "PID: <%d> - Accion: <%s> - Pagina: <%d> - Marco: <%d>", pcb_en_ejecucion->pid, "OBTENER MARCO", numPag, marco);
+
+    return marco;
 }
 
 void putRegValueToMem(int fisicalAddress, int valor){
@@ -79,7 +83,7 @@ void putRegValueToMem(int fisicalAddress, int valor){
     recibir_operacion(conexion_mem);
     recibir_mensaje(conexion_mem); //receive ack from mem "guarde lo q me pediste"
 
-    log_info(logger, "PID: <%d> - Accion: <%s> - Pagina: <%d> - Direccion Fisica: <%d> - Valor: <%s>", pcb_en_ejecucion->pid, "WRITE", numero_pagina, fisicalAddress, (char *)valor);
+    log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "WRITE", fisicalAddress, valor);
 }
 
 int requestRegToMem (int fisicalAddr){
@@ -95,5 +99,9 @@ int requestRegToMem (int fisicalAddr){
     eliminar_paquete(peticion);
 
     recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
-    return recibir_req(conexion_mem); //receive VALOR DEL REG
+    int valor = recibir_req(conexion_mem); //receive VALOR DEL REG
+    
+    log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "READ", fisicalAddr, valor);
+
+    return valor;
 }

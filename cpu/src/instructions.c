@@ -37,6 +37,44 @@ int buscar(char *elemento, char **lista) //buscar un elemento en una lista
     return (i > string_array_size(lista)) ? -1 : i;
 }
 
+void init_reg_proceso_actual(void){
+    reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
+    if (reg_proceso_actual == NULL) {
+        fprintf(stderr, "Error al asignar memoria\n");
+        return 1;
+    }
+
+    reg_proceso_actual->AX = 0;
+    reg_proceso_actual->BX = 0;
+    reg_proceso_actual->CX = 0;
+    reg_proceso_actual->DI = 0;
+    reg_proceso_actual->EAX = 0;
+    reg_proceso_actual->EBX = 0;
+    reg_proceso_actual->ECX = 0;
+    reg_proceso_actual->EDX = 0;
+    reg_proceso_actual->PC = 0;
+    reg_proceso_actual->SI = 0;
+}
+
+int valueOfReg (char* reg){
+    if (strcmp(reg, "AX") == 0)
+        return reg_proceso_actual->AX;
+    if (strcmp(reg, "BX") == 0)
+        return reg_proceso_actual->BX;
+    if (strcmp(reg, "CX") == 0)
+        return reg_proceso_actual->CX;
+    if (strcmp(reg, "EAX") == 0)
+        return reg_proceso_actual->EAX;
+    if (strcmp(reg, "EBX") == 0)
+        return reg_proceso_actual->EBX;
+    if (strcmp(reg, "ECX") == 0)
+        return reg_proceso_actual->ECX;
+    if (strcmp(reg, "EDX") == 0)
+        return reg_proceso_actual->EDX;
+
+    return 0;
+}
+
 void recibir_instruccion(int socket_cliente)
 {
     int size;
@@ -100,10 +138,10 @@ void execute(t_pcb *pcb)
             set(instr_decode[1],instr_decode[2]);
         break;
         case _MOV_IN:
-             
+            mov_in(instr_decode[1],instr_decode[2]);
         break;
         case _MOV_OUT:
-             
+            mov_out(instr_decode[1],instr_decode[2]);
         break;
         case _SUM:
             sum(instr_decode[1],instr_decode[2]);
@@ -115,10 +153,10 @@ void execute(t_pcb *pcb)
             jnz(instr_decode[1],instr_decode[2]);
         break;
         case _COPY_STRING:
-             
+            copy_string(instr_decode[1]);
         break;
         case _WAIT:
-             
+            
         break;   
         case _SIGNAL:
              
@@ -127,10 +165,10 @@ void execute(t_pcb *pcb)
             io_gen_sleep(instr_decode[1],instr_decode[2]);
         break;
         case _IO_STDIN_READ:
-             
+            io_stdin_read(instr_decode[1],instr_decode[2],instr_decode[3]);
         break;
         case _IO_STDOUT_WRITE:
-             
+            io_stdin_write(instr_decode[1],instr_decode[2],instr_decode[3]);
         break;
         case _IO_FS_CREATE:
              
@@ -154,6 +192,21 @@ void execute(t_pcb *pcb)
         break;
     }
 }
+
+void check_interrupt (void){
+
+
+    //t_paquete* interrupt = crear_paquete(QUANTUM_FINISHED); //POR EJEMPLO Q FINISHED
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    serialize_pcb(pcb_en_ejecucion, buffer);
+
+
+
+}
+
+
+
+//INSTRUCTIONS:
 
 void set(char* registro, char* valor){
 
@@ -223,8 +276,9 @@ void mov_out(char* logicalAddr, char* reg){
     if (strcmp(reg, "EDX") == 0)
         valor = reg_proceso_actual->EDX;
 
-    putRegValueToMem(fisicalAddress,valor); //TO DO
+    putRegValueToMem(fisicalAddress,valor);
 }
+
 void io_gen_sleep(char* interfaz, char* job_unit){
 
     t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
@@ -245,45 +299,6 @@ void io_gen_sleep(char* interfaz, char* job_unit){
     recibir_operacion(cliente_fd);
     recibir_mensaje(cliente_fd); //receive ack from kermel
     */
-}
-
-
-void init_reg_proceso_actual(void){
-    reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
-    if (reg_proceso_actual == NULL) {
-        fprintf(stderr, "Error al asignar memoria\n");
-        return 1;
-    }
-
-    reg_proceso_actual->AX = 0;
-    reg_proceso_actual->BX = 0;
-    reg_proceso_actual->CX = 0;
-    reg_proceso_actual->DI = 0;
-    reg_proceso_actual->EAX = 0;
-    reg_proceso_actual->EBX = 0;
-    reg_proceso_actual->ECX = 0;
-    reg_proceso_actual->EDX = 0;
-    reg_proceso_actual->PC = 0;
-    reg_proceso_actual->SI = 0;
-}
-
-int valueOfReg (char* reg){
-    if (strcmp(reg, "AX") == 0)
-        return reg_proceso_actual->AX;
-    if (strcmp(reg, "BX") == 0)
-        return reg_proceso_actual->BX;
-    if (strcmp(reg, "CX") == 0)
-        return reg_proceso_actual->CX;
-    if (strcmp(reg, "EAX") == 0)
-        return reg_proceso_actual->EAX;
-    if (strcmp(reg, "EBX") == 0)
-        return reg_proceso_actual->EBX;
-    if (strcmp(reg, "ECX") == 0)
-        return reg_proceso_actual->ECX;
-    if (strcmp(reg, "EDX") == 0)
-        return reg_proceso_actual->EDX;
-
-    return 0;
 }
 
 void sum(char* destReg, char* origReg){                 
@@ -353,5 +368,183 @@ char* recibir_ack_resize(int conexion_mem){
     ack = recibir_buffer(&size, conexion_mem);
     log_info(logger, "ACK RESIZE received... %s", ack);
     return ack;
+}
+
+//COPY_STRING:
+
+void copy_string (int tamanio){
+    t_paquete* copy_string_paq = crear_paquete(COPY_STRING);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+
+    t_copy_string* copy_string = new_copy_string(tamanio);
+
+    serializar_copy_string(copy_string,buffer);
+
+    agregar_a_paquete(copy_string_paq,buffer->stream,buffer->size);
+    enviar_paquete(copy_string_paq,conexion_mem);
+
+    eliminar_paquete(copy_string_paq);
+}
+
+void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) + sizeof(int) * 3;
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(copy_string->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(copy_string->tamaño), sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &(copy_string->fisical_si), sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &(copy_string->fisical_di), sizeof(int));
+    buffer->offset += sizeof(int);
+}
+
+t_copy_string* deserializar_copy_string(void* stream){
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    int offset = 0;
+
+    memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(copy_string->tamaño), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_di), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return copy_string;
+}
+
+t_copy_string* new_copy_string(int tamanio){
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    if (copy_string == NULL) {
+        return NULL; 
+    }
+
+    copy_string->pid = pcb_en_ejecucion->pid;
+    copy_string->tamaño = tamanio;
+    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->AX)); //agregar registro DI
+    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->BX)); //AGREGAR REGISTRO SI AL PCB
+
+    return copy_string;
+}
+
+//, IO_STDIN_READ:,
+
+void io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
+    t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+
+    t_io_stdin* io_stdin_read = new_io_stdin(interfaz, tamanio, atoi(logicalAdress));
+
+    serializar_io_stdin(io_stdin_read,buffer);
+
+    agregar_a_paquete(io_stdin_read_paq,buffer->stream,buffer->size);
+    enviar_paquete(io_stdin_read_paq,cliente_fd);
+
+    eliminar_paquete(io_stdin_read_paq);
+}
+
+// IO_STDOUT_WRITE:
+
+void io_stdin_write(char* interfaz, char* logicalAdress, int tamanio){
+    t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+
+    t_io_stdin* io_stdin_write = new_io_stdin(interfaz, tamanio, atoi(logicalAdress));
+
+    serializar_io_stdin(io_stdin_write,buffer);
+
+    agregar_a_paquete(io_stdin_write_paq,buffer->stream,buffer->size);
+    enviar_paquete(io_stdin_write_paq,cliente_fd);
+
+    eliminar_paquete(io_stdin_write_paq);
+}
+/*
+typedef struct{
+    u_int32_t pid;
+    char* interfaz;
+    int tamanio;
+    int fisical_dir;
+} t_io_stdin;
+*/
+
+void serializar_io_stdin(t_io_stdin* io_stdin, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) + sizeof(int) * 2;
+    if(io_stdin->interfaz != NULL){
+        size+= sizeof(u_int32_t); //largo interfaz
+        size+= string_length(io_stdin->interfaz_length) + 1;
+    }
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(io_stdin->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(io_stdin->tamanio), sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &(io_stdin->fisical_dir), sizeof(int));
+    buffer->offset += sizeof(int);
+
+    u_int32_t interfaz_length = strlen(io_stdin->interfaz) + 1;
+    memcpy(buffer->stream + buffer->offset, &(interfaz_length), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, io_stdin->interfaz, interfaz_length);
+    buffer->offset += interfaz_length;
+}
+
+t_io_stdin* deserialize_io_stdin(void* stream){
+    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
+    int offset = 0;
+
+    memcpy(&(io_stdin->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(io_stdin->tamanio), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(io_stdin->fisical_dir), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    u_int32_t interfaz_length;
+    memcpy(&interfaz_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    io_stdin->interfaz_length = interfaz_length;
+
+    io_stdin->interfaz = malloc(interfaz_length);
+    memcpy(&(io_stdin->interfaz), stream + offset, interfaz_length);
+    offset += interfaz_length;
+
+    return io_stdin;
+}
+
+t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address){
+    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
+    if (io_stdin == NULL) {
+        return NULL; 
+    }
+
+    io_stdin->pid = pcb_en_ejecucion->pid;
+    io_stdin->tamanio = tamanio;
+    io_stdin->interfaz = strdup(interfaz);
+    io_stdin->fisical_dir = mmu(string_itoa(logical_address));
+    
+    return io_stdin;
 }
 
