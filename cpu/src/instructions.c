@@ -195,15 +195,33 @@ void execute(t_pcb *pcb)
 
 void check_interrupt (void){
 
+    bool check;
+    
+    sem_wait(&interruptions_list_sem);
+    check = list_is_empty(interruptions_list);
+    sem_post(&interruptions_list_sem);
 
-    //t_paquete* interrupt = crear_paquete(QUANTUM_FINISHED); //POR EJEMPLO Q FINISHED
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    serialize_pcb(pcb_en_ejecucion, buffer);
+    if(!check){
+        sem_wait(&interruptions_list_sem);
+        t_interrupt* interrupt = list_get(interruptions_list,0);
+        sem_post(&interruptions_list_sem);
 
+        if(interrupt->pid == pcb_en_ejecucion->pid){
+            int motivo_interrupt = buscar(interrupt->motivo,lista_motivos_interrupt); //de la lista de motivos de interrupcion (simil a lista de comandos)
+            t_paquete* interrupt = crear_paquete(motivo_interrupt); //motivo_interrupt coincidira con el enum de la lista de motivos de interrupcion
+            t_buffer* buffer = malloc(sizeof(t_buffer));
+            serialize_pcb(pcb_en_ejecucion, buffer); 
 
-
+            enviar_paquete(interrupt,cliente_fd); //envio el pcb en ejecucion al kernel con el motivo como code_op
+            eliminar_paquete(interrupt);          
+        }    
+        else{
+            sem_wait(&interruptions_list_sem);
+            list_clean_and_destroy_elements(interruptions_list); //o solo list_clean?
+            sem_post(&interruptions_list_sem);
+        }
+    }
 }
-
 
 
 //INSTRUCTIONS:
@@ -548,3 +566,61 @@ t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address){
     return io_stdin;
 }
 
+
+
+
+void serializar_interrupcion(t_interrupt* interrupt, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t);
+    if(interrupt->motivo != NULL){
+        size+= sizeof(u_int32_t); //largo motivo
+        size+= string_length(interrupt->motivo) + 1;
+    }
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(io_stdin->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    u_int32_t motivo_length = strlen(interrupt->motivo) + 1;
+    memcpy(buffer->stream + buffer->offset, &(motivo_length), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, io_stdin->interfaz, motivo_length);
+    buffer->offset += motivo_length;
+}
+
+t_interrupt* deserializar_interrupcion(void* stream){
+    t_interrupt* interrupt = malloc(sizeof(t_interrupt));
+    int offset = 0;
+
+    memcpy(&(io_stdin->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    u_int32_t motivo_length;
+    memcpy(&motivo_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    interrupt->motivo_length = motivo_length;
+
+    interrupt->motivo = malloc(motivo_length);
+    memcpy(&(interrupt->motivo), stream + offset, motivo_length);
+    offset += motivo_length;
+
+    return interrupt;
+}
+
+t_interrupt* new_interupt(u_int32_t pid, char* motivo){
+    t_interrupt* interrupt = malloc(sizeof(t_interrupt));
+    if (interrupt == NULL) {
+        return NULL; 
+    }
+
+    interrupt->pid = pid;
+    interrupt->motivo_length = string_length(motivo);
+    interrupt->motivo = strdup(motivo);
+    
+    return interrupt;
+}

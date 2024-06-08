@@ -63,6 +63,12 @@ typedef struct{
     char* interfaz;    
 } t_io_stdin;
 
+typedef struct{
+    u_int32_t pid;
+    u_int32_t motivo_length;
+    char* motivo;    //crear una lista de interrupciones como cree la lista de comandos
+} t_interrupt;
+
 void init_reg_proceso_actual(void);
 void io_gen_sleep(char* interfaz, char* job_unit);
 void set(char* registro, char* valor);
@@ -94,6 +100,10 @@ t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address);
 void io_stdin_read(char* interfaz, char* logicalAdress, int tamanio);
 void io_stdin_write(char* interfaz, char* logicalAdress, int tamanio);
 
+void serializar_interrupcion(t_interrupcion* int, t_buffer* buffer);
+t_interrupt* deserializar_interrupcion(void* stream);
+t_interrupt* new_interupt(u_int32_t pid, char* motivo);
+
 //from long term scheduler (to sincronize):
 
 typedef enum {
@@ -107,5 +117,8 @@ typedef enum {
 
 
 void check_interrupt (void);
+
+t_list* interruptions_list;
+sem_t interruptions_list_sem = 1;
 
 #endif

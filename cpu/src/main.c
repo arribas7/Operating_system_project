@@ -141,22 +141,23 @@ int ejecutarServidorCPU(int server_fd)
             }
             enviar_mensaje("CPU: recibido PCBS del kernel OK", cliente_fd);
             break;
-        case INTERRUPT:
-            t_list *int_lista = recibir_paquete(cliente_fd);
-            for (int i = 0; i < list_size(lista); i++)
-            {
-                void *pcb_buffer = list_get(lista, i);
-                t_pcb *pcb = deserialize_pcb(pcb_buffer);
-                free(pcb_buffer);
-                if (pcb != NULL)
+        case INTERRUPT: //aqui debe ser el motivo de la interrupcion
+                t_list *lista = recibir_paquete(cliente_fd);
+                for (int i = 0; i < list_size(lista); i++)
                 {
-                    // Agrego el pcb a la lista de interrupciones
-
-                }
-                else
-                {
-                    log_error(logger, "Error al deserializar el PCB");
-                }
+                    void *int_buffer = list_get(lista, i);
+                    t_interrupt* interrupt = deserializar_interrupcion(int_buffer);
+                    free(int_buffer);
+                    if (interrupt != NULL)
+                    {
+                        sem_wait(&interruptions_list_sem);
+                        list_add(interruptions_list,interrupt);
+                        sem_post(&interruptions_list_sem);
+                    }
+                    else
+                    {
+                        log_error(logger, "Error al deserializar interrupcion");
+                    }
             }
         case -1:
             log_error(logger, "El cliente se desconectó. Terminando servidor");
