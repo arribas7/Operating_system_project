@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
     /* -------Dispatch Testing Start------- */
     //Cpu module needs to be running for this to work
     t_pcb *pcb = new_pcb(999, 0, "my/test/path");
-    KERNEL_DISPATCH(pcb, config);
+    response_code code = KERNEL_DISPATCH(pcb, config);
+    log_info(logger, "Response code is %d", code);
     /* -------Dispatch Testing Finish------- */
 
     atomic_init(&pid_count, 0);
