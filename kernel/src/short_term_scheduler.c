@@ -1,5 +1,6 @@
 #include "short_term_scheduler.h"
 #include <utils/cpu.h>
+#include <quantum.h>
 
 t_pcb* fifo(){
     pthread_mutex_lock(&mutex_ready);
@@ -20,7 +21,7 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check if we're managing 
 
 t_pcb* round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    list_sort(list_READY, compare_pcb_priority);
+    list_sort(list_READY, rr_pcb_priority);
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
@@ -95,15 +96,15 @@ void st_sched_ready_running(void* arg) {
     char *selection_algorithm = (char *) arg;
     log_debug(logger, "Initializing short term scheduler (ready->running) with selection algorithm: %s...", selection_algorithm);
 
-    // TODO: Quantum thread
-    // TODO: Maybe change the logger for this?
-    // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
-    /*t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
-
-    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
-        log_error(logger, "Error creating console thread");
-        return -1;
-    }*/
+    if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+        pthread_t quantum_counter_thread;
+        t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
+        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
+            log_error(logger, "Error creating quantum thread");
+            return;
+        }
+        pthread_join(&quantum_counter_thread, NULL);
+    }
 
     while (1) {
         sem_wait(&sem_all_scheduler); // Wait for the semaphore to be available
@@ -116,6 +117,7 @@ void st_sched_ready_running(void* arg) {
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
             
+            // TODO: Send quantum reset signal if it's rr or vrr
             pthread_t cpu_dispatch_thread;
             if (pthread_create(&cpu_dispatch_thread, NULL, cpu_dispatch, config) != 0) {
                 log_error(logger, "Error creating cpu dispatch thread");

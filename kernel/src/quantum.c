@@ -108,7 +108,7 @@ int run_quantum_counter(t_quantum_thread_params *params)
                 timer_variable = temporal_create();
 
                 // Send a message somehow to change the current running pcb in here
-                log_info(logger, "Quantum Cumplido");
+                log_trace(logger, "Quantum Cumplido");
             }
         }
         else

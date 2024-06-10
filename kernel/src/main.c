@@ -13,7 +13,6 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
-#include <quantum.h>
 
 extern t_list *list_NEW;
 pthread_mutex_t mutex_new;
