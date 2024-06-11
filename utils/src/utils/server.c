@@ -138,5 +138,3 @@ t_list* recibir_paquete(int socket_cliente)
     free(buffer);
     return valores;
 }
-
-
