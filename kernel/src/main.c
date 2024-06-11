@@ -15,6 +15,7 @@
 #include <utils/inout.h>
 #include <utils/cpu.h>
 #include <quantum.h>
+#include <communication_kernel_cpu.h>
 
 extern t_list *list_NEW;
 extern t_list *list_READY;
@@ -57,6 +58,13 @@ int main(int argc, char *argv[]) {
     if (config == NULL) {
         return -1;
     }
+
+    /* -------Dispatch Testing Start------- */
+    //Cpu module needs to be running for this to work
+    t_pcb *pcb = new_pcb(999, 0, "my/test/path");
+    response_code code = KERNEL_DISPATCH(pcb, config);
+    log_info(logger, "Response code is %d", code);
+    /* -------Dispatch Testing Finish------- */
 
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");

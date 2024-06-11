@@ -32,6 +32,15 @@ void *list_pop(t_list *list) {
     return popped_element;
 }
 
+void *list_get_first(t_list *list) {
+    if (list == NULL || list->elements_count == 0) {
+        return NULL;
+    }
+
+    void *first_element = list_remove(list, 0);
+    return first_element;
+}
+
 void *log_list_contents(t_log *logger, t_list *list) {
     if (list == NULL) {
         log_info(logger, "List is NULL. It needs to be initialized with initialize_lists();");
