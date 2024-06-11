@@ -25,18 +25,6 @@ typedef struct {
     uint32_t DI;
 } t_reg_cpu;
 
-
-typedef struct instruction {
-    u_int32_t pid;
-    char* interfaz;
-    char* job_unit;
-} t_instruction;
-
-
-t_instruction* deserializar_instruction_IO (void* stream);
-void serializar_instruccion_IO(t_instruction* IO, t_buffer* buffer);
-
-
 t_reg_cpu* nuevo_reg(uint8_t pc);
 
 void serializar_reg(t_reg_cpu* reg, t_buffer* buffer);
