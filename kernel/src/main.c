@@ -13,6 +13,7 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
+#include <utils/cpu.h>
 #include <quantum.h>
 #include <communication_kernel_cpu.h>
 
@@ -72,8 +73,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sem_all_scheduler, 0, 1);
     pthread_mutex_init(&mutex_multiprogramming, NULL);
 
-
-    pthread_t server_thread, console_thread, lt_sched_new_ready_thread, quantum_counter_thread;
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread,hilo_cpu, quantum_counter_thread;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     // TODO: Use a new log with other name for each thread?
@@ -81,12 +81,16 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error creating server thread");
         return -1;
     }
-
-    if (pthread_create(&console_thread, NULL, (void*) interactive_console, config) != 0) {
-        log_error(logger, "Error creating console thread");
+    // Creación y ejecución del hilo de la consola
+    if (pthread_create(&hilo_consola, NULL, consola_interactiva, config) != 0) {
+        log_error(logger, "Error al crear el hilo de la consola");
         return -1;
     }
 
+    // Creación y ejecución del hilo de CPU
+    if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
+        log_error(logger, "Error al crear el hilo de la CPU");
+    }
 
     //TODO: Maybe change the logger for this?
     // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
@@ -102,11 +106,14 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    // Esperar a que los hilos terminen
     pthread_join(server_thread, NULL);
+    pthread_join(hilo_cpu, NULL);
     pthread_join(console_thread, NULL);
     pthread_join(quantum_counter_thread, NULL);
     pthread_join(lt_sched_new_ready_thread, NULL);
 
+    // TODO: Esperar a que los hilos den señal de terminado para limpiar la config.
     clean(config);
     return 0;
 }
@@ -170,25 +177,44 @@ void* dispatch(void* arg){
     t_config *config = (t_config *) arg;
     int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
-    t_pcb *pcb = new_pcb(22, 0, "");
+    t_pcb *pcb = new_pcb(22, 0, "/home/utn/");
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serialize_pcb(pcb, buffer);
 
     t_paquete *paquete = crear_paquete(DISPATCH);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
 
-
-    pcb = new_pcb(9, 0, "");
-    buffer = malloc(sizeof(t_buffer));
-    serialize_pcb(pcb, buffer);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
     enviar_paquete(paquete, conexion_cpu);
     eliminar_paquete(paquete);
     delete_pcb(pcb);
 
-    response_code code = esperar_respuesta(conexion_cpu);
-    log_info(logger, "Response code: %d", code);
+    recibir_operacion(conexion_cpu); // va a ser cod_op: CPU ACK
+    recibir_mensaje(conexion_cpu);
+
+    while (1) {
+        int cod_op = recibir_operacion(conexion_cpu);
+        switch (cod_op) {
+            case IO_GEN_SLEEP:
+                t_list* lista = recibir_paquete(conexion_cpu);
+                void *instruction_buffer;
+                t_instruction* instruction;
+                for(int i = 0; i< list_size(lista); i ++){
+                    instruction_buffer = list_get(lista, i);
+                    instruction = deserializar_instruction_IO(instruction_buffer);
+                    log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
+                }
+                free(instruction_buffer);
+                break;
+            case -1:
+                log_error(logger, "el cliente se desconecto. Terminando servidor");
+                return EXIT_FAILURE;
+            break;
+            default:
+                log_warning(logger, "Operacion desconocida. No quieras meter la pata");
+                break;
+        }
+        sleep(15);
+    }
 
     liberar_conexion(conexion_cpu);
     log_debug(logger, "CPU connection released");

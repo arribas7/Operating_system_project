@@ -10,7 +10,6 @@
 #include<commons/string.h>
 #include<commons/log.h>
 #include <commons/config.h>
-
 typedef enum {
     MENSAJE,
     PAQUETE,
@@ -29,6 +28,13 @@ typedef enum {
     
     // CPU -> MEMORY
     PC,
+    WRITE,
+    TLB_MISS,
+    INSTRUCTION,
+    TAM_PAG,
+    REG_REQUEST,
+    RESIZE,
+    COPY_STRING,
 
     // CPU -> KERNEL -> IO -> MEMORY
     IO_GEN_SLEEP,
