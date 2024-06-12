@@ -121,12 +121,11 @@ int correr_servidor(void *arg) {
                 log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
                 log_info(logger, "quantum: %d", pcb->quantum);
-                //log_info(logger, "reg->dato: %d", pcb->reg->dato);
-                //log_info(logger, "path: %d", pcb->path);
-                //const char *path_info = pcb->path; 
-                //u_int32_t pid = pcb->pid; //KEY TO DICTIONARY
-                const char *path_info = "file1";//memory.config contains relative path
-                u_int32_t pid = 20;
+                log_info(logger, "path: %d", pcb->path);
+                const char *path_info = pcb->path; 
+                u_int32_t pid = pcb->pid; //KEY TO DICTIONARY
+                // const char *path_info = "file1";//memory.config contains relative path
+                //u_int32_t pid = 20;
                 // Simulación de operación CREATE_PROCESS
                 handle_create_process("path_info", pid);
                 }

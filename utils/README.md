@@ -15,6 +15,8 @@
 
 - Variables globales, debemos usar mutex? -> Debemos proteger todas las variables globales. Por cada variable global tiene que haber un mutex.
 
+==========================================================================
+
 
 #### MEMORIA
 - Usar un dictionary con key=pid, value=list de instrucciones
