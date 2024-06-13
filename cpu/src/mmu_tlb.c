@@ -71,8 +71,7 @@ int solicitar_tam_pag_a_mem(void){
 }
 
 
-int recibir_tam_pag(int socket_cliente)
-{
+int recibir_tam_pag(int socket_cliente){
     int size;
     int* tam_pag = recibir_buffer(&size, socket_cliente);
     log_debug(logger, "Tam pag received.. %d", *tam_pag);

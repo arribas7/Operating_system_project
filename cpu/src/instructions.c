@@ -37,11 +37,11 @@ int buscar(char *elemento, char **lista) //buscar un elemento en una lista
     return (i > string_array_size(lista)) ? -1 : i;
 }
 
-void init_reg_proceso_actual(void){
+int init_reg_proceso_actual(void){
     reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
     if (reg_proceso_actual == NULL) {
         fprintf(stderr, "Error al asignar memoria\n");
-        return 1;
+        return -1;
     }
 
     reg_proceso_actual->AX = 0;
@@ -54,6 +54,8 @@ void init_reg_proceso_actual(void){
     reg_proceso_actual->EDX = 0;
     reg_proceso_actual->PC = 0;
     reg_proceso_actual->SI = 0;
+
+    return 1;
 }
 
 int valueOfReg (char* reg){
@@ -156,7 +158,10 @@ void execute(t_pcb *pcb)
             copy_string(instr_decode[1]);
         break;
         case _WAIT:
-            
+
+        break;
+        case _RESIZE:
+    
         break;   
         case _SIGNAL:
              
@@ -171,22 +176,22 @@ void execute(t_pcb *pcb)
             io_stdin_write(instr_decode[1],instr_decode[2],instr_decode[3]);
         break;
         case _IO_FS_CREATE:
-             
+            io_fs_create(instr_decode[1],instr_decode[2]);
         break;
         case _IO_FS_DELETE:
-             
+            io_fs_delete(instr_decode[1],instr_decode[2]);
         break;
         case _IO_FS_TRUNCATE:
-             
+            io_fs_truncate(instr_decode[1],instr_decode[2],instr_decode[3]);
         break;
         case _IO_FS_WRITE:
-             
+            io_fs_write(instr_decode[1],instr_decode[2],instr_decode[3],instr_decode[4],instr_decode[5]); 
         break;
         case _IO_FS_READ:
-             
+            io_fs_read(instr_decode[1],instr_decode[2],instr_decode[3],instr_decode[4],instr_decode[5]);
         break;
         case _EXIT:
-        
+            exxxit(pcb_en_ejecucion);
         break;
         default:
         break;
@@ -195,33 +200,15 @@ void execute(t_pcb *pcb)
 
 void check_interrupt (void){
 
-    bool check;
-    
-    sem_wait(&interruptions_list_sem);
-    check = list_is_empty(interruptions_list);
-    sem_post(&interruptions_list_sem);
 
-    if(!check){
-        sem_wait(&interruptions_list_sem);
-        t_interrupt* interrupt = list_get(interruptions_list,0);
-        sem_post(&interruptions_list_sem);
+    //t_paquete* interrupt = crear_paquete(QUANTUM_FINISHED); //POR EJEMPLO Q FINISHED
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    serialize_pcb(pcb_en_ejecucion, buffer);
 
-        if(interrupt->pid == pcb_en_ejecucion->pid){
-            int motivo_interrupt = buscar(interrupt->motivo,lista_motivos_interrupt); //de la lista de motivos de interrupcion (simil a lista de comandos)
-            t_paquete* interrupt = crear_paquete(motivo_interrupt); //motivo_interrupt coincidira con el enum de la lista de motivos de interrupcion
-            t_buffer* buffer = malloc(sizeof(t_buffer));
-            serialize_pcb(pcb_en_ejecucion, buffer); 
 
-            enviar_paquete(interrupt,cliente_fd); //envio el pcb en ejecucion al kernel con el motivo como code_op
-            eliminar_paquete(interrupt);          
-        }    
-        else{
-            sem_wait(&interruptions_list_sem);
-            list_clean_and_destroy_elements(interruptions_list); //o solo list_clean?
-            sem_post(&interruptions_list_sem);
-        }
-    }
+
 }
+
 
 
 //INSTRUCTIONS:
@@ -390,11 +377,11 @@ char* recibir_ack_resize(int conexion_mem){
 
 //COPY_STRING:
 
-void copy_string (int tamanio){
+void copy_string (char* tamanio){
     t_paquete* copy_string_paq = crear_paquete(COPY_STRING);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_copy_string* copy_string = new_copy_string(tamanio);
+    t_copy_string* copy_string = new_copy_string(atoi(tamanio));
 
     serializar_copy_string(copy_string,buffer);
 
@@ -567,6 +554,7 @@ t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address){
 }
 
 
+//check_interrupt:
 
 
 void serializar_interrupcion(t_interrupt* interrupt, t_buffer* buffer){
@@ -581,14 +569,14 @@ void serializar_interrupcion(t_interrupt* interrupt, t_buffer* buffer){
     buffer->stream = malloc(size);
 
     //serializo:
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->pid), sizeof(u_int32_t));
+    memcpy(buffer->stream + buffer->offset, &(interrupt->pid), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
     u_int32_t motivo_length = strlen(interrupt->motivo) + 1;
     memcpy(buffer->stream + buffer->offset, &(motivo_length), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy(buffer->stream + buffer->offset, io_stdin->interfaz, motivo_length);
+    memcpy(buffer->stream + buffer->offset, interrupt->motivo, motivo_length);
     buffer->offset += motivo_length;
 }
 
@@ -596,7 +584,8 @@ t_interrupt* deserializar_interrupcion(void* stream){
     t_interrupt* interrupt = malloc(sizeof(t_interrupt));
     int offset = 0;
 
-    memcpy(&(io_stdin->pid), stream + offset, sizeof(u_int32_t));
+
+    memcpy(&(interrupt->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
     u_int32_t motivo_length;
@@ -623,4 +612,212 @@ t_interrupt* new_interupt(u_int32_t pid, char* motivo){
     interrupt->motivo = strdup(motivo);
     
     return interrupt;
+}
+
+//IO_FS_CREATE e IO_FS_DELETE
+void io_fs_create(char* interfaz, char* nombre_archivo){
+    t_paquete* io_fs_create = crear_paquete(IO_FS_CREATE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+
+    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,0,0);
+    serializar_interfaz(_interfaz,buffer);
+
+    agregar_a_paquete(io_fs_create,buffer->stream,buffer->size);
+    enviar_paquete(io_fs_create,cliente_fd);
+    eliminar_paquete(io_fs_create);
+}
+
+void io_fs_delete(char* interfaz, char* nombre_archivo){
+    t_paquete* io_fs_delete = crear_paquete(IO_FS_DELETE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));    
+
+    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,0,0);
+    serializar_interfaz(_interfaz,buffer);
+
+    agregar_a_paquete(io_fs_delete,buffer->stream,buffer->size);
+    enviar_paquete(io_fs_delete,cliente_fd);
+    eliminar_paquete(io_fs_delete);
+}
+
+//IO_FS:
+
+void serializar_interfaz(t_interfaz* interfaz, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size;
+    if(interfaz->interfaz != NULL){
+        size+= sizeof(u_int32_t);
+        size+= string_length(interfaz->interfaz) + 1;
+    }
+
+    if(interfaz->nombre_archivo != NULL){
+        size+= sizeof(u_int32_t);
+        size+= string_length(interfaz->nombre_archivo) + 1;
+    }
+
+    size+= sizeof(u_int32_t) * 3;
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    u_int32_t interfaz_length = strlen(interfaz->interfaz) + 1;
+    memcpy(buffer->stream + buffer->offset, &(interfaz_length), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, interfaz->interfaz, interfaz_length);
+    buffer->offset += interfaz_length;
+
+    u_int32_t nombre_archivo_length = strlen(interfaz->nombre_archivo) + 1;
+    memcpy(buffer->stream + buffer->offset, &(nombre_archivo_length), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, interfaz->nombre_archivo, nombre_archivo_length);
+    buffer->offset += nombre_archivo_length;
+
+    memcpy(buffer->stream + buffer->offset, &(interfaz->direccion_fisica), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(interfaz->tamanio_bytes), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(interfaz->puntero_archivo), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+}
+
+t_interfaz* deserializar_interfaz(void* stream){
+    t_interfaz* interfaz = malloc(sizeof(t_interfaz));
+    int offset = 0;
+
+    u_int32_t interfaz_length;
+    memcpy(&interfaz_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    interfaz->interfaz_length = interfaz_length;
+
+    interfaz->interfaz = malloc(interfaz_length);
+    memcpy(&(interfaz->interfaz), stream + offset, interfaz_length);
+    offset += interfaz_length;
+
+    u_int32_t nombre_archivo_length;
+    memcpy(&nombre_archivo_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    interfaz->nombre_archivo_length = nombre_archivo_length;
+
+    interfaz->nombre_archivo = malloc(nombre_archivo_length);
+    memcpy(&(interfaz->nombre_archivo), stream + offset, nombre_archivo_length);
+    offset += nombre_archivo_length;
+
+    memcpy(&(interfaz->direccion_fisica), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(interfaz->tamanio_bytes), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(interfaz->puntero_archivo), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    return interfaz;
+}
+
+//en caso de no necesitar algun argumento poner 0 o NULL
+t_interfaz* new_interfaz(char* interfazs, char* nombre_archivo, u_int32_t direccion_fisica, u_int32_t tamanio_bytes, u_int32_t puntero_archivo){
+    t_interfaz* interfaz = malloc(sizeof(t_interfaz));
+    if (interfaz == NULL) {
+        return NULL; 
+    }
+
+    interfaz->interfaz_length = string_length(interfazs);
+    interfaz->interfaz = strdup(interfazs);
+    interfaz->nombre_archivo_length = string_length(nombre_archivo);
+    interfaz->nombre_archivo = strdup(nombre_archivo);
+    interfaz->direccion_fisica = direccion_fisica;
+    interfaz->tamanio_bytes = tamanio_bytes;
+    interfaz->puntero_archivo = puntero_archivo;
+    
+    return interfaz;
+}
+
+
+//IO_FS_TRUNCATE:
+
+void io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio){
+    t_paquete* io_fs_truncate = crear_paquete(IO_FS_TRUNCATE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));    
+
+    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,/*resolver que aqui se ponga el valor del registro_tamanio*/0,0);
+    serializar_interfaz(_interfaz,buffer);
+
+    agregar_a_paquete(io_fs_delete,buffer->stream,buffer->size);
+
+    enviar_paquete(io_fs_delete,cliente_fd);
+    eliminar_paquete(io_fs_delete);
+}
+
+void io_fs_write(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo){
+    t_paquete* io_fs_write = crear_paquete(IO_FS_WRITE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));    
+
+    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,mmu(obtener_valor_registro(registro_direccion)),obtener_valor_registro(registro_tamanio),obtener_valor_registro(registro_puntero_archivo));
+    serializar_interfaz(_interfaz,buffer);
+
+    agregar_a_paquete(io_fs_write,buffer->stream,buffer->size);
+
+    enviar_paquete(io_fs_write,cliente_fd);
+    eliminar_paquete(io_fs_write);
+}
+
+
+void io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo){
+    t_paquete* io_fs_read = crear_paquete(IO_FS_READ);
+    t_buffer* buffer = malloc(sizeof(t_buffer));    
+
+    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,mmu(obtener_valor_registro(registro_direccion)),obtener_valor_registro(registro_tamanio),obtener_valor_registro(registro_puntero_archivo));
+    serializar_interfaz(_interfaz,buffer);
+
+    agregar_a_paquete(io_fs_read,buffer->stream,buffer->size);
+    enviar_paquete(io_fs_read,cliente_fd);
+    eliminar_paquete(io_fs_read);
+}
+
+
+void exxxit(t_pcb* pcb_en_ejecucion){
+    t_paquete* contexto_actualizado = crear_paquete(EXIT_);
+    t_buffer* buffer = malloc(sizeof(t_buffer));  
+
+    serialize_pcb(pcb_en_ejecucion, buffer);
+    agregar_a_paquete(contexto_actualizado,buffer->stream,buffer->size);
+    enviar_paquete(contexto_actualizado,cliente_fd);
+    eliminar_paquete(contexto_actualizado);
+}
+
+//del pcb en ejecucion
+int obtener_valor_registro (char* registro){
+
+    int valor = 0;
+    //maybe make sense sem for pcb en ejecucion
+    if(!strcmp(registro,"PC"))
+        return pcb_en_ejecucion->pc;
+    if(!strcmp(registro,"AX"))
+        return pcb_en_ejecucion->reg->AX;
+    if(!strcmp(registro,"BX"))
+        return pcb_en_ejecucion->reg->BX;
+    if(!strcmp(registro,"CX"))
+        return pcb_en_ejecucion->reg->CX;
+    if(!strcmp(registro,"DX"))
+        return pcb_en_ejecucion->reg->DX;
+    if(!strcmp(registro,"EAX"))
+        return pcb_en_ejecucion->reg->EAX;
+    if(!strcmp(registro,"EBX"))
+        return pcb_en_ejecucion->reg->EBX;
+    if(!strcmp(registro,"ECX"))
+        return pcb_en_ejecucion->reg->ECX;
+    if(!strcmp(registro,"EDX"))
+        //return pcb_en_ejecucion->reg->EDX;
+    if(!strcmp(registro,"SI"))
+        //return pcb_en_ejecucion->reg->SI;
+    if(!strcmp(registro,"DI"))
+        //return pcb_en_ejecucion->reg->DI;
+
+    return valor;
 }

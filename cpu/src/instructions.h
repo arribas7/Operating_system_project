@@ -69,7 +69,18 @@ typedef struct{
     char* motivo;    //crear una lista de interrupciones como cree la lista de comandos
 } t_interrupt;
 
-void init_reg_proceso_actual(void);
+typedef struct{
+    u_int32_t interfaz_length;
+    char* interfaz;
+    u_int32_t nombre_archivo_length;
+    char* nombre_archivo;
+    u_int32_t direccion_fisica;
+    u_int32_t tamanio_bytes;
+    u_int32_t puntero_archivo;
+} t_interfaz; //para las fs
+
+
+int init_reg_proceso_actual(void);
 void io_gen_sleep(char* interfaz, char* job_unit);
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
@@ -81,6 +92,7 @@ int valueOfReg (char* reg);
 void sum(char* destReg, char* origReg);
 void sub(char* destReg, char* origReg);
 void jnz(char* reg, char* inst);
+void copy_string (char* tamanio);
 
 
 int buscar(char *elemento, char **lista); //to find comando decode
@@ -100,9 +112,22 @@ t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address);
 void io_stdin_read(char* interfaz, char* logicalAdress, int tamanio);
 void io_stdin_write(char* interfaz, char* logicalAdress, int tamanio);
 
-void serializar_interrupcion(t_interrupcion* int, t_buffer* buffer);
+
+void serializar_interrupcion(t_interrupt* interrupt, t_buffer* buffer);
 t_interrupt* deserializar_interrupcion(void* stream);
 t_interrupt* new_interupt(u_int32_t pid, char* motivo);
+
+void serializar_interfaz(t_interfaz* interfaz, t_buffer* buffer);   
+t_interfaz* deserializar_interfaz(void* stream);
+t_interfaz* new_interfaz(char* interfazs, char* nombre_archivo, u_int32_t direccion_fisica, u_int32_t tamanio_bytes, u_int32_t puntero_archivo);
+
+void io_fs_create(char* interfaz, char* nombre_archivo);
+void io_fs_delete(char* interfaz, char* nombre_archivo);
+void io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio);
+void io_fs_write(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
+void io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
+
+void exxxit(t_pcb* pcb_en_ejecucion);
 
 //from long term scheduler (to sincronize):
 
@@ -117,8 +142,5 @@ typedef enum {
 
 
 void check_interrupt (void);
-
-t_list* interruptions_list;
-sem_t interruptions_list_sem = 1;
 
 #endif
