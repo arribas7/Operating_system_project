@@ -13,6 +13,17 @@
 #include <utils/cpu.h>
 #include <files.h>
 
+typedef struct
+{
+     int memory_size; 		//  bytes 
+     int page_size; 		//  bytes 
+     char* port;
+     char* ip;
+     int respond_time;
+} t_memory;
+        
+extern t_memory value_memory;
+
 
 // Estructura para representar una página de memoria
 typedef struct {
@@ -38,6 +49,7 @@ typedef struct {
     TablaPaginas tabla_paginas; 
    void *config;
 } MemoriaPrincipal;
+
 
 
 int iniciarMemoria(void);
