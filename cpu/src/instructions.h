@@ -96,10 +96,15 @@ void copy_string (char* tamanio);
 
 
 int buscar(char *elemento, char **lista); //to find comando decode
+typedef struct{
+    u_int32_t pid;
+    u_int32_t tamanio;
+} t_resize;
 
-//TO DO:
-//IO_STDIN_READ, IO_STDOUT_WRITE.
-void resize(int tamanio);
+t_resize* new_resize(u_int32_t tamanio);
+void resize(char* tamanio);
+void serializar_resize(t_resize* resize, t_buffer* buffer);
+t_resize* deserializar_resize(void* stream);
 char* recibir_ack_resize(int conexion_mem);
 t_copy_string* new_copy_string(int tamanio);
 void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer);
@@ -126,9 +131,18 @@ void io_fs_delete(char* interfaz, char* nombre_archivo);
 void io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio);
 void io_fs_write(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
 void io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
-
 void exxxit(t_pcb* pcb_en_ejecucion);
 
+typedef struct{
+    u_int32_t recurso_length;
+    char* recurso;
+} t_ws;
+
+void wait (char* recurso);
+void inst_signal (char* recurso);
+t_ws* new_ws(char* recurso);
+void serializar_wait_o_signal(t_ws* ws, t_buffer* buffer);
+t_ws* deserializar_wait_o_signal(void* stream);
 //from long term scheduler (to sincronize):
 
 typedef enum {

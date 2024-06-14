@@ -158,13 +158,13 @@ void execute(t_pcb *pcb)
             copy_string(instr_decode[1]);
         break;
         case _WAIT:
-
+            wait(instr_decode[1]);
         break;
         case _RESIZE:
-    
+            resize(instr_decode[1]);
         break;   
         case _SIGNAL:
-             
+            inst_signal(instr_decode[1]);
         break;
         case _IO_GEN_SLEEP:
             io_gen_sleep(instr_decode[1],instr_decode[2]);
@@ -338,43 +338,6 @@ void jnz(char* reg, char* inst){
 
     //log_info(logger, "PC in actual process after: %d", reg_proceso_actual->PC); //funciona probe init reg proceso actual con AX = 1
 }
-
-void resize(int tamanio){
-    //solicitar a mem ajustar el tamaño del proceso a tamanio, deberia ser un opCode que reciba mem
-
-    //armar paquete con opcode RESIZE
-    t_paquete* resize = crear_paquete(RESIZE);
-    t_buffer* buffer = malloc(sizeof(t_buffer));
-    serialize_pcb(pcb_en_ejecucion,buffer);
-
-    agregar_a_paquete(resize,buffer->stream,buffer->size);
-    enviar_paquete(resize,conexion_mem);
-
-    //if out of memory como respuesta
-    char* ack = strdup(recibir_ack_resize(conexion_mem));
-
-    if(!strcmp(ack,"Out of memory")){
-        //devolver contexto ej a kernel informando esto.
-        t_paquete* out_of_memory = crear_paquete(OUT_OF_MEMORY);
-        agregar_a_paquete(out_of_memory,buffer->stream,buffer->size);
-        enviar_paquete(out_of_memory,cliente_fd);
-        eliminar_paquete(out_of_memory);
-    }
-    else
-        log_info(logger, "PID: <%d> - Accion: <%s> - New Size: <%d>", pcb_en_ejecucion->pid, "RESIZE", tamanio);   
-
-
-    eliminar_paquete(resize);
-}
-
-char* recibir_ack_resize(int conexion_mem){
-    int size;
-    char* ack;
-    ack = recibir_buffer(&size, conexion_mem);
-    log_info(logger, "ACK RESIZE received... %s", ack);
-    return ack;
-}
-
 //COPY_STRING:
 
 void copy_string (char* tamanio){
@@ -821,3 +784,152 @@ int obtener_valor_registro (char* registro){
 
     return valor;
 }
+
+//RESIZE, WAIT Y SIGNAL:
+
+t_resize* new_resize(u_int32_t tamanio){
+    t_resize* resize = malloc(sizeof(t_resize));
+
+    resize->pid = pcb_en_ejecucion->pid;
+    resize->tamanio = tamanio;
+
+    return resize;
+} 
+
+void resize(char* tamanio){
+    //solicitar a mem ajustar el tamaño del proceso a tamanio, deberia ser un opCode que reciba mem
+
+    //armar paquete con opcode RESIZE
+    t_paquete* resizep = crear_paquete(RESIZE);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    t_resize* resize = new_resize(atoi(tamanio));
+
+    serializar_resize(resize,buffer);
+    agregar_a_paquete(resizep,buffer->stream,buffer->size);
+    enviar_paquete(resizep,conexion_mem);
+
+    //if out of memory como respuesta
+    char* ack = strdup(recibir_ack_resize(conexion_mem));
+
+    if(!strcmp(ack,"Out of memory")){
+        //devolver contexto ej a kernel informando esto.
+        t_paquete* out_of_memory = crear_paquete(OUT_OF_MEMORY);
+        serialize_pcb(pcb_en_ejecucion,buffer);
+        agregar_a_paquete(out_of_memory,buffer->stream,buffer->size);
+        enviar_paquete(out_of_memory,cliente_fd);
+        eliminar_paquete(out_of_memory);
+    }
+    else
+        log_info(logger, "PID: <%d> - Accion: <%s> - New Size: <%d>", pcb_en_ejecucion->pid, "RESIZE", atoi(tamanio));   
+
+
+    eliminar_paquete(resize);
+}
+
+void serializar_resize(t_resize* resize, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) * 2;
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(resize->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(resize->tamanio), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+}
+
+t_resize* deserializar_resize(void* stream){
+    t_resize* resize = malloc(sizeof(t_resize));
+    int offset = 0;
+
+    memcpy(&(resize->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(resize->tamanio), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    return resize;
+}
+
+char* recibir_ack_resize(int conexion_mem){
+    int size;
+    char* ack;
+    ack = recibir_buffer(&size, conexion_mem);
+    log_info(logger, "ACK RESIZE received... %s", ack);
+    return ack;
+}
+
+void wait (char* recurso){
+    t_ws* ws = new_ws(recurso);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    t_paquete* wsp = crear_paquete(WAIT);
+
+    serializar_wait_o_signal(ws,buffer);
+    agregar_a_paquete(wsp,buffer->stream,buffer->size);
+    enviar_paquete(wsp,cliente_fd);
+
+    eliminar_paquete(wsp);
+}
+
+void inst_signal (char* recurso){
+    t_ws* ws = new_ws(recurso);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
+    t_paquete* wsp = crear_paquete(SIGNAL);
+
+    serializar_wait_o_signal(ws,buffer);
+    agregar_a_paquete(wsp,buffer->stream,buffer->size);
+    enviar_paquete(wsp,cliente_fd);
+
+    eliminar_paquete(wsp);
+}
+
+
+t_ws* new_ws(char* recurso){
+    t_ws* ws = malloc(sizeof(t_ws));
+
+    ws->recurso_length = string_length(recurso);
+    ws->recurso = strdup(recurso);
+
+    return ws;
+}
+
+void serializar_wait_o_signal(t_ws* ws, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size;
+    if(ws->recurso != NULL){
+        size+= sizeof(u_int32_t);
+        size+= string_length(ws->recurso) + 1;
+    }
+
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    u_int32_t recurso_length = strlen(ws->recurso) + 1;
+    memcpy(buffer->stream + buffer->offset, &(recurso_length), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, ws->recurso, recurso_length);
+    buffer->offset += recurso_length;
+}
+
+t_ws* deserializar_wait_o_signal(void* stream){
+    t_ws* ws = malloc(sizeof(t_ws));
+    int offset = 0;
+
+    u_int32_t recurso_length;
+    memcpy(&recurso_length, stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    ws->recurso_length = recurso_length;
+
+    ws->recurso = malloc(recurso_length);
+    memcpy(&(ws->recurso), stream + offset, recurso_length); //esta bien el primer argumento o es sin el &
+    offset += recurso_length;
+
+    return ws;
+}
+

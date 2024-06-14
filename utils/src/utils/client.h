@@ -25,6 +25,7 @@ typedef enum {
     RELEASE,
     TIMEOUT,
     WAIT,
+    SIGNAL,
     
     // CPU -> MEMORY
     PC,
