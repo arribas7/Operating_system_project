@@ -1,12 +1,14 @@
 #include <memoria.h>
 #include <files.h>
 
-t_memory value_memory;
+t_memory memory;
 t_config *config;
 t_log* logger;
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
+    
+  
       config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
@@ -14,11 +16,11 @@ int main(int argc, char *argv[]) {
     }
            
 	
-    value_memory.memory_size = config_get_int_value(config,"TAM_MEMORIA");
-    value_memory.page_size = config_get_int_value(config,"TAM_PAGINA");
-    value_memory.port = config_get_string_value(config,"PUERTO");
-    value_memory.ip = config_get_string_value(config,"IP");
-    value_memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
+    memory.memory_size = config_get_int_value(config,"TAM_MEMORIA");
+    memory.page_size = config_get_int_value(config,"TAM_PAGINA");
+    memory.port = config_get_string_value(config,"PUERTO");
+    memory.ip = config_get_string_value(config,"IP");
+    memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
     
     logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_INFO);
     if (logger == NULL) {
@@ -40,7 +42,7 @@ int main(int argc, char *argv[]) {
     pthread_t hilo_servidor;
     //t_config *config;
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    // TODO: Podemos usar un nuevo log y otro name para loggear en el server
+    // El servidor se corre en un hilo
     if (pthread_create(&hilo_servidor, NULL, (void*)correr_servidor, puerto) != 0) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
