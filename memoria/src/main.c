@@ -1,22 +1,34 @@
 #include <memoria.h>
 #include <files.h>
-t_log *logger;
+
+t_memory memory;
 t_config *config;
-
-
-
+t_log* logger;
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
-    t_config *config;
+    
+  
+      config = config_create("memoria.config");
+    if (config == NULL) {
+        perror("memoria.config creation failed");
+        exit(EXIT_FAILURE);
+    }
+           
+	
+    memory.memory_size = config_get_int_value(config,"TAM_MEMORIA");
+    memory.page_size = config_get_int_value(config,"TAM_PAGINA");
+    memory.port = config_get_string_value(config,"PUERTO");
+    memory.ip = config_get_string_value(config,"IP");
+    memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
+    
     logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_INFO);
     if (logger == NULL) {
         return -1;
     }
-    config = config_create("memoria.config");
-    if (config == NULL) {
-        return -1;
-    }
+     /*-------------------Pagination----------------------------*/
+
+    initPaging();
   
     /*-------------------Test diccionary----------------------------*/
     const char *file_path="scripts-pruebas/file1";
@@ -28,9 +40,9 @@ int main(int argc, char *argv[]) {
     /* ---------------- Hilos ---------------- */
 
     pthread_t hilo_servidor;
-  
+    //t_config *config;
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    // TODO: Podemos usar un nuevo log y otro name para loggear en el server
+    // El servidor se corre en un hilo
     if (pthread_create(&hilo_servidor, NULL, (void*)correr_servidor, puerto) != 0) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;

@@ -28,6 +28,8 @@ void instruction_dictionary_free(InstructionDictionary *dict);
 void load_instructions_from_file(InstructionDictionary *dict, FILE *file);
 const char *get_complete_instruction(const InstructionDictionary *dict, int index);
 FILE *open_file(const char *file_path);
-void handle_create_process(const char *file_path, uint32_t pid);
 void send_instruction(const char *instruction, int socket_cliente);
+
+
+
 #endif // FILES_H
