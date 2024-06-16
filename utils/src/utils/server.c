@@ -134,8 +134,7 @@ t_list* recibir_paquete(int socket_cliente)
         desplazamiento+=tamanio;
         list_add(valores, valor);
     }
+    
     free(buffer);
     return valores;
 }
-
-
