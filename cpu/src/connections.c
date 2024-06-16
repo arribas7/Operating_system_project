@@ -1,0 +1,107 @@
+#include "connections.h"
+
+int recibir_req(int socket_cliente)
+{
+    int size;
+    char* req;
+    req = recibir_buffer(&size, socket_cliente);
+    log_info(logger, "REQ received... %s", req);
+    return atoi(req);
+}
+
+
+void serializar_request(t_request* request, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) + sizeof(int);
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(request->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(request->req), sizeof(int));
+    buffer->offset += sizeof(int);
+}
+
+t_request* deserializar_request(void* stream){
+    t_request* request = malloc(sizeof(t_request));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(request->req), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return request;
+}
+
+t_request* new_request (u_int32_t pid, int req){
+    t_request* new_req = malloc(sizeof(t_request));
+    if (new_req == NULL) {
+        return NULL; 
+    }
+
+    new_req->pid = pid;
+    new_req->req = req;
+
+    return new_req;
+}
+
+int requestFrameToMem (int numPag){
+    t_paquete* peticion = crear_paquete(TLB_MISS); //this opcode receive in mem
+    t_request* request = new_request(pcb_en_ejecucion->pid, numPag);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_request(request, buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
+    //armar la funcion deserializadora de este paquete para recibirlo bien en memoria
+    enviar_paquete(peticion, conexion_mem);
+    eliminar_paquete(peticion);
+
+    recibir_operacion(conexion_mem); //FRAME O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
+    int marco = recibir_req(conexion_mem); 
+
+    log_info(logger, "PID: <%d> - Accion: <%s> - Pagina: <%d> - Marco: <%d>", pcb_en_ejecucion->pid, "OBTENER MARCO", numPag, marco);
+
+    return marco;
+}
+
+void putRegValueToMem(int fisicalAddress, int valor){
+    t_paquete* peticion = crear_paquete(WRITE); //this opcode receive in mem
+    //int tamReg = obtenerTamanioReg(reg);
+
+    agregar_a_paquete(peticion, &(pcb_en_ejecucion->pid), sizeof(uint32_t));
+    agregar_a_paquete(peticion, &fisicalAddress, sizeof(int));
+    agregar_a_paquete(peticion, &valor, sizeof(int)); 
+    //armar la funcion deserializadora de este paquete para recibirlo bien en memoria
+    enviar_paquete(peticion, conexion_mem);
+    eliminar_paquete(peticion);
+
+    recibir_operacion(conexion_mem);
+    recibir_mensaje(conexion_mem); //receive ack from mem "guarde lo q me pediste"
+
+    log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "WRITE", fisicalAddress, valor);
+}
+
+int requestRegToMem (int fisicalAddr){
+    t_paquete* peticion = crear_paquete(REG_REQUEST); //this opcode receive in mem
+    t_request* request = new_request(pcb_en_ejecucion->pid, fisicalAddr);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_request(request, buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
+ 
+    enviar_paquete(peticion, conexion_mem);
+    eliminar_paquete(peticion);
+
+    recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
+    int valor = recibir_req(conexion_mem); //receive VALOR DEL REG
+    
+    log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "READ", fisicalAddr, valor);
+
+    return valor;
+}
