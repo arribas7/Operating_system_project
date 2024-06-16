@@ -13,6 +13,8 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
+#include <quantum.h>
+#include <communication_kernel_cpu.h>
 
 extern t_list *list_NEW;
 pthread_mutex_t mutex_new;
@@ -71,6 +73,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    /* -------Dispatch Testing Start------- */
+    //Cpu module needs to be running for this to work
+    t_pcb *pcb = new_pcb(999, 0, "my/test/path");
+    response_code code = KERNEL_DISPATCH(pcb, config);
+    log_info(logger, "Response code is %d", code);
+    /* -------Dispatch Testing Finish------- */
+
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
     atomic_init(&current_multiprogramming_grade, multiprogramming_grade);
@@ -95,6 +104,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    if (pthread_create(&console_thread, NULL, (void*) interactive_console, config) != 0) {
+        log_error(logger, "Error creating console thread");
+        return -1;
+    }
+
+
     if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
         return -1;
@@ -105,7 +120,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    // wait for threads to finish
     pthread_join(server_thread, NULL);
     pthread_join(console_thread, NULL);
     pthread_join(quantum_counter_thread, NULL);

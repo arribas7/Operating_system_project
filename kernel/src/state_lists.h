@@ -46,6 +46,10 @@ void state_list_clean(t_list * list);
 //Broke the usual naming convention to specify that this isn't from list.h but state_list.h
 void state_list_destroy(t_list * list);
 
+//Removes the first element from a list and returns it
+//Returns NULL if the list is empty
+void *list_get_first(t_list *list);
+
 /* ---------------- Lists Usage example ---------------- */
     /*t_pcb *testpcb = new_pcb(1,0,"");
     t_pcb *testpcb2 = new_pcb(2,0,"");
