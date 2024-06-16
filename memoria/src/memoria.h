@@ -34,7 +34,3 @@ int iniciarMemoria(void);
 int correr_servidor(void *arg);
 void clean(t_config *config);
 //void liberarMemoria();
-
-
-
-
