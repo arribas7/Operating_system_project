@@ -23,6 +23,6 @@ void run_quantum_counter(void* arg)
         while (temporal_gettime(timer) >= *quantum_time);
         log_info(logger, "Quantum Cumplido");
 
-        // TODO: Enviar una interrupción al CPU después de que el quantum expire 
+        // TODO: Enviar una interrupción al CPU después de que el quantum expire
     }
 }
