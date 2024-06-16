@@ -1,15 +1,7 @@
 #include "short_term_scheduler.h"
 #include <communication_kernel_cpu.h>
 #include <utils/cpu.h>
-#include <quantum.h>
-
-t_pcb* fifo(){
-    pthread_mutex_lock(&mutex_ready);
-    t_pcb *next_pcb = list_pop(list_READY);
-    pthread_mutex_unlock(&mutex_ready);
-
-    return next_pcb;
-}
+#include <commons/temporal.h>
 
 bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check if we're managing well the fourth criteria, order.
     t_pcb* a = (t_pcb*)pcb1;
@@ -18,6 +10,14 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check if we're managing 
     if (a->prev_state == RUNNING && b->prev_state != RUNNING) return true;
     if (a->prev_state == BLOCKED && b->prev_state == NEW) return true;
     return false;
+}
+
+t_pcb* fifo(){
+    pthread_mutex_lock(&mutex_ready);
+    t_pcb *next_pcb = list_pop(list_READY);
+    pthread_mutex_unlock(&mutex_ready);
+
+    return next_pcb;
 }
 
 t_pcb* round_robin(){
@@ -44,6 +44,30 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
     }
 
     return fifo();
+}
+
+void run_quantum_counter(void* arg) {
+    int* quantum_time = (int*) arg;
+    
+    while (1) {
+        sem_wait(&sem_quantum);
+        t_temporal *timer = temporal_create();
+
+        log_info(logger, "Quantum Iniciado");
+        temporal_resume(timer);
+        while (temporal_gettime(timer) >= *quantum_time);
+        log_info(logger, "Quantum Cumplido");
+
+        pthread_mutex_lock(&mutex_running);
+        if (pcb_RUNNING != NULL) {
+            cpu_interrupt(config);
+            pcb_RUNNING = NULL;
+        }
+        pthread_mutex_unlock(&mutex_running);
+
+        // TODO: We send the interrupt only if pcb_running is not null (it could be finished by other reason).
+
+    }
 }
 
 void handle_pcb_dispatch_return(t_pcb* pcb, op_code response_code){
