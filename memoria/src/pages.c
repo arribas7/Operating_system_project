@@ -26,10 +26,14 @@ int initPaging(void) {
 
     log_info(logger, "Memory has %d frames of %d bytes", frameCount, pageSize);
 
+
+
+
+
        /* ----------------Second Structure ---------------- */
 
 
-    // Inicializar el arreglo para llevar registro de los frames ocupados
+      // Inicializar el arreglo para llevar registro de los frames ocupados
        memory.frames_ocupados = calloc(frameCount, sizeof(bool));
        if (memory.frames_ocupados == NULL) {
        perror("Failed to allocate memory for frame occupancy");
@@ -37,10 +41,10 @@ int initPaging(void) {
        exit(EXIT_FAILURE);
      }
 
-    // establecer todos los elementos del arreglo frames_ocupados a cero
+      // establecer todos los elementos del arreglo frames_ocupados a cero
        memset(memory.frames_ocupados, 0, frameCount * sizeof(bool));
    
-    //memset(mapabits, 0, frameCount / 8); 
+      //memset(mapabits, 0, frameCount / 8); 
     
     /*
     Memory Frame Allocation After memset
@@ -52,12 +56,14 @@ int initPaging(void) {
     | 0 1 2 3 4 5 6 7 | 8 9 10 11 12 13 14 15 | 16 17 18 19 20 21 22 23 | ...
     (Bits representing frames; all bits set to 0)
     */
-    //Se usaran las funciones de gestion de bitarray de las commons :
    
- /* ----------------Third Structure ---------------- */
    
-// Función para crear la tabla de páginas y asignar marcos a cada página
-TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
+
+
+    /* ----------------Third Structure ---------------- */
+   
+    // Función para crear la tabla de páginas y asignar marcos a cada página
+    TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
     // Calculamos el número de marcos necesarios para el proceso
     int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
 
