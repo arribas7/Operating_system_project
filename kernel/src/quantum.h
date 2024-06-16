@@ -10,7 +10,6 @@
 extern t_log *logger;
 extern sem_t sem_quantum;
 
-//Code to run inside the quantum counter thread
 void run_quantum_counter(void *arg);
 
 #endif

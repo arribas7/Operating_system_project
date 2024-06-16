@@ -72,7 +72,7 @@ void clean(t_config *config) {
     free(pcb_RUNNING);
 }
 
-int run_server(void *arg) {
+void run_server(void *arg) {
     char *puerto = (char *) arg;
 
     int server_fd = iniciar_servidor(puerto);
@@ -143,22 +143,22 @@ int main(int argc, char *argv[]) {
     pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
 
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    if (pthread_create(&server_thread, NULL, (void*) run_server, puerto) != 0) {
+    if (pthread_create(&server_thread, NULL, run_server, puerto) != 0) {
         log_error(logger, "Error creating server thread");
         return -1;
     }
 
-    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
+    if (pthread_create(&lt_sched_new_ready_thread, NULL, lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
         return -1;
     }
 
-    if (pthread_create(&st_sched_ready_running_thread, NULL, (void*) st_sched_ready_running, scheduler_algorithm) != 0) {
+    if (pthread_create(&st_sched_ready_running_thread, NULL, st_sched_ready_running, scheduler_algorithm) != 0) {
         log_error(logger, "Error creating short term scheduler thread");
         return -1;
     }
 
-    if (pthread_create(&console_thread, NULL, (void*) interactive_console, config) != 0) {
+    if (pthread_create(&console_thread, NULL, interactive_console, config) != 0) {
         log_error(logger, "Error creating console thread");
         return -1;
     }

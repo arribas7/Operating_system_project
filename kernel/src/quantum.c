@@ -23,6 +23,7 @@ void run_quantum_counter(void* arg)
         while (temporal_gettime(timer) >= *quantum_time);
         log_info(logger, "Quantum Cumplido");
 
-        // TODO: Enviar una interrupción al CPU después de que el quantum expire
+        // TODO: We send the interrupt only if pcb_running is not null (it could be finished by other reason).
+
     }
 }

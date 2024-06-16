@@ -6,6 +6,7 @@
 #include <utils/kernel.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <communication_kernel_cpu.h>
 
 extern t_log* logger;
 extern t_config *config;
@@ -21,7 +22,6 @@ extern sem_t sem_st_scheduler;
 extern int scheduler_paused;
 extern sem_t sem_quantum;
 
-void* st_sched_ready_running(void* arg);
-void* cpu_dispatch(void* arg);
+void st_sched_ready_running(void* arg);
 
 #endif
