@@ -15,6 +15,8 @@
 #include <utils/inout.h>
 #include <short_term_scheduler.h>
 #include <long_term_scheduler.h>
+#include <quantum.h>
+#include <communication_kernel_cpu.h>
 
 extern t_list *list_NEW;
 pthread_mutex_t mutex_new;
