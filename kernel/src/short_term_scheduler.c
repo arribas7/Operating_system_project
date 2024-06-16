@@ -92,14 +92,19 @@ void* cpu_dispatch(void* arg){
     return NULL;
 }
 
-void st_sched_ready_running(void* arg) {
+void handle_pcb_dispatch_return(t_pcb* pcb){
+    // TODO:
+}
+
+void* st_sched_ready_running(void* arg) {
     char *selection_algorithm = (char *) arg;
     log_debug(logger, "Initializing short term scheduler (ready->running) with selection algorithm: %s...", selection_algorithm);
 
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
-        t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
-        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
+        int *quantum_time = config_get_int_value(config, "QUANTUM");
+
+        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, quantum_time) != 0) {
             log_error(logger, "Error creating quantum thread");
             return;
         }
@@ -117,13 +122,26 @@ void st_sched_ready_running(void* arg) {
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
             
-            // TODO: Send quantum reset signal if it's rr or vrr
             pthread_t cpu_dispatch_thread;
             if (pthread_create(&cpu_dispatch_thread, NULL, cpu_dispatch, config) != 0) {
                 log_error(logger, "Error creating cpu dispatch thread");
             }
+
+            if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+                sem_post(&sem_quantum);
+            }
+
+            pthread_join(cpu_dispatch_thread, NULL);
+
+            pthread_mutex_lock(&mutex_running);
+            if (pcb_RUNNING != NULL) {
+                handle_pcb_dispatch_return(pcb_RUNNING);
+                pcb_RUNNING = NULL;
+            }
+            pthread_mutex_unlock(&mutex_running);
+            sem_post(&sem_st_scheduler);
         }
-        // Check if planning is paused
+
         if (scheduler_paused) {
             sem_wait(&sem_all_scheduler); // Block until planning is resumed
             sem_post(&sem_all_scheduler);

@@ -19,8 +19,9 @@ extern pthread_mutex_t mutex_running;
 extern sem_t sem_all_scheduler;
 extern sem_t sem_st_scheduler;
 extern int scheduler_paused;
+extern sem_t sem_quantum;
 
-void st_sched_ready_running();
+void* st_sched_ready_running(void* arg);
 void* cpu_dispatch(void* arg);
 
 #endif
