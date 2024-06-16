@@ -1,38 +1,48 @@
 #include <memoria.h>
-t_log *logger;
+#include <files.h>
+
+t_memory memory;
 t_config *config;
-//FALTA MUTEX EN VARIABLES GLOBALES
-char ***vector = NULL;//GLOBAL
-int *tamano = 0;
-
- t_dictionary *dict_pcbs;
- pthread_mutex_t mutex_dict_pcbs;
-
-int correr_servidor(void *arg);
-
-void clean(t_config *config);
+t_log* logger;
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
-    t_config *config;
+    
+  
+      config = config_create("memoria.config");
+    if (config == NULL) {
+        perror("memoria.config creation failed");
+        exit(EXIT_FAILURE);
+    }
+           
+	
+    memory.memory_size = config_get_int_value(config,"TAM_MEMORIA");
+    memory.page_size = config_get_int_value(config,"TAM_PAGINA");
+    memory.port = config_get_string_value(config,"PUERTO");
+    memory.ip = config_get_string_value(config,"IP");
+    memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
+    
     logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_INFO);
     if (logger == NULL) {
         return -1;
     }
-    config = config_create("memoria.config");
-    if (config == NULL) {
-        return -1;
-    }
-    /* ---------------- Dictionary ---------------- */
-    dict_pcbs = dictionary_create();
-    pthread_mutex_init(&mutex_dict_pcbs, NULL);
+     /*-------------------Pagination----------------------------*/
+
+    initPaging();
+  
+    /*-------------------Test diccionary----------------------------*/
+    const char *file_path="scripts-pruebas/file1";
+    uint32_t TIPO=1;
+    printf("Step 1: %s\n",file_path);
+    handle_create_process(file_path,TIPO);
+    //*FILE *open_file(const char *file_path);
 
     /* ---------------- Hilos ---------------- */
 
     pthread_t hilo_servidor;
-  
+    //t_config *config;
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    // TODO: Podemos usar un nuevo log y otro name para loggear en el server
+    // El servidor se corre en un hilo
     if (pthread_create(&hilo_servidor, NULL, (void*)correr_servidor, puerto) != 0) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
@@ -42,8 +52,6 @@ int main(int argc, char *argv[]) {
          
     return 0;
 }
-
-
 
 void handle_create_process(const char *file_path, uint32_t pid){
 //OPEN FILE THAT CORRESPONDS TO PATH_INFO - PID FROM KERNEL
@@ -92,8 +100,6 @@ void agregar_instruccion_a_pcb(uint32_t pid, const char *instruccion) {
     list_add(instructions, strdup(instruccion));
 }
 
-
-
 int correr_servidor(void *arg) {
     char *puerto = (char *) arg;
 
@@ -121,14 +127,11 @@ int correr_servidor(void *arg) {
                 log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
                 log_info(logger, "quantum: %d", pcb->quantum);
-                //log_info(logger, "reg->dato: %d", pcb->reg->dato);
-                //log_info(logger, "path: %d", pcb->path);
-                //const char *path_info = pcb->path; 
-                //u_int32_t pid = pcb->pid; //KEY TO DICTIONARY
-                const char *path_info = "file1";//memory.config contains relative path
-                u_int32_t pid = 20;
-                // Simulación de operación CREATE_PROCESS
-                handle_create_process("path_info", pid);
+                log_info(logger, "path: %s", pcb->path);
+                const char *path_info = pcb->path; 
+                u_int32_t pid = pcb->pid; //KEY TO DICTIONARY?
+                //u_int32_t pid = 20;
+                //handle_create_process("path_info", pid); DESCOMENTAR CUANDO SE PUEDA RECIBIR PATH
                 }
                 free(pcb_buffer);
                 break;
@@ -156,14 +159,14 @@ int correr_servidor(void *arg) {
                 for(int i = 0; i< list_size(lista); i ++){
                     reg_buffer = list_get(lista, i);
                     reg = deserializar_reg(reg_buffer);
-                    log_info(logger, "PC: %d", reg->PC);
-                    uint32_t PC=reg->PC;
-                    t_list *instructions_list = dictionary_get(dict_pcbs, pcb->pid);
-                    list_get(instructions_list, pcb->pc);
-                }
+                    log_info(logger, "PC: %d", pcb->pc);     //pcb->pid
+                    const char *instruction = get_complete_instruction(&dict, PC);
+                    //send_instruction(instruction, cliente_fd);
+                    enviar_mensaje((char *)instruction,cliente_fd);
+                    }
 
                 //aqui en base al PC recibido el modulo memoria debera buscar en los PCBs recibidos desde el kernel, para devolver a cpu en el siguiente enviar mensaje la proxima instruccion a ejecutar
-               // obtenerinstruccion(PC); //CONTAINS PC TO MEMORY      
+              
                 free(reg_buffer);
                 eliminar_reg(reg);
                 //enviar_mensaje("SET AX 1",cliente_fd); //simulo una instruccion cualquiera 
