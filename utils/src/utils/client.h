@@ -25,6 +25,7 @@ typedef enum {
     RELEASE,
     TIMEOUT,
     WAIT,
+    SIGNAL,
     
     // CPU -> MEMORY
     PC,
@@ -33,6 +34,8 @@ typedef enum {
     INSTRUCTION,
     TAM_PAG,
     REG_REQUEST,
+    RESIZE,
+    COPY_STRING,
 
     // CPU -> KERNEL -> IO -> MEMORY
     IO_GEN_SLEEP,
@@ -43,6 +46,7 @@ typedef enum {
     IO_FS_TRUNCATE,
     IO_FS_WRITE,
     IO_FS_READ,
+    EXIT_,
 
     // IO -> KERNEL
     IO

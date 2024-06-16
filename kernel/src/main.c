@@ -73,17 +73,16 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error creating server thread");
         return -1;
     }
-/*
     // Creación y ejecución del hilo de la consola
     if (pthread_create(&hilo_consola, NULL, consola_interactiva, config) != 0) {
         log_error(logger, "Error al crear el hilo de la consola");
         return -1;
     }
-*/
+
     // Creación y ejecución del hilo de CPU
     if (pthread_create(&hilo_cpu, NULL, dispatch, config) != 0) {
         log_error(logger, "Error al crear el hilo de la CPU");
-
+    }
 
     //TODO: Maybe change the logger for this?
     // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
@@ -197,10 +196,11 @@ void* dispatch(void* arg){
                     log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
                 }
                 free(instruction_buffer);
-                
+                break;
             case -1:
                 log_error(logger, "el cliente se desconecto. Terminando servidor");
                 return EXIT_FAILURE;
+            break;
             default:
                 log_warning(logger, "Operacion desconocida. No quieras meter la pata");
                 break;
