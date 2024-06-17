@@ -14,6 +14,7 @@
 typedef enum {
     MENSAJE,
     PAQUETE,
+
     // Kernel -> MEMORY
     CREATE_PROCESS,
     FINISH_PROCESS,
@@ -22,12 +23,6 @@ typedef enum {
     DISPATCH,
     INTERRUPT, // INTERRUPT / QUANTUM_FINISHED / DESALOJO
 
-    // CPU -> KERNEL
-    RELEASE,
-    TIMEOUT,
-    WAIT,
-    SIGNAL,
-    
     // CPU -> MEMORY
     PC,
     WRITE,
@@ -50,15 +45,20 @@ typedef enum {
     EXIT_,
 
     // IO -> KERNEL
-    IO
-} op_code;
+    IO,
 
-typedef enum {
+    // CPU -> KERNEL
+    RELEASE,
+    TIMEOUT,
+    WAIT,
+    SIGNAL,
+
+    // generic
     OK,
     NOT_FOUND,
     NOT_SUPPORTED,
     GENERAL_ERROR,
-} response_code;
+} op_code;
 
 typedef struct {
     u_int32_t size;

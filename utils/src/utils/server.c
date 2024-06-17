@@ -138,3 +138,15 @@ t_list* recibir_paquete(int socket_cliente)
     free(buffer);
     return valores;
 }
+
+t_pcb* recibir_pcb(int socket_cliente) {
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cliente);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_pcb* pcb = deserialize_pcb(buffer);
+    free(buffer);
+    return pcb;
+}

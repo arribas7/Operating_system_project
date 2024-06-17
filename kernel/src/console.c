@@ -80,7 +80,7 @@ void handle_stop_process(const char *cmd_args) {
     }
 
     int pid = (int)val;
-    exit_process(pid, INTERRUPTED_BY_USER);
+    exit_process_from_pid(pid, INTERRUPTED_BY_USER);
 }
 
 void handle_start_scheduler() {

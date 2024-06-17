@@ -40,7 +40,8 @@ t_pcb *pcb_cpug;
 t_log *cambiarNombre(t_log *logger, char *nuevoNombre);
 void run_dispatch_server();
 void run_interrupt_server();
-int ejecutarServidorCPU(int);
+int handle_dispatch(int);
+int handle_interrupt(int);
 void fetch(t_pcb *pcb);
 void recibir_instruccion(int socket_cliente);
 int buscar(char *elemento, char **lista);
@@ -81,92 +82,103 @@ void run_dispatch_server(void){
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Dispatch server ready.");
-    ejecutarServidorCPU(server_fd);
+    handle_dispatch(server_fd);
 }
 
 void run_interrupt_server(void){
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Interrupt server ready.");
-    ejecutarServidorCPU(server_fd);
+    handle_interrupt(server_fd);
 }
 
-void procesar_pcb(t_pcb *pcb)
+t_pcb *procesar_pcb(t_pcb *pcb)
 {
+    // Procesar el PCB y ejecutar el ciclo de instrucción
+    log_info(logger, "Procesando el PCB con PID: %d", pcb->pid);
+    init_reg_proceso_actual(); //luego de procesar el proceso actual, verificar instrucciones, antes de pasar al nuevo proceso del sig PC, acordarse hacer "free(reg_proceso_actual)"
+    
+    // process
     fetch(pcb);
     decode(pcb);
     execute(pcb);
     pcb->pc++;
-}
-
-void *procesar_pcb_thread(void *arg)
-{
-    t_pcb *pcb = (t_pcb *)arg;
-    // Procesar el PCB y ejecutar el ciclo de instrucción
-    log_info(logger, "Procesando el PCB con PID: %d", pcb->pid);
-    init_reg_proceso_actual(); //luego de procesar el proceso actual, verificar instrucciones, antes de pasar al nuevo proceso del sig PC, acordarse hacer "free(reg_proceso_actual)"
-    procesar_pcb(pcb);
-    // Liberar memoria del PCB
-    free(pcb);
+    
     //hacer hilo para checkear las interrupciones, envio el pcb actualizado y el motivo del desalojo
     check_interrupt();
     //el motivo sera el codeop del paquete que contenga el pcb actualizado
     return NULL;
 }
 
-int ejecutarServidorCPU(int server_fd)
+int handle_dispatch(int server_fd)
+{
+    while (1)
+    {
+        int cliente_fd = esperar_cliente(server_fd);
+        log_info(logger, "Received PCB from kernel...");
+        
+        int cod_op = recibir_operacion(cliente_fd);
+        if(cod_op != DISPATCH){
+            log_error(logger, "Invalid operation code or disconnected from client for dispatch handler. cod_op: %s", cod_op);
+            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
+            continue;
+        }
+
+        t_pcb *pcb = recibir_pcb(cliente_fd);
+        if (pcb == NULL) {
+            log_error(logger, "Error deserializing PCB.");
+            enviar_respuesta(cliente_fd, GENERAL_ERROR);
+            continue;
+        }
+
+        // Process dispatch and get the updated pcb
+        procesar_pcb(pcb);
+        // TODO Gabi: return updated pcb;
+        t_pcb *updated_pcb = new_pcb(pcb->pid, pcb->quantum, pcb->path, pcb->prev_state);
+
+        t_buffer *buffer = malloc(sizeof(t_buffer));
+        serialize_pcb(updated_pcb, buffer);
+
+        t_paquete *paquete = crear_paquete(RELEASE);
+        agregar_a_paquete(paquete, buffer->stream, buffer->size);
+        enviar_paquete(paquete, cliente_fd);
+        eliminar_paquete(paquete);
+        free(buffer->stream);
+        free(buffer);
+        free(pcb);
+
+        liberar_conexion(cliente_fd);
+    }
+    return EXIT_SUCCESS;
+}
+
+int handle_interrupt(int server_fd)
 {
     interruptions_list = list_create();
     while (1)
     {
         cliente_fd = esperar_cliente(server_fd);
-        log_info(logger, "Recibi PCB desde el kernel...");
+        log_info(logger, "Received interrupt signal from kernel...");
         int cod_op = recibir_operacion(cliente_fd);
-        switch (cod_op){
-        case DISPATCH:
-            t_list *lista = recibir_paquete(cliente_fd);
-            for (int i = 0; i < list_size(lista); i++)
-            {
-                void *pcb_buffer = list_get(lista, i);
-                t_pcb *pcb = deserialize_pcb(pcb_buffer);
-                free(pcb_buffer);
-                if (pcb != NULL)
-                {
-                    // Crear un hilo para procesar el PCB
-                    pthread_t thread;
-                    pthread_create(&thread, NULL, procesar_pcb_thread, (void *)pcb);
-                    pthread_detach(thread);
-                }
-                else
-                {
-                    log_error(logger, "Error al deserializar el PCB");
-                }
+        if(cod_op != INTERRUPT){
+            log_error(logger, "Invalid operation code or disconnected from client for interrupt handler. cod_op: %s", cod_op);
+            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
+            continue;
+        }
+        t_list *lista = recibir_paquete(cliente_fd);
+        for (int i = 0; i < list_size(lista); i++)
+        {
+            void *pcb_buffer = list_get(lista, i);
+            t_pcb *pcb = deserialize_pcb(pcb_buffer);
+            free(pcb_buffer);
+            if (pcb == NULL) {
+                log_error(logger, "Error deserializing PCB.");
+                enviar_respuesta(cliente_fd, GENERAL_ERROR);
+                continue;
             }
-            enviar_mensaje("CPU: recibido PCBS del kernel OK", cliente_fd);
-            break;
-        case INTERRUPT:
-            t_list *int_lista = recibir_paquete(cliente_fd);
-            for (int i = 0; i < list_size(lista); i++)
-            {
-                void *pcb_buffer = list_get(lista, i);
-                t_pcb *pcb = deserialize_pcb(pcb_buffer);
-                free(pcb_buffer);
-                if (pcb != NULL)
-                {
-                    // Agrego el pcb a la lista de interrupciones
+            // TODO: handle interrupt
 
-                }
-                else
-                {
-                    log_error(logger, "Error al deserializar el PCB");
-                }
-            }
-        case -1:
-            log_error(logger, "El cliente se desconectó. Terminando servidor");
-            return EXIT_FAILURE;
-        default:
-            log_warning(logger, "Operación desconocida. No quieras meter la pata");
-            break;
+            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
         }
     }
     return EXIT_SUCCESS;

@@ -92,9 +92,11 @@ void fetch(t_pcb *pcb)
 
     t_paquete *paquete = crear_paquete(PC);
     agregar_a_paquete(paquete, buffer->stream, buffer->size);
-
     enviar_paquete(paquete, conexion_mem);
+
     eliminar_paquete(paquete);
+    free(buffer->stream);
+    free(buffer);
 
     recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR) //PROBAR SI FUNCIONA SIN ESTA LINEA YA QUE LA INSTRUCCION VIENE EN UN MENSAJE
     recibir_instruccion(conexion_mem); // LA INSTRUCCION

@@ -3,10 +3,13 @@
 #include <commons/collections/list.h>
 #include <state_lists.h>
 #include <utils/kernel.h>
+#include <pthread.h>
 
 
-//extern t_log *logger; // Extern indicates that logger will be defined elsewhere in execution
+extern t_log *logger;
 
+extern pthread_mutex_t mutex_blocked;
+extern pthread_mutex_t mutex_ready;
 t_list *list_NEW = NULL;
 t_list *list_READY = NULL;
 t_pcb *pcb_running = NULL;
@@ -158,30 +161,10 @@ void *list_remove_by_pid(t_list* list, int pid) {
 	return list_remove(list, position);
 }
 
-/*
-	typedef struct {
-		t_link_element *head;
-		int elements_count;
-	} t_list;
-
-	typedef struct {
-		t_list *list;
-		t_link_element **actual;
-		t_link_element **next;
-		int index;
-	} t_list_iterator;
-
-    struct link_element{
-		void *data;
-		struct link_element *next;
-	};
-	typedef struct link_element t_link_element;
-
-	typedef struct {
-    u_int32_t pid;
-    u_int32_t pc;
-    u_int32_t quantum;
-    //    char *path; 
-    t_register *reg;
-} t_pcb;
-*/
+void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_list* destination_list, pthread_mutex_t* mutex) {
+	log_info(logger, "“PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>”", pcb->pid, t_state_to_string(prev_status), t_state_to_string(destination_status));
+	pcb->prev_state = prev_status;
+	pthread_mutex_lock(mutex);
+	list_add(destination_list, pcb);
+	pthread_mutex_unlock(mutex);
+}
