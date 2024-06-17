@@ -13,102 +13,42 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
-#include <quantum.h>
+#include <short_term_scheduler.h>
+#include <long_term_scheduler.h>
 #include <communication_kernel_cpu.h>
 
 extern t_list *list_NEW;
+pthread_mutex_t mutex_new;
+
 extern t_list *list_READY;
+pthread_mutex_t mutex_ready;
+
 extern t_list *list_BLOCKED;
+pthread_mutex_t mutex_blocked;
+
 extern t_list *list_EXIT;
+pthread_mutex_t mutex_exit;
+
 t_pcb *pcb_RUNNING;
+pthread_mutex_t mutex_running;
 
 atomic_int pid_count;
+
 sem_t sem_multiprogramming;
 pthread_mutex_t mutex_multiprogramming;
 sem_t sem_all_scheduler;
+sem_t sem_st_scheduler;
+sem_t sem_quantum;
+
 int scheduler_paused = 0;
 atomic_int current_multiprogramming_grade;
+char* scheduler_algorithm;
 
 t_log *logger;
 t_config *config;
 
-void clean(t_config *config);
-
-int run_server();
-
-void iterator(char *value);
-
-void* dispatch(void* arg);
-
-void *lt_sched_new_ready(void *arg);
-
-int main(int argc, char *argv[]) {
-    /* ---------------- Initial Setup ---------------- */
-    t_config *config;
-    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
-    if (logger == NULL) {
-        return -1;
-    }
-
-    initialize_lists();
-
-
-    config = config_create("kernel.config");
-    if (config == NULL) {
-        return -1;
-    }
-
-    /* -------Dispatch Testing Start------- */
-    //Cpu module needs to be running for this to work
-    t_pcb *pcb = new_pcb(999, 0, "my/test/path");
-    response_code code = KERNEL_DISPATCH(pcb, config);
-    log_info(logger, "Response code is %d", code);
-    /* -------Dispatch Testing Finish------- */
-
-    atomic_init(&pid_count, 0);
-    int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
-    atomic_init(&current_multiprogramming_grade, multiprogramming_grade);
-    sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
-    sem_init(&sem_all_scheduler, 0, 1);
-    pthread_mutex_init(&mutex_multiprogramming, NULL);
-
-
-    pthread_t server_thread, console_thread, lt_sched_new_ready_thread, quantum_counter_thread;
-
-    char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    // TODO: Use a new log with other name for each thread?
-    if (pthread_create(&server_thread, NULL, (void*) run_server, puerto) != 0) {
-        log_error(logger, "Error creating server thread");
-        return -1;
-    }
-
-    if (pthread_create(&console_thread, NULL, (void*) interactive_console, config) != 0) {
-        log_error(logger, "Error creating console thread");
-        return -1;
-    }
-
-
-    //TODO: Maybe change the logger for this?
-    // Matias: Logger is only for debugging purposes. It should get commented out from within run_quantum_counter once it's working as intended.
-    /*t_quantum_thread_params *q_params = get_quantum_params_struct(logger, config);
-
-    if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, q_params) != 0) {
-        log_error(logger, "Error creating console thread");
-        return -1;
-    }*/
-
-    if (pthread_create(&lt_sched_new_ready_thread, NULL, (void*) lt_sched_new_ready, NULL) != 0) {
-        log_error(logger, "Error creating long term scheduler thread");
-        return -1;
-    }
-
-    pthread_join(server_thread, NULL);
-    pthread_join(console_thread, NULL);
-    pthread_join(quantum_counter_thread, NULL);
-    pthread_join(lt_sched_new_ready_thread, NULL);
-
-    clean(config);
-    return 0;
+void iterator(char *value) {
+    log_info(logger, "%s", value);
 }
 
 void clean(t_config *config) {
@@ -116,7 +56,14 @@ void clean(t_config *config) {
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
     sem_destroy(&sem_all_scheduler);
+    sem_destroy(&sem_st_scheduler);
+    sem_destroy(&sem_quantum);
     pthread_mutex_destroy(&mutex_multiprogramming);
+    pthread_mutex_destroy(&mutex_new);
+    pthread_mutex_destroy(&mutex_running);
+    pthread_mutex_destroy(&mutex_ready);
+    pthread_mutex_destroy(&mutex_exit);
+    pthread_mutex_destroy(&mutex_blocked);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
@@ -124,11 +71,7 @@ void clean(t_config *config) {
     free(pcb_RUNNING);
 }
 
-void iterator(char *value) {
-    log_info(logger, "%s", value);
-}
-
-int run_server(void *arg) {
+void run_server(void *arg) {
     char *puerto = (char *) arg;
 
     int server_fd = iniciar_servidor(puerto);
@@ -164,33 +107,66 @@ int run_server(void *arg) {
     return EXIT_SUCCESS;
 }
 
-void* dispatch(void* arg){
-    log_debug(logger, "CPU connection running in a thread");
+int main(int argc, char *argv[]) {
+    /* ---------------- Initial Setup ---------------- */
+    logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
+    if (logger == NULL) {
+        return -1;
+    }
+
+    initialize_lists();
+
+    config = config_create("kernel.config");
+    if (config == NULL) {
+        return -1;
+    }
+
+    atomic_init(&pid_count, 0);
+    int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+    atomic_init(&current_multiprogramming_grade, multiprogramming_grade);
+    sem_init(&sem_multiprogramming, 0, multiprogramming_grade);
+    sem_init(&sem_all_scheduler, 0, 1);
+    sem_init(&sem_st_scheduler,0, 1);
+    sem_init(&sem_quantum,0, 0);
     
-    t_config *config = (t_config *) arg;
-    int conexion_cpu = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
+    pthread_mutex_init(&mutex_multiprogramming, NULL);
+    pthread_mutex_init(&mutex_new, NULL);
+    pthread_mutex_init(&mutex_ready, NULL);
+    pthread_mutex_init(&mutex_running, NULL);
+    pthread_mutex_init(&mutex_blocked, NULL);
+    pthread_mutex_init(&mutex_exit, NULL);
 
-    t_pcb *pcb = new_pcb(22, 0, "");
-    t_buffer *buffer = malloc(sizeof(t_buffer));
-    serialize_pcb(pcb, buffer);
+    scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
-    t_paquete *paquete = crear_paquete(DISPATCH);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+    pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
 
+    char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+    if (pthread_create(&server_thread, NULL, run_server, puerto) != 0) {
+        log_error(logger, "Error creating server thread");
+        return -1;
+    }
 
-    pcb = new_pcb(9, 0, "");
-    buffer = malloc(sizeof(t_buffer));
-    serialize_pcb(pcb, buffer);
-    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+    if (pthread_create(&lt_sched_new_ready_thread, NULL, lt_sched_new_ready, NULL) != 0) {
+        log_error(logger, "Error creating long term scheduler thread");
+        return -1;
+    }
 
-    enviar_paquete(paquete, conexion_cpu);
-    eliminar_paquete(paquete);
-    delete_pcb(pcb);
+    if (pthread_create(&st_sched_ready_running_thread, NULL, st_sched_ready_running, scheduler_algorithm) != 0) {
+        log_error(logger, "Error creating short term scheduler thread");
+        return -1;
+    }
 
-    response_code code = esperar_respuesta(conexion_cpu);
-    log_info(logger, "Response code: %d", code);
+    if (pthread_create(&console_thread, NULL, interactive_console, config) != 0) {
+        log_error(logger, "Error creating console thread");
+        return -1;
+    }
 
-    liberar_conexion(conexion_cpu);
-    log_debug(logger, "CPU connection released");
-    return NULL;
+    // wait for threads to finish
+    pthread_join(server_thread, NULL);
+    pthread_join(console_thread, NULL);
+    pthread_join(lt_sched_new_ready_thread, NULL);
+    pthread_join(st_sched_ready_running_thread, NULL);
+
+    clean(config);
+    return 0;
 }

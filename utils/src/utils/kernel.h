@@ -23,12 +23,21 @@ typedef struct {
     uint32_t ECX;
 } t_register;
 
+typedef enum {
+    NEW,
+    READY,
+    RUNNING,
+    BLOCKED,
+    EXIT
+} t_state;
+
 typedef struct {
     u_int32_t pid;
     u_int32_t pc;
     u_int32_t quantum;
     char* path; 
     t_register *reg;
+    t_state prev_state;
 } t_pcb;
 
 typedef struct {

@@ -10,11 +10,11 @@
 //Serializes and then sends a pcb to the CPU module using the DISPATCH op code
 //Port and Ip address are dependant on the config parameter
 //Returns the response code passed by the CPU
-response_code KERNEL_DISPATCH(t_pcb *pcb, t_config *config);
+op_code cpu_dispatch(t_pcb *pcb, t_config *config);
 
 //Sends an empty package to the CPU module using the INTERRUPT op code
 //Port and Ip address are dependant on the config parameter
 //Returns the response code passed by the CPU
-response_code KERNEL_INTERRUPT(t_config *config);
+op_code cpu_interrupt(t_config *config);
 
 #endif 
