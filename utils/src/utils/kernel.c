@@ -74,7 +74,7 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
     // Calculate the size needed for serialization
     buffer->size = sizeof(u_int32_t) * 4  // pid, pc, quantum, and path length
                     + strlen(pcb->path) + 1 // path string and null terminator
-                    + sizeof(t_register); // entire t_register structure
+                    + sizeof(t_register) // entire t_register structure
                     + sizeof(t_state); // entire t_state enum
 
     buffer->offset = 0;
