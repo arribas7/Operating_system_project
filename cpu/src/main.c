@@ -27,12 +27,6 @@ t_reg_cpu* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
 int cliente_fd; //el kenel
 
-
-
-
-
-
-
 int correr_servidor(void *arg);
 void *conexion_MEM(void *arg);
 void clean(t_config *config);
@@ -44,7 +38,8 @@ int conexionMemoria(t_config *config);
 
 t_pcb *pcb_cpug;
 t_log *cambiarNombre(t_log *logger, char *nuevoNombre);
-void escucharAlKernel(void);
+void run_dispatch_server();
+void run_interrupt_server();
 int ejecutarServidorCPU(int);
 void fetch(t_pcb *pcb);
 void recibir_instruccion(int socket_cliente);
@@ -74,17 +69,25 @@ int main(int argc, char *argv[])
 
     conexionMemoria(config);
 
-    escucharAlKernel();
+    run_dispatch_server();
+    
+    run_interrupt_server();
 
     clean(config);
     return 0;
 }
 
-void escucharAlKernel(void)
-{
+void run_dispatch_server(void){
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
     int server_fd = iniciar_servidor(puerto);
-    log_info(logger, "Listo para escuchar al Kernel!");
+    log_info(logger, "Dispatch server ready.");
+    ejecutarServidorCPU(server_fd);
+}
+
+void run_interrupt_server(void){
+    char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
+    int server_fd = iniciar_servidor(puerto);
+    log_info(logger, "Interrupt server ready.");
     ejecutarServidorCPU(server_fd);
 }
 

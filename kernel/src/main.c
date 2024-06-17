@@ -109,7 +109,6 @@ void run_server(void *arg) {
 
 int main(int argc, char *argv[]) {
     /* ---------------- Initial Setup ---------------- */
-    t_config *config;
     logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
         return -1;

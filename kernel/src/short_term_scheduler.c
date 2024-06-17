@@ -110,7 +110,7 @@ void st_sched_ready_running(void* arg) {
             log_error(logger, "Error creating quantum thread");
             return -1;
         }
-        pthread_join(&quantum_counter_thread, NULL);
+        pthread_detach(quantum_counter_thread);
     }
 
     while (1) {
