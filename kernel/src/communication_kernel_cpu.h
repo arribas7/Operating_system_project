@@ -7,10 +7,15 @@
 #include <commons/config.h>
 #include <utils/client.h>
 
+typedef struct {
+    t_pcb *pcb_updated;
+    op_code resp_code;
+} t_return_dispatch;
+
 //Serializes and then sends a pcb to the CPU module using the DISPATCH op code
 //Port and Ip address are dependant on the config parameter
 //Returns the response code passed by the CPU
-op_code cpu_dispatch(t_pcb *pcb, t_config *config);
+t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config);
 
 //Sends an empty package to the CPU module using the INTERRUPT op code
 //Port and Ip address are dependant on the config parameter

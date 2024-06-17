@@ -2,8 +2,9 @@
 #include <communication_kernel_cpu.h>
 #include <utils/cpu.h>
 #include <commons/temporal.h>
+#include <long_term_scheduler.h>
 
-bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check if we're managing well the fourth criteria, order.
+bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if we're managing well the fourth criteria, order.
     t_pcb* a = (t_pcb*)pcb1;
     t_pcb* b = (t_pcb*)pcb2;
     // Priority: RUNNING > BLOCKED > NEW
@@ -47,7 +48,7 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
 }
 
 void run_quantum_counter(void* arg) {
-    int* quantum_time = (int*) arg;
+    int quantum_time = *(int*) arg;
     
     while (1) {
         sem_wait(&sem_quantum);
@@ -55,7 +56,9 @@ void run_quantum_counter(void* arg) {
 
         log_info(logger, "Quantum Iniciado");
         temporal_resume(timer);
-        while (temporal_gettime(timer) >= *quantum_time);
+        while (temporal_gettime(timer) < quantum_time) {
+            usleep(1000); // sleep 1 ms to wait busy-waiting
+        }
         log_info(logger, "Quantum Cumplido");
 
         pthread_mutex_lock(&mutex_running);
@@ -64,34 +67,23 @@ void run_quantum_counter(void* arg) {
             pcb_RUNNING = NULL;
         }
         pthread_mutex_unlock(&mutex_running);
-
-        // TODO: We send the interrupt only if pcb_running is not null (it could be finished by other reason).
-
+        temporal_destroy(timer);
     }
 }
 
-void handle_pcb_dispatch_return(t_pcb* pcb, op_code response_code){
-   switch (response_code) {
+void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
+   switch (resp_code) {
         case RELEASE:
-            /*t_list* lista = recibir_paquete(cpu_connection);
-            void *instruction_buffer;
-            t_instruction* instruction;
-            for(int i = 0; i< list_size(lista); i ++){
-                instruction_buffer = list_get(lista, i);
-                instruction = deserializar_instruction_IO(instruction_buffer);
-                log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s> - Unit: <%s>", instruction->pid , "IO_GEN_SLEEP", instruction->interfaz, instruction->job_unit);
-            }
-            free(instruction_buffer);*/
+            exit_process(pcb, RUNNING, SUCCESS);
             break;
         case TIMEOUT:
+            move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         case SIGNAL:
             break;
-        case -1:
-            log_error(logger, "Client disconnected. Ending server");
-            return EXIT_FAILURE;
         default:
             log_warning(logger, "Unknown operation");
             break;
@@ -108,7 +100,7 @@ void st_sched_ready_running(void* arg) {
 
         if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, quantum_time) != 0) {
             log_error(logger, "Error creating quantum thread");
-            return -1;
+            return;
         }
         pthread_detach(quantum_counter_thread);
     }
@@ -127,14 +119,20 @@ void st_sched_ready_running(void* arg) {
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
                 sem_post(&sem_quantum);
             }
-            op_code response_code = cpu_dispatch(pcb_RUNNING, config);
-            
-            pthread_mutex_lock(&mutex_running);
-            if (pcb_RUNNING != NULL) {
-                handle_pcb_dispatch_return(pcb_RUNNING, response_code);
-                pcb_RUNNING = NULL;
+            t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
+            if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
+                log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);
+                return;
             }
+
+            log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
+
+            pthread_mutex_lock(&mutex_running);
+            handle_pcb_dispatch_return(ret->pcb_updated, ret->resp_code);
+            free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
+            pcb_RUNNING = NULL;
             pthread_mutex_unlock(&mutex_running);
+
             sem_post(&sem_st_scheduler);
         }
 

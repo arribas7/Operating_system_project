@@ -117,12 +117,12 @@ void liberar_conexion(int socket_cliente) {
     close(socket_cliente);
 }
 
-void enviar_respuesta(int socket_cliente, response_code code) {
-    send(socket_cliente, &code, sizeof(response_code), 0);
+void enviar_respuesta(int socket_cliente, op_code code) {
+    send(socket_cliente, &code, sizeof(code), 0);
 }
 
-response_code esperar_respuesta(int socket_cliente) {
-    response_code code;
-    recv(socket_cliente, &code, sizeof(response_code), 0);
+op_code esperar_respuesta(int socket_cliente) {
+    op_code code;
+    recv(socket_cliente, &code, sizeof(op_code), 0);
     return code;
 }

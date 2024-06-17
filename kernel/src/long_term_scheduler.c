@@ -26,7 +26,7 @@ void start_process(char* path, t_config *config) {
     int mem_conn = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
 
     u_int32_t quantum = config_get_int_value(config, "QUANTUM");
-    t_pcb *pcb = new_pcb(pid, quantum, path);
+    t_pcb *pcb = new_pcb(pid, quantum, path, NEW);
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serialize_pcb(pcb, buffer);
 
@@ -37,19 +37,14 @@ void start_process(char* path, t_config *config) {
     free(buffer->stream);
     free(buffer);
 
-	response_code code = esperar_respuesta(mem_conn);
+	op_code code = recibir_operacion(mem_conn);
     log_debug(logger, "Response code: %d", code);
+
     // TODO: Manage error response codes.
     liberar_conexion(mem_conn);
     log_debug(logger, "Connection released");
     atomic_fetch_add(&pid_count, 1); // Increment after a successful response
     list_push(list_NEW, pcb);
-}
-
-void move_to_exit(t_pcb* pcb, char* status_prev, exit_reason reason){
-    log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
-    log_info(logger, "“PID: <%d> - Estado Anterior: <%s> - Estado Actual: <EXIT>”", pcb->pid, status_prev);
-    list_push(list_EXIT, pcb);
 }
 
 void sem_post_multiprogramming(){
@@ -58,37 +53,61 @@ void sem_post_multiprogramming(){
     pthread_mutex_unlock(&mutex_multiprogramming);
 }
 
-void exit_process(int pid, exit_reason reason){
+void exit_process(t_pcb *pcb, t_state prev_status, exit_reason reason){
+    log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
+    move_pcb(pcb, prev_status, EXIT, list_EXIT, &mutex_exit);
+    sem_post_multiprogramming();
+    return;
+}
+
+void exit_process_from_pid(int pid, exit_reason reason){
     // Check in all lists 
+    pthread_mutex_lock(&mutex_running);
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
         pcb_RUNNING = NULL;
-        move_to_exit(pcb, "RUNNING", reason);
-        sem_post_multiprogramming();
+        pthread_mutex_unlock(&mutex_running);
+        exit_process(pcb, RUNNING, reason);
         return;
-    } 
+    } else {
+        pthread_mutex_unlock(&mutex_running);
+    }
 
+
+    pthread_mutex_lock(&mutex_ready);
     pcb = list_pid_element(list_READY, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_READY, pid);
-        move_to_exit(pcb, "READY", reason);
+        pthread_mutex_unlock(&mutex_ready);
+        exit_process(pcb, READY, reason);
         sem_post_multiprogramming();
         return;
+    } else {
+        pthread_mutex_unlock(&mutex_ready);
     }
 
+    pthread_mutex_lock(&mutex_blocked);
     pcb = list_pid_element(list_BLOCKED, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_BLOCKED, pid);
-        move_to_exit(pcb, "BLOCKED", reason);
+        pthread_mutex_unlock(&mutex_blocked);
+
+        exit_process(pcb, BLOCKED, reason);
         sem_post_multiprogramming();
         return;
+    } else {
+        pthread_mutex_unlock(&mutex_blocked);
     }
 
+    pthread_mutex_lock(&mutex_new);
     pcb = list_pid_element(list_NEW, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_NEW, pid);
-        move_to_exit(pcb, "NEW", reason);
+        pthread_mutex_unlock(&mutex_new);
+        exit_process(pcb, NEW, reason);
         return;
+    } else {
+        pthread_mutex_unlock(&mutex_new);
     }
     log_error(logger, "Process with pid: <%d> doesn't exist or it is already finished.", pid);
 }

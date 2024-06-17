@@ -5,7 +5,7 @@
 #include <commons/config.h>
 #include <utils/client.h>
 
-t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char *path)
+t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char *path, t_state prev_state)
 {
     // Check if path is NULL
     if (path == NULL || *path == '\0')
@@ -50,6 +50,7 @@ t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char *path)
     reg->ECX = 0;
 
     pcb->reg = reg;
+    pcb->prev_state = prev_state;
     return pcb;
 }
 
@@ -73,7 +74,8 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
     // Calculate the size needed for serialization
     buffer->size = sizeof(u_int32_t) * 4  // pid, pc, quantum, and path length
                     + strlen(pcb->path) + 1 // path string and null terminator
-                    + sizeof(t_register); // entire t_register structure
+                    + sizeof(t_register) // entire t_register structure
+                    + sizeof(t_state); // entire t_state enum
 
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
@@ -99,6 +101,10 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
     // Serialize the registers
     memcpy(buffer->stream + buffer->offset, pcb->reg, sizeof(t_register));
     buffer->offset += sizeof(t_register);
+
+    // Serialize prev_state
+    memcpy(buffer->stream + buffer->offset, &(pcb->prev_state), sizeof(t_state));
+    buffer->offset += sizeof(t_state);
 }
 
 t_pcb *deserialize_pcb(void *stream)
@@ -142,5 +148,24 @@ t_pcb *deserialize_pcb(void *stream)
     memcpy(pcb->reg, stream + offset, sizeof(t_register));
     offset += sizeof(t_register);
 
+    // Deserialize prev_state
+    memcpy(&(pcb->prev_state), stream + offset, sizeof(t_state));
+    offset += sizeof(t_state);
     return pcb;
+}
+
+const char *t_state_strings[] = {
+    "NEW",
+    "READY",
+    "RUNNING",
+    "BLOCKED",
+    "EXIT"
+};
+
+const char* t_state_to_string(t_state state) {
+    if (state >= 0 && state < sizeof(t_state_strings) / sizeof(t_state_strings[0])) {
+        return t_state_strings[state];
+    } else {
+        return "UNKNOWN";
+    }
 }

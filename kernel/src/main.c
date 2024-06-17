@@ -82,11 +82,6 @@ void run_server(void *arg) {
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
-            case PAQUETE:
-                lista = recibir_paquete(cliente_fd);
-                log_info(logger, "I receive the following values:\n");
-                list_iterate(lista, (void *) iterator);
-                break;
             case IO:
                 lista = recibir_paquete(cliente_fd);
                 t_interface* new_io = list_to_IO(lista);
@@ -97,8 +92,8 @@ void run_server(void *arg) {
                 log_info(logger, "IO Device disconnected");
                 break;
             case -1:
-                log_error(logger, "Client disconnected. Finishing server...");
-                return EXIT_FAILURE;
+                log_info(logger, "Client disconnected. Finishing server...");
+                return;
             default:
                 log_warning(logger, "Unknown operation.");
                 break;

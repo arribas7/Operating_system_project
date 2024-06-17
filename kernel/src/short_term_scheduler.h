@@ -14,6 +14,9 @@ extern t_config *config;
 extern t_list *list_READY;
 extern pthread_mutex_t mutex_ready;
 
+extern t_list *list_BLOCKED;
+extern pthread_mutex_t mutext_blocked;
+
 extern t_pcb *pcb_RUNNING;
 extern pthread_mutex_t mutex_running;
 

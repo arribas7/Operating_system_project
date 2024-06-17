@@ -56,11 +56,13 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer);
 */
 t_pcb* deserialize_pcb(void* stream);
 
-t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path);
+t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path, t_state prev_state);
 
 void delete_pcb(t_pcb *pcb);
 
 //Does exactly what it says it does. Doesn't validate input so make sure it's valid beforehand.
 uint32_t string_to_uint32(const char *str);
+
+const char* t_state_to_string(t_state state);
 
 #endif

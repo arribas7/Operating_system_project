@@ -5,7 +5,7 @@ t_memory memory;
 t_config *config;
 t_log* logger;
 
-void *handle_client(void *arg) {
+void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
     free(arg);
 
@@ -14,47 +14,35 @@ void *handle_client(void *arg) {
     t_list *lista;
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
+        t_pcb *pcb;
         switch (cod_op) {
             case CREATE_PROCESS:
-                lista = recibir_paquete(cliente_fd);
-                void *pcb_buffer;
-                t_pcb *pcb;
-                for (int i = 0; i < list_size(lista); i++) {
-                    pcb_buffer = list_get(lista, i);
-                    pcb = deserialize_pcb(pcb_buffer);
-                    log_info(logger, "pid: %d", pcb->pid);
-                    log_info(logger, "pc: %d", pcb->pc);               
-                    log_info(logger, "quantum: %d", pcb->quantum);
-                    log_info(logger, "path: %s", pcb->path);
-                    const char *path_info = pcb->path; 
-                    u_int32_t pid = pcb->pid; //KEY TO DICTIONARY?
-                }
-                free(pcb_buffer);
+                pcb = recibir_pcb(cliente_fd);
+                log_info(logger, "pid: %d", pcb->pid);
+                log_info(logger, "pc: %d", pcb->pc);               
+                log_info(logger, "quantum: %d", pcb->quantum);
+                log_info(logger, "path: %s", pcb->path);
+                const char *path_info = pcb->path; 
+                u_int32_t pid = pcb->pid; //KEY TO DICTIONARY?
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
-                lista = recibir_paquete(cliente_fd);
-                void* reg_buffer;
-                t_reg_cpu* reg;
-                for (int i = 0; i < list_size(lista); i++) {
-                    reg_buffer = list_get(lista, i);
-                    reg = deserializar_reg(reg_buffer);
-                    log_info(logger, "PC: %d", pcb->pc);     //pcb->pid
-                    const char *instruction = get_complete_instruction(&dict, reg->PC);
-                    enviar_mensaje((char *)instruction, cliente_fd);
-                }
-                free(reg_buffer);
-                eliminar_reg(reg);
-                enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd); //reemp las XXX por alguna interfaz
+                pcb = recibir_pcb(cliente_fd);
+                log_info(logger, "pid: %d", pcb->pid);
+                log_info(logger, "pc: %d", pcb->pc);               
+                log_info(logger, "quantum: %d", pcb->quantum);
+                log_info(logger, "path: %s", pcb->path);
+                /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
+                //const char *instruction = get_complete_instruction(&dict, pcb->pc);
+                //enviar_mensaje((char *)instruction, cliente_fd);
+                enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
             case -1:
-                log_error(logger, "El cliente se desconectó. Terminando conexión con el cliente");
-                close(cliente_fd);
-                pthread_exit(NULL);
-                break;
+                log_info(logger, "Connection finished. Client disconnected.");
+                return;
             default:
                 log_warning(logger, "Operación desconocida. No quieras meter la pata");
-                break;
+               break;
         }
     }
 

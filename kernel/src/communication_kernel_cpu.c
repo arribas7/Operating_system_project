@@ -1,3 +1,4 @@
+#include <communication_kernel_cpu.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <utils/kernel.h>
@@ -5,7 +6,7 @@
 #include <utils/client.h>
 #include <commons/config.h>
 
-op_code cpu_dispatch(t_pcb *pcb, t_config *config){
+t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     int cpu_connection = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
     log_debug(logger, "CPU connection running in a thread");
@@ -19,11 +20,16 @@ op_code cpu_dispatch(t_pcb *pcb, t_config *config){
     free(buffer->stream);
     free(buffer);
 
-    op_code response_code = (op_code) recibir_operacion(cpu_connection);
+    op_code resp_code = (op_code) recibir_operacion(cpu_connection);
+    t_pcb *pcb_updated = recibir_pcb(cpu_connection);
+    
+    t_return_dispatch *ret= malloc(sizeof(t_return_dispatch));
+    ret->pcb_updated = pcb_updated;
+    ret->resp_code = resp_code;
 
     liberar_conexion(cpu_connection);
     log_debug(logger, "CPU dispatch connection released");
-    return response_code;
+    return ret;
 }
 
 op_code cpu_interrupt(t_config *config){
