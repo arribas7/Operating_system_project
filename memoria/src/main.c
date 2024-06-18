@@ -37,6 +37,17 @@ void handle_client(void *arg) {
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
+            case FINISH_PROCESS:
+                pcb = recibir_pcb(cliente_fd);
+                log_info(logger, "pid: %d", pcb->pid);
+                log_info(logger, "pc: %d", pcb->pc);               
+                log_info(logger, "quantum: %d", pcb->quantum);
+                log_info(logger, "path: %s", pcb->path);
+                /* TODO Jannet: end process
+                //enviar_mensaje((char *)instruction, cliente_fd);
+                */
+                enviar_respuesta(cliente_fd, OK);
+                break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
                 return;

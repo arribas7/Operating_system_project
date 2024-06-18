@@ -18,7 +18,7 @@ const char *get_exit_reason_str(exit_reason reason) {
     }
 }
 
-// start_process_on_new creates a pcb and push it into list NEW.
+// start_process creates a pcb and push it into list NEW.
 void start_process(char* path, t_config *config) {
     int pid = atomic_load(&pid_count) + 1;
     log_info(logger, "Se crea el proceso <%d> en NEW\n", pid);
@@ -48,6 +48,27 @@ void start_process(char* path, t_config *config) {
     list_push(list_NEW, pcb);
 }
 
+// exit_process_memory calls memory to release process resources.
+void exit_process_memory(t_pcb* pcb) {
+    log_debug(logger, "[THREAD] Memory connection");
+    int mem_conn = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serialize_pcb(pcb, buffer);
+
+    t_paquete *paquete = crear_paquete(FINISH_PROCESS);
+    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+    enviar_paquete(paquete, mem_conn);
+    eliminar_paquete(paquete);
+    free(buffer->stream);
+    free(buffer);
+
+	op_code code = esperar_respuesta(mem_conn);
+    log_debug(logger, "Response code: %d", code);
+    liberar_conexion(mem_conn);
+    log_debug(logger, "Connection released");
+}
+
 void sem_post_multiprogramming(){
     pthread_mutex_lock(&mutex_multiprogramming);
     sem_post(&sem_multiprogramming);
@@ -57,6 +78,7 @@ void sem_post_multiprogramming(){
 void exit_process(t_pcb *pcb, t_state prev_status, exit_reason reason){
     log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
     move_pcb(pcb, prev_status, EXIT, list_EXIT, &mutex_exit);
+    exit_process_memory(pcb);
     sem_post_multiprogramming();
     return;
 }
