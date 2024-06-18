@@ -1,4 +1,5 @@
 #include "long_term_scheduler.h"
+#include <communication_kernel_cpu.h>
 
 // Array of strings corresponding to the enum values
 const char *exit_reason_strings[] = {
@@ -60,14 +61,13 @@ void exit_process(t_pcb *pcb, t_state prev_status, exit_reason reason){
     return;
 }
 
-void exit_process_from_pid(int pid, exit_reason reason){
+void exit_process_from_pid(int pid, exit_reason reason) {
     // Check in all lists 
     pthread_mutex_lock(&mutex_running);
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
-        pcb_RUNNING = NULL;
+        cpu_interrupt(config); // interrupt should answer dispatch and move it to running
         pthread_mutex_unlock(&mutex_running);
-        exit_process(pcb, RUNNING, reason);
         return;
     } else {
         pthread_mutex_unlock(&mutex_running);
@@ -78,9 +78,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_READY, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_READY, pid);
-        pthread_mutex_unlock(&mutex_ready);
         exit_process(pcb, READY, reason);
-        sem_post_multiprogramming();
+        pthread_mutex_unlock(&mutex_ready);
         return;
     } else {
         pthread_mutex_unlock(&mutex_ready);
@@ -90,10 +89,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_BLOCKED, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_BLOCKED, pid);
-        pthread_mutex_unlock(&mutex_blocked);
-
         exit_process(pcb, BLOCKED, reason);
-        sem_post_multiprogramming();
+        pthread_mutex_unlock(&mutex_blocked);
         return;
     } else {
         pthread_mutex_unlock(&mutex_blocked);
@@ -103,8 +100,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_NEW, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_NEW, pid);
-        pthread_mutex_unlock(&mutex_new);
         exit_process(pcb, NEW, reason);
+        pthread_mutex_unlock(&mutex_new);
         return;
     } else {
         pthread_mutex_unlock(&mutex_new);
