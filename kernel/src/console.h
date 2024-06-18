@@ -7,7 +7,10 @@
 #include <pthread.h>
 
 extern t_log* logger;
+
 extern t_list *list_NEW;
+extern pthread_mutex_t mutex_new;
+
 extern sem_t sem_all_scheduler;
 extern pthread_mutex_t mutex_multiprogramming;
 extern int scheduler_paused;

@@ -19,7 +19,7 @@ void *list_pop(t_list *list);
 
 //Log contents in kernel.log to know what's inside the list at any given time
 //Doesn't return anything
-void *log_list_contents(t_log *logger, t_list *list);
+void *log_list_contents(t_log *logger, t_list *list, pthread_mutex_t mutex);
 
 //Returns true if there exists a pcb with the given pid anywhere on the list
 bool list_has_pid(t_list* list, int pid);

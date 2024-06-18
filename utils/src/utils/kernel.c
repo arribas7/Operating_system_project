@@ -110,8 +110,11 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
 t_pcb *deserialize_pcb(void *stream)
 {
     t_pcb *pcb = malloc(sizeof(t_pcb));
-
+    int tamanio;
     int offset = 0;
+    memcpy(&tamanio, stream + offset, sizeof(int));
+    offset += sizeof(int);
+    
     memcpy(&(pcb->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
