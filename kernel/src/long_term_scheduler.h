@@ -40,6 +40,7 @@ extern pthread_mutex_t mutex_multiprogramming;
 extern sem_t sem_all_scheduler;
 extern int scheduler_paused;
 extern atomic_int pid_count;
+extern t_config *config;
 
 void lt_sched_new_ready();
 void start_process();
