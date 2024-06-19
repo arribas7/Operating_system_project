@@ -12,6 +12,11 @@
 #include <commons/config.h>
 
 typedef enum {
+    // generic
+    OK,
+    NOT_FOUND,
+    NOT_SUPPORTED,
+    GENERAL_ERROR,
     MENSAJE,
     PAQUETE,
 
@@ -53,12 +58,6 @@ typedef enum {
     TIMEOUT,
     WAIT,
     SIGNAL,
-
-    // GENERIC
-    OK,
-    NOT_FOUND,
-    NOT_SUPPORTED,
-    GENERAL_ERROR,
 } op_code;
 
 typedef struct {

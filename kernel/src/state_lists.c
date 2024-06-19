@@ -44,14 +44,17 @@ void *list_get_first(t_list *list) {
     return first_element;
 }
 
-void *log_list_contents(t_log *logger, t_list *list) {
+void *log_list_contents(t_log *logger, t_list *list, pthread_mutex_t mutex) {
+	pthread_mutex_lock(&mutex);
     if (list == NULL) {
         log_info(logger, "List is NULL. It needs to be initialized with initialize_lists();");
+		pthread_mutex_unlock(&mutex);
         return NULL;
     }
 
 	if (list->elements_count == 0) {
 		log_info(logger, "List is empty");
+		pthread_mutex_unlock(&mutex);
 		return NULL;
 	}
 
@@ -77,6 +80,7 @@ void *log_list_contents(t_log *logger, t_list *list) {
     }
 	log_info(logger, "***************************");
 	log_info(logger, "-----------List End-----------");
+	pthread_mutex_unlock(&mutex);
 }
 
 void list_element_destroyer(void *element) {

@@ -150,20 +150,23 @@ void handle_multiprogramming_grade(const char *cmd_args) {
 
 void handle_process_state() {
     log_info(logger, "RUNNING state process:");
+    
+    pthread_mutex_lock(&mutex_running);
     if(pcb_RUNNING != NULL) {
         log_info(logger, "---pid: %d", pcb_RUNNING->pid);
     } else {
         log_info(logger, "No process running.");
     }
+    pthread_mutex_unlock(&mutex_running);
 
     log_info(logger, "NEW state processes:");
-    log_list_contents(logger, list_NEW);
+    log_list_contents(logger, list_NEW, mutex_new);
 
     log_info(logger, "READY state processes:");
-    log_list_contents(logger, list_READY);
+    log_list_contents(logger, list_READY, mutex_ready);
 
     log_info(logger, "BLOCKED state processes:");
-    log_list_contents(logger, list_BLOCKED);
+    log_list_contents(logger, list_BLOCKED, mutex_blocked);
 
     // TODO: Confirm if we need to show EXIT list too.
 }

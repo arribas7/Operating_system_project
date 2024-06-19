@@ -1,4 +1,5 @@
 #include "long_term_scheduler.h"
+#include <communication_kernel_cpu.h>
 
 // Array of strings corresponding to the enum values
 const char *exit_reason_strings[] = {
@@ -17,7 +18,7 @@ const char *get_exit_reason_str(exit_reason reason) {
     }
 }
 
-// start_process_on_new creates a pcb and push it into list NEW.
+// start_process creates a pcb and push it into list NEW.
 void start_process(char* path, t_config *config) {
     int pid = atomic_load(&pid_count) + 1;
     log_info(logger, "Se crea el proceso <%d> en NEW\n", pid);
@@ -47,6 +48,27 @@ void start_process(char* path, t_config *config) {
     list_push(list_NEW, pcb);
 }
 
+// exit_process_memory calls memory to release process resources.
+void exit_process_memory(t_pcb* pcb) {
+    log_debug(logger, "[THREAD] Memory connection");
+    int mem_conn = conexion_by_config(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serialize_pcb(pcb, buffer);
+
+    t_paquete *paquete = crear_paquete(FINISH_PROCESS);
+    agregar_a_paquete(paquete, buffer->stream, buffer->size);
+    enviar_paquete(paquete, mem_conn);
+    eliminar_paquete(paquete);
+    free(buffer->stream);
+    free(buffer);
+
+	op_code code = esperar_respuesta(mem_conn);
+    log_debug(logger, "Response code: %d", code);
+    liberar_conexion(mem_conn);
+    log_debug(logger, "Connection released");
+}
+
 void sem_post_multiprogramming(){
     pthread_mutex_lock(&mutex_multiprogramming);
     sem_post(&sem_multiprogramming);
@@ -56,18 +78,18 @@ void sem_post_multiprogramming(){
 void exit_process(t_pcb *pcb, t_state prev_status, exit_reason reason){
     log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
     move_pcb(pcb, prev_status, EXIT, list_EXIT, &mutex_exit);
+    exit_process_memory(pcb);
     sem_post_multiprogramming();
     return;
 }
 
-void exit_process_from_pid(int pid, exit_reason reason){
+void exit_process_from_pid(int pid, exit_reason reason) {
     // Check in all lists 
     pthread_mutex_lock(&mutex_running);
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
-        pcb_RUNNING = NULL;
+        cpu_interrupt(config); // interrupt should answer dispatch and move it to running
         pthread_mutex_unlock(&mutex_running);
-        exit_process(pcb, RUNNING, reason);
         return;
     } else {
         pthread_mutex_unlock(&mutex_running);
@@ -78,9 +100,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_READY, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_READY, pid);
-        pthread_mutex_unlock(&mutex_ready);
         exit_process(pcb, READY, reason);
-        sem_post_multiprogramming();
+        pthread_mutex_unlock(&mutex_ready);
         return;
     } else {
         pthread_mutex_unlock(&mutex_ready);
@@ -90,10 +111,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_BLOCKED, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_BLOCKED, pid);
-        pthread_mutex_unlock(&mutex_blocked);
-
         exit_process(pcb, BLOCKED, reason);
-        sem_post_multiprogramming();
+        pthread_mutex_unlock(&mutex_blocked);
         return;
     } else {
         pthread_mutex_unlock(&mutex_blocked);
@@ -103,8 +122,8 @@ void exit_process_from_pid(int pid, exit_reason reason){
     pcb = list_pid_element(list_NEW, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_NEW, pid);
-        pthread_mutex_unlock(&mutex_new);
         exit_process(pcb, NEW, reason);
+        pthread_mutex_unlock(&mutex_new);
         return;
     } else {
         pthread_mutex_unlock(&mutex_new);
@@ -131,10 +150,10 @@ void lt_sched_new_ready() {
             log_info(logger, "“PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <READY>”", pcb->pid);
 
             log_debug(logger, "Logging list_new: ");
-            log_list_contents(logger, list_NEW);
+            log_list_contents(logger, list_NEW, mutex_new);
 
             log_info(logger, "Cola Ready <%d>:", pcb->pid);
-            log_list_contents(logger, list_READY);
+            log_list_contents(logger, list_READY, mutex_ready);
         }
         // Check if planning is paused
         if (scheduler_paused) {
