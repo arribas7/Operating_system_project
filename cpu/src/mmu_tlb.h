@@ -19,12 +19,13 @@ extern t_pcb* pcb_en_ejecucion;
 extern int conexion_mem;
 
 #define cant_entradas_tlb() config_get_int_value("cpu.config","CANTIDAD_ENTRADAS_TLB")
+#define algoritmo_tlb() config_get_string_value("cpu.config","ALGORITMO_TLB")
 
 typedef struct tlb{
     int pid;
     int pagina;
     int marco;
-    // Otros campos que puedan ser necesarios
+    int last_time_access;
 } TLBEntry;
 
 extern TLBEntry TLB[32];
@@ -38,6 +39,7 @@ uint32_t mmu(char* logicalAddress);
 void agregar_a_TLB(int pid, int pagina, int marco);
 int solicitar_tam_pag_a_mem(void);
 int recibir_tam_pag(int socket_cliente);
-
+void agregar_a_TLB_LRU(int pid, int pagina, int marco);
+int find_LRU_index();
 
 #endif
