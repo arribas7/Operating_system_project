@@ -17,6 +17,8 @@
 #include <long_term_scheduler.h>
 #include <communication_kernel_cpu.h>
 
+extern t_interface_list* interface_list;
+
 extern t_list *list_NEW;
 pthread_mutex_t mutex_new;
 
@@ -83,13 +85,23 @@ void run_server(void *arg) {
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
             case IO:
+                uint32_t response = 0;
                 lista = recibir_paquete(cliente_fd);
-                t_interface* new_io = list_to_IO(lista);
-                char* name = get_IO_name(new_io);
-                char* type = get_IO_type(new_io);
-                log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
-                delete_IO(new_io);
-                log_info(logger, "IO Device disconnected");
+                t_interface* interface = list_to_interface(lista, cliente_fd);
+                char* name = get_interface_name(interface);
+
+                if(find_interface_by_name(name) != NULL) {
+                    // Aviso y elimino
+                    log_error(logger, "La interfaz %s ya existe", name);
+                    delete_interface(interface);
+                } else {
+                    // Aviso y añado
+                    char* type = get_interface_type(interface);
+                    log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
+                    add_interface_to_list(interface_list, interface);
+                    response = 1;
+                }
+                send_confirmation_to_interface(cliente_fd, &(response));
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing server...");
@@ -110,6 +122,8 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_lists();
+
+    interface_list = create_interface_list();
 
     config = config_create("kernel.config");
     if (config == NULL) {

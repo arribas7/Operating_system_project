@@ -45,6 +45,7 @@ typedef enum {
     EXIT_,
 
     // IO -> KERNEL
+    // KERNEL -> IO
     IO,
 
     // CPU -> KERNEL
@@ -53,7 +54,7 @@ typedef enum {
     WAIT,
     SIGNAL,
 
-    // generic
+    // GENERIC
     OK,
     NOT_FOUND,
     NOT_SUPPORTED,
@@ -90,5 +91,9 @@ void eliminar_paquete(t_paquete *paquete);
 int conexion_by_config(t_config *config, char *ip_config, char *puerto_config);
 
 void enviar_mensaje(char *mensaje, int socket_cliente);
+
+void *serializar_paquete(t_paquete *paquete, int bytes);
+
+void crear_buffer(t_paquete *paquete);
 
 #endif
