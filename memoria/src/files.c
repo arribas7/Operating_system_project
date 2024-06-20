@@ -48,32 +48,7 @@ const char *get_complete_instruction(const InstructionDictionary *dict, int inde
         return "__ERROR__";
     }
 }
-/*
 
-// Function to find the dictionary by PID
-InstructionDictionary* find_dictionary_by_pid(uint32_t pid) {
-    for (int i = 0; i < pid_dict_count; i++) {
-        if (pid_dict_array[i].pid == pid) {
-            return &pid_dict_array[i].instruction_dict;
-        }
-    }
-    return NULL; // Retorna NULL si no encuentra el PID
-}
-// Function to get a complete instruction by PID and index
-const char *get_complete_instruction(uint32_t pid, int index) {
-    InstructionDictionary* dict = find_dictionary_by_pid(pid);
-    if (dict == NULL) {
-        return "__ERROR__: PID not found";
-    }
-
-    if (index >= 0 && index < dict->size) {
-        return dict->instructions[index].complete_line;
-    } else {
-        return "__ERROR__: Index out of bounds";
-    }
-}
-
-*/
 void add_pid_instruction_dict(uint32_t pid, InstructionDictionary *dict) {
     if (pid_dict_count >= MAX_PROCESSES) {
         fprintf(stderr, "Maximum number of processes reached\n");
