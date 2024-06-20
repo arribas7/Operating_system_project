@@ -3,6 +3,8 @@
 FILE *file;
 InstructionDictionary dict;
 
+PIDToDict pid_dict_array[MAX_PROCESSES];
+int pid_dict_count = 0;
 /*
 Key: In this implementation, the key is the index (program counter) used to access the instructions.
 Value: The value is the complete instruction string stored in the complete_line field of the Instruction structure.
@@ -28,6 +30,7 @@ void instruction_dictionary_free(InstructionDictionary *dict) {
     }
     free(dict->instructions);
 }
+
 void load_instructions_from_file(InstructionDictionary *dict, FILE *file) {
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -44,6 +47,41 @@ const char *get_complete_instruction(const InstructionDictionary *dict, int inde
     } else {
         return "__ERROR__";
     }
+}
+/*
+
+// Function to find the dictionary by PID
+InstructionDictionary* find_dictionary_by_pid(uint32_t pid) {
+    for (int i = 0; i < pid_dict_count; i++) {
+        if (pid_dict_array[i].pid == pid) {
+            return &pid_dict_array[i].instruction_dict;
+        }
+    }
+    return NULL; // Retorna NULL si no encuentra el PID
+}
+// Function to get a complete instruction by PID and index
+const char *get_complete_instruction(uint32_t pid, int index) {
+    InstructionDictionary* dict = find_dictionary_by_pid(pid);
+    if (dict == NULL) {
+        return "__ERROR__: PID not found";
+    }
+
+    if (index >= 0 && index < dict->size) {
+        return dict->instructions[index].complete_line;
+    } else {
+        return "__ERROR__: Index out of bounds";
+    }
+}
+
+*/
+void add_pid_instruction_dict(uint32_t pid, InstructionDictionary *dict) {
+    if (pid_dict_count >= MAX_PROCESSES) {
+        fprintf(stderr, "Maximum number of processes reached\n");
+        return;
+    }
+    pid_dict_array[pid_dict_count].pid = pid;
+    pid_dict_array[pid_dict_count].instruction_dict = dict;
+    pid_dict_count++;
 }
 /*
 void send_instruction(const char *instruction, int socket_cliente) {
@@ -75,10 +113,11 @@ void handle_create_process(const char *file_path, uint32_t pid){
               instruction_dictionary_init(&dictionary, 10);  
               load_instructions_from_file(&dictionary, file); 
               fclose(file); 
-
+              add_pid_instruction_dict(pid, &dictionary); //Nueva funcion
               for (int pc = 0; pc < dictionary.size; pc++) {
               const char *complete_instruction = get_complete_instruction(&dictionary, pc);
-              printf("PC: %d, Complete Instruction: %s\n", pc, complete_instruction);
+              printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
+        
               }
               instruction_dictionary_free(&dictionary);
 
