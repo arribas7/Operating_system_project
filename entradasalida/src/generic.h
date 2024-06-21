@@ -7,10 +7,7 @@
 #include <utils/server.h>
 #include <utils/inout.h>
 
-// Generic interface functions
+// ----- Functions -----
 
-/**
- * @fn generic_interface_wait
- * @brief Wait time microseconds * unit_work_time
-**/ 
+// Wait time microseconds * unit_work_time 
 int generic_interface_wait(int time, t_config* config);

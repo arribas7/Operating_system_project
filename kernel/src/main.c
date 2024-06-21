@@ -91,17 +91,31 @@ void run_server(void *arg) {
                 char* name = get_interface_name(interface);
 
                 if(find_interface_by_name(name) != NULL) {
-                    // Aviso y elimino
                     log_error(logger, "La interfaz %s ya existe", name);
                     delete_interface(interface);
                 } else {
-                    // Aviso y añado
                     char* type = get_interface_type(interface);
                     log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
                     add_interface_to_list(interface_list, interface);
                     response = 1;
                 }
-                send_confirmation_to_interface(cliente_fd, &(response));
+
+                send_confirmation(cliente_fd, &(response));
+
+                // Prueba de instruction
+
+                t_instruction* instruction = create_instruction(1, "prueba", 5, "myPath");
+                send_instruction(IO_GEN_SLEEP, instruction, cliente_fd);
+                log_info(logger, "Instruction sended");
+                delete_instruction(instruction);
+
+                receive_confirmation(cliente_fd, &(response));
+                if (response == 0) 
+                {
+                    log_error(logger, "An error has ocurred");
+                } else {
+                    log_info(logger, "Successfull operation");
+                }
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing server...");

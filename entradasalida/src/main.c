@@ -27,6 +27,8 @@ int main(int argc, char* argv[]) {
 
     config = config_create(argv[1]);
     char* name = argv[2];
+    char* type = type_from_config(config);
+    t_interface* interface = create_interface(name, type, 0);
 
     // Connect to the Kernel
 
@@ -40,53 +42,41 @@ int main(int argc, char* argv[]) {
 
     // I send a package to Kernel to inform the interface created
 
-    t_paquete* package = create_interface_package(name, config);
+    t_paquete* package = interface_to_package(interface);
     enviar_paquete(package, connection);
     eliminar_paquete(package);
+    delete_interface(interface);
 
     uint32_t response;
-    receive_confirmation_from_kernel(connection, &(response));
+    receive_confirmation(connection, &(response));
 
     if (response == 0) 
     {
         return EXIT_FAILURE;
     } else {
-        txt_write_in_stdout("CONNECTION SUCESSFULL\n");
         log_info(logger, "CONNECTION SUCESSFULL");
     }
-
-    /*
+    
     while(1) 
     {
-        // I hope I get an instruction from the Kernel
-        //bytes = recv(connection, &result, sizeof(int32_t), MSG_WAITALL);
-        
-        //int client_fd = esperar_cliente(connection);
-        log_debug(logger, "PASO 1: Cliente conectado");
+        int cod_op; char* code;
+        cod_op = recibir_operacion(connection);
 
-        int cod_op = recibir_operacion(client_fd);
-        log_debug(logger, "PASO 2: Operación recibida");
-
-        // I manage the operation received
-        if (is_valid_instruction(cod_op, config))
+        if(is_valid_instruction(cod_op, code, config)) 
         {
-            // I log the PID and the instruction
-            log_debug(logger, "PASO 3: Instruccion validada");
-            log_info(logger, "PID: %s - Operation: %d", "", cod_op);
-            
-            // Once the instruction has been validated and logged in, we execute it
+            t_instruction* instruction = receive_instruction(connection);
 
             switch(cod_op) 
             {
-                // Generic interface
                 case IO_GEN_SLEEP:
-                    int ret = generic_interface_wait(10, config);
-                    inform_kernel(client_fd, ret);
+                    log_info(logger, "PID: %i - Operación a realizar: %s", instruction->pid, code);
+                    int result = generic_interface_wait(instruction->job_unit, config);
+                    response = (result == 0) ? 1 : 0;
+                    log_info(logger, "Operation finished");
+                    send_confirmation(connection, &(response));
                     break;
-                // STDIN interface
                 case IO_STDIN_READ:
                     break;
-                // STDOUT interface
                 case IO_STDOUT_WRITE:
                     break;
                 default:
@@ -95,14 +85,10 @@ int main(int argc, char* argv[]) {
             }
         } else {
             log_error(logger, "Invalid instruction");
-            enviar_mensaje("Invalid instruction", client_fd);
+            enviar_mensaje("Invalid instruction", connection);
             break;
         }
-
-        log_debug(logger, "PASO 4: Llego al fin. Vuelve al PASO 1");
-
     }
-    */
 
     liberar_conexion(connection);
 

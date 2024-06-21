@@ -7,8 +7,7 @@
 #include <utils/server.h>
 #include <utils/inout.h>
 
-
-// ----- Interfaces Types Functions -----
+// ----- DEFINITIONS -----
 
 // - Generic IO Functions
 
