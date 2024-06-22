@@ -39,6 +39,7 @@ typedef enum {
     REG_REQUEST,
     RESIZE,
     COPY_STRING,
+    PAGE_REQUEST,
 
     // CPU -> KERNEL -> IO -> MEMORY
     IO_GEN_SLEEP,
