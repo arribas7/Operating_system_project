@@ -23,7 +23,8 @@ void handle_client(void *arg) {
                 log_info(logger, "quantum: %d", pcb->quantum);
                 log_info(logger, "path: %s", pcb->path);
                 const char *path_info = pcb->path; 
-                u_int32_t pid = pcb->pid; //KEY TO DICTIONARY?
+                u_int32_t pid = pcb->pid; 
+                handle_create_process(*path_info,pid);
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
@@ -33,7 +34,9 @@ void handle_client(void *arg) {
                 log_info(logger, "quantum: %d", pcb->quantum);
                 log_info(logger, "path: %s", pcb->path);
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
-                //const char *instruction = get_complete_instruction(&dict, pcb->pc);
+                //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
+                const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
+
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
@@ -129,13 +132,17 @@ int main(int argc, char *argv[]) {
      /*-------------------Pagination----------------------------*/
 
     initPaging();
-  
+
     /*-------------------Test diccionary----------------------------*/
     const char *file_path="scripts-pruebas/file1";
-    uint32_t TIPO=1;
-    printf("Step 1: %s\n",file_path);
-    handle_create_process(file_path,TIPO);
-    //*FILE *open_file(const char *file_path);
+    uint32_t TIPO1=1; //tipo es el PID1
+     uint32_t TIPO2=2; //tipo es el PID2
+    printf("Step PID1: %s\n",file_path);
+    handle_create_process(file_path,TIPO1);
+    printf("Step PID2: %s\n",file_path);
+    handle_create_process(file_path,TIPO2);
+    
+
 
     /* ---------------- Hilos ---------------- */
 

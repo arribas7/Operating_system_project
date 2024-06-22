@@ -1,4 +1,5 @@
 
+
 #ifndef UTILS_INOUT_H_
 #define UTILS_INOUT_H_
 
@@ -10,82 +11,120 @@
 #include <netdb.h>
 #include <string.h>
 #include <commons/log.h>
+#include <commons/txt.h>
+#include <pthread.h>
 #include "client.h"
 
-// ----- Structures -----
+// ----- STRUCTURES -----
 typedef struct 
 {
-    char* IO_name;
-    char* IO_type;
+    uint32_t length_name;
+    char* name;
+    uint32_t length_type;
+    char* type;
+    int connection;
 } t_interface;
 
-// ----- Statements -----
+typedef struct
+{
+    t_list* list;
+    pthread_mutex_t mutex;
+} t_interface_list;
 
-// -- To Kernel
+typedef struct 
+{
+    uint32_t pid;
+    uint32_t length_name;
+    char* name;
+    uint32_t job_unit;
+    uint32_t length_path;
+    char* path;
+} t_instruction;
 
-/**
- * @fn create_IO
- * @brief Create a pointer to a struct t_interface
-**/
-t_interface* create_IO(char* IO_name, char* IO_type);
+// ----- FUNCTIONS -----
 
-/**
- * @fn list_to_IO
- * @brief Extract the information from a list and create a pointer to a struct t_interface 
-**/
-t_interface* list_to_IO(t_list* list);
+// -- GENERAL --
+// CREATE / DELETE INTERFACES
 
-/**
- * @fn get_IO_name
- * @brief Get the IO name from the struct t_interface
-**/ 
-char* get_IO_name(t_interface* interface);
+// Create a pointer to a struct t_interface
+t_interface* create_interface(char* name, char* type, int connection);
 
-/**
- * @fn get_IO_type
- * @brief Get the IO type from the struct t_interface
-**/
-char* get_IO_type(t_interface* interface);
+// Free the space of the struct t_interface
+void delete_interface(t_interface* interface);
 
-/**
- * @fn delete_IO
- * @brief free the space of the struct t_interface
-**/
-void delete_IO(t_interface* interface);
+// INSTRUCTION
 
-// -- To IO
+// Create a instruction struct
+t_instruction* create_instruction(uint32_t pid, char* name, uint32_t job_unit, char* path);
 
-/**
- * @fn create_IO_package
- * @brief create a package to send the IO information
-**/ 
-t_paquete* create_IO_package(char* IO_name, t_config* config);
+// Serialize instruction
+t_buffer* serialize_instruction(t_instruction* instruction);
 
-/**
- * @fn IO:type_from_config
- * @brief get the IO type from the struct t_config
-**/ 
-char* IO_type_from_config(t_config* config);
+// Deserialize instruction
+t_instruction* desearialize_instruction(t_buffer* buffer);
 
-/**
- * @fn is_valid_instructiom
- * @brief validate the received instruction from the Kernel
-**/ 
-bool is_valid_instruction(op_code instruction, t_config* config);
+// Send a instruction
+void send_instruction(op_code code, t_instruction* instruction, int connection);
 
-/**
- * @fn IO_inform_kernel
- * @brief send a message to Kernel about the event status
-**/ 
-void IO_inform_kernel(int connection, int ret);
+// Receive a instruction
+t_instruction* receive_instruction(int connection);
 
-// ----- Generic Interface Functions
+// Delete a instruction
+void delete_instruction(t_instruction* instruction);
 
-/**
- * @fn generic_IO_wait
- * @brief Wait time microseconds * unit_work_time
-**/ 
-int generic_IO_wait(int time, t_config* config);
+// SEND
+
+// Send a confirmation to the connection
+int send_confirmation(int connection, uint32_t* response);
+
+// Receive a confirmation from the connection
+int receive_confirmation(int connection, uint32_t* received);
+
+// Inform by screen the result of the operation
+void result_of_operation(uint32_t);
+
+// -- TO KERNEL --
+
+// Extract the information from a list and create a pointer to a struct t_interface 
+t_interface* list_to_interface(t_list* list, int connection);
+
+// GETTERS
+
+// Get the interface name from the struct t_interface 
+char* get_interface_name(t_interface* interface);
+
+// Get the interface type from the struct t_interface
+char* get_interface_type(t_interface* interface);
+
+// Get the interface connection number to send instructions
+int get_interface_connection(t_interface* interface);
+
+// LIST 
+
+// Create the list to save interfaces
+t_interface_list* create_interface_list();
+
+// Add the interface to the list
+void add_interface_to_list(t_interface_list* list, t_interface* interface);
+
+// Find the interface by the name
+t_interface* find_interface_by_name(char* name);
+
+// -- TO INTERFACE --
+// PACKAGE
+
+// Create a package to send the interface information 
+t_paquete* interface_to_package(t_interface* interface);
+
+// GETTERS
+
+// Get the interface type from the struct t_config
+char* type_from_config(t_config* config);
+
+// VALIDATION
+
+// Validate the received instruction from the Kernel 
+bool is_valid_instruction(op_code instruction, char* code, t_config* config);
 
 //void iterator(char* value);
 

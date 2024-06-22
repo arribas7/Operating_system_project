@@ -1,95 +1,93 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <commons/txt.h>
 #include <commons/log.h>
 #include <commons/config.h>
 #include <utils/client.h>
 #include <utils/server.h>
 #include <utils/inout.h>
+#include "generic.h"
+#include "stdin_stdout.h"
 
-// -- Global variables
+// Global variables
 
+t_list* process_list;
+pthread_mutex_t mutex_process_list;
 t_log* logger;
 t_config* config;
-char* IO_name;
+char* name;
 
 int main(int argc, char* argv[]) {
     
-    // -- Create log and config for the initial connection --
+    // Create log and config for the initial connection
 
     logger = log_create("in_out.log", "IN_OUT", true, LOG_LEVEL_INFO);
     
-    // -- In each instance of the module I can change the path of the configuration file --
+    // In each instance of the module I can change the path of the configuration file
 
     config = config_create(argv[1]);
-    char* IO_name = argv[2];
+    char* name = argv[2];
+    char* type = type_from_config(config);
+    t_interface* interface = create_interface(name, type, 0);
 
-    // -- I create the interface --
-
-    /* 
-    
-    -- Procedure --
-    
-    // -- General (all interfaces)
-    1 - I connect to the Kernel
-    2 - I hope you send me a message (operation to be carried out)
-    3 - I attend to the message (I perform the operation)
-    4 - I reply that I'm done
-    5 - I go back to step 2
-    
-    // -- Generic Interface
-    1 - I wait the amount of time defined in the configuration file
-
-    */
-
-    // ----- Client Connection -----
-
-    // -- Connect to the Kernel --
+    // Connect to the Kernel
 
     char* ip = config_get_string_value(config, "IP_KERNEL");
     char* port = config_get_string_value(config, "PUERTO_KERNEL");
     
-    // -- I create the client connection --
+    // I create the client connection
     
     int connection = crear_conexion(ip, port);
+    log_info(logger, "La conexion es: %d", connection);
 
-    // -- I send a package to Kernel to inform the IO created --
+    // I send a package to Kernel to inform the interface created
 
-    t_paquete* package = create_IO_package(IO_name, config);
+    t_paquete* package = interface_to_package(interface);
     enviar_paquete(package, connection);
     eliminar_paquete(package);
+    delete_interface(interface);
 
+    uint32_t response;
+    receive_confirmation(connection, &(response));
+
+    if (response == 0) 
+    {
+        return EXIT_FAILURE;
+    } else {
+        log_info(logger, "CONNECTION SUCESSFULL");
+    }
+    
     while(1) 
     {
-        // -- I hope I get an instruction from the Kernel
-        int client_fd = esperar_cliente(connection);
-        int cod_op = recibir_operacion(client_fd);
+        int cod_op; char* code;
+        cod_op = recibir_operacion(connection);
 
-        // -- I manage the operation received
-        if (is_valid_instruction(cod_op, config))
+        if(is_valid_instruction(cod_op, code, config)) 
         {
-            // -- I log the PID and the instruction
-            log_info(logger, "PID: %s - Operación: %d", "", cod_op);
-            
-            // -- Once the instruction has been validated and logged in, we execute it
+            t_instruction* instruction = receive_instruction(connection);
 
             switch(cod_op) 
             {
-                // -- Generic IO
                 case IO_GEN_SLEEP:
-                    int ret = generic_IO_wait(10, config);
-                    IO_inform_kernel(client_fd, ret);
+                    log_info(logger, "PID: %i - Operación a realizar: %s", instruction->pid, code);
+                    int result = generic_interface_wait(instruction->job_unit, config);
+                    response = (result == 0) ? 1 : 0;
+                    log_info(logger, "Operation finished");
+                    send_confirmation(connection, &(response));
+                    break;
+                case IO_STDIN_READ:
+                    break;
+                case IO_STDOUT_WRITE:
                     break;
                 default:
-                    // Here is the implementation of the other interfaces
-                    // (For now we only build the generic interface)
+                    log_error(logger, "Invalid instruction");
                     break;
             }
         } else {
-            log_error(logger, "Invalid Instruction");
-            enviar_mensaje("Invalid Instruction", client_fd);
+            log_error(logger, "Invalid instruction");
+            enviar_mensaje("Invalid instruction", connection);
             break;
         }
-
     }
 
     liberar_conexion(connection);
