@@ -91,10 +91,6 @@ void copy_string (char* tamanio);
 
 
 int buscar(char *elemento, char **lista); //to find comando decode
-typedef struct{
-    u_int32_t pid;
-    u_int32_t tamanio;
-} t_resize;
 
 t_resize* new_resize(u_int32_t tamanio);
 t_paquete *resize(char* tamanio);
