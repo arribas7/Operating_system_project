@@ -20,6 +20,6 @@ t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config);
 //Sends an empty package to the CPU module using the INTERRUPT op code
 //Port and Ip address are dependant on the config parameter
 //Returns the response code passed by the CPU
-op_code cpu_interrupt(t_config *config);
+op_code cpu_interrupt(t_config *config, op_code reason);
 
 #endif 

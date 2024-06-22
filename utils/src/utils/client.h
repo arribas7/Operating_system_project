@@ -23,10 +23,12 @@ typedef enum {
     // Kernel -> MEMORY
     CREATE_PROCESS,
     FINISH_PROCESS,
+    OUT_OF_MEMORY,
 
     // Kernel -> CPU
     DISPATCH,
-    INTERRUPT, // INTERRUPT / QUANTUM_FINISHED / DESALOJO
+    INTERRUPT_BY_USER,
+    INTERRUPT_TIMEOUT, // Quantum timeout
 
     // CPU -> MEMORY
     PC,
@@ -47,17 +49,14 @@ typedef enum {
     IO_FS_TRUNCATE,
     IO_FS_WRITE,
     IO_FS_READ,
-    EXIT_,
-
-    // IO -> KERNEL
-    // KERNEL -> IO
-    IO,
-
-    // CPU -> KERNEL
     RELEASE,
     TIMEOUT,
     WAIT,
     SIGNAL,
+
+    // IO -> KERNEL
+    // KERNEL -> IO
+    IO,
 } op_code;
 
 typedef struct {
