@@ -5,6 +5,25 @@ t_memory memory;
 t_config *config;
 t_log* logger;
 
+void end_process(){
+    int frameCount = memory.memory_size / memory.page_size; 
+
+    memset(memory.frames_ocupados, 0, frameCount * sizeof(bool));
+}
+
+t_resize* recibir_resize(int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    //t_resize* resize = deserializar_resize(buffer);
+    free(buffer);
+
+    //return resize;
+}
+
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
     free(arg);
@@ -53,16 +72,16 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PAGE_REQUEST:
-                pagina = recibir_pagina();
-                marco = obtener_marco();
-                enviar_marco(marco);
+                //pagina = recibir_pagina();
+                //marco = obtener_marco();
+                //enviar_marco(marco);
             break;
             case RESIZE:
-                t_resize* resize = recibir_resize(socket_cpu);
-                int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
-                if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
-                if(caso == 1) ampliar_proceso(resize.pid);
-                if(caso == 2) reducir_proceso(resize.pid);
+                //t_resize* resize = recibir_resize(socket_cpu);
+                //int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
+                //if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
+                //if(caso == 1) ampliar_proceso(resize.pid);
+                //if(caso == 2) reducir_proceso(resize.pid);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
@@ -161,21 +180,3 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void end_process(){
-    int frameCount = memory.memory_size / memory.page_size; 
-
-    memset(memory.frames_ocupados, 0, frameCount * sizeof(bool));
-}
-
-t_resize* recibir_resize(socket_cpu){
-    int size;
-    void *buffer = recibir_buffer(&size, socket_cpu);
-    if (buffer == NULL) {
-        return NULL;
-    }
-
-    t_resize* resize = deserializar_resize(buffer);
-    free(buffer);
-
-    return resize;
-}
