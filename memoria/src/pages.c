@@ -9,7 +9,7 @@ int initPaging(void) {
  
     printf("TAMAÑO MEMORIA TOTAL: %d\n",memory.memory_size);
 
-    espacio_usuario = malloc(memory.memory_size);
+       espacio_usuario = malloc(memory.memory_size);
     if (espacio_usuario == NULL) {
         perror("Memory allocation failed!\n");
         return 0;
@@ -21,7 +21,7 @@ int initPaging(void) {
 
     int pageSize = memory.page_size;
     int frameCount = memory.memory_size / pageSize; 
-    printf("TAMAÑO MARCO: %d\n",frameCount);
+     printf("TAMAÑO MARCO: %d\n",frameCount);
     //Each bit in the bit array represents one frame (0 for free, 1 for occupied).
 
     log_info(logger, "Memory has %d frames of %d bytes", frameCount, pageSize);
@@ -56,15 +56,14 @@ int initPaging(void) {
     | 0 1 2 3 4 5 6 7 | 8 9 10 11 12 13 14 15 | 16 17 18 19 20 21 22 23 | ...
     (Bits representing frames; all bits set to 0)
     */
+   
+   
 
-    
-    return 1;
-}
 
     /* ----------------Third Structure ---------------- */
    
     // Función para crear la tabla de páginas y asignar marcos a cada página
-TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
+    TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
     // Calculamos el número de marcos necesarios para el proceso
     int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
 
@@ -89,4 +88,8 @@ TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
 // Función para liberar la memoria ocupada por la tabla de páginas
 void liberarTablaPaginas(TablaPaginas tabla) {
     free(tabla.paginas);
+}
+
+    
+    return 1;
 }

@@ -38,8 +38,10 @@ t_pcb* virtual_round_robin(){ // TODO: Implement
 }
 
 t_pcb* get_next_pcb(char *selection_algorithm) {
+
     if (strcmp(selection_algorithm, "RR") == 0) {
         return round_robin();
+
     } else if (strcmp(selection_algorithm, "VRR") == 0) {
         return virtual_round_robin();
     }
@@ -51,22 +53,34 @@ void run_quantum_counter(void* arg) {
     int quantum_time = *(int*) arg;
     
     while (1) {
+        //Wait for initialization
         sem_wait(&sem_quantum);
-        t_temporal *timer = temporal_create();
 
+        //Create and start timer
+        t_temporal *timer = temporal_create();
         log_info(logger, "Quantum Iniciado");
         temporal_resume(timer);
+
+        //Check for the completion of the timer
         while (temporal_gettime(timer) < quantum_time) {
             usleep(1000); // sleep 1 ms to wait busy-waiting
         }
+
+        //Quantum is finished
         log_info(logger, "Quantum Cumplido");
 
+        //Wait until no one is interacting with RUNNING
         pthread_mutex_lock(&mutex_running);
-        if (pcb_RUNNING != NULL) {
-            cpu_interrupt(config);
-            pcb_RUNNING = NULL;
-        }
+
+            //Send an interrupt signal in case a pcb is running
+            if (pcb_RUNNING != NULL) {
+                cpu_interrupt(config);
+                pcb_RUNNING = NULL;
+            }
+
         pthread_mutex_unlock(&mutex_running);
+
+        //Destroy timer
         temporal_destroy(timer);
     }
 }

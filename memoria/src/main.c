@@ -23,8 +23,8 @@ void handle_client(void *arg) {
                 log_info(logger, "quantum: %d", pcb->quantum);
                 log_info(logger, "path: %s", pcb->path);
                 const char *path_info = pcb->path; 
-                u_int32_t pid = pcb->pid; 
-                handle_create_process(*path_info,pid);
+                u_int32_t pid = pcb->pid; //KEY TO DICTIONARY?
+                // handle_create_process(file_path,TIPO);
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
@@ -49,21 +49,8 @@ void handle_client(void *arg) {
                 /* TODO Jannet: end process
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 */
-                //end_process();
                 enviar_respuesta(cliente_fd, OK);
                 break;
-            case PAGE_REQUEST:
-                pagina = recibir_pagina();
-                marco = obtener_marco();
-                enviar_marco(marco);
-            break;
-            case RESIZE:
-                t_resize* resize = recibir_resize(socket_cpu);
-                int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
-                if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
-                if(caso == 1) ampliar_proceso(resize.pid);
-                if(caso == 2) reducir_proceso(resize.pid);
-            break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
                 return;
@@ -112,7 +99,7 @@ int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
     
   
-    config = config_create("memoria.config");
+      config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);
@@ -132,17 +119,16 @@ int main(int argc, char *argv[]) {
      /*-------------------Pagination----------------------------*/
 
     initPaging();
-
+  
     /*-------------------Test diccionary----------------------------*/
-    const char *file_path="scripts-pruebas/file1";
+    const char *file_path="scripts-pruebas/file2";
     uint32_t TIPO1=1; //tipo es el PID1
      uint32_t TIPO2=2; //tipo es el PID2
     printf("Step PID1: %s\n",file_path);
     handle_create_process(file_path,TIPO1);
     printf("Step PID2: %s\n",file_path);
     handle_create_process(file_path,TIPO2);
-    
-
+    //*FILE *open_file(const char *file_path);
 
     /* ---------------- Hilos ---------------- */
 
@@ -159,23 +145,4 @@ int main(int argc, char *argv[]) {
     clean(config);
          
     return 0;
-}
-
-void end_process(){
-    int frameCount = memory.memory_size / memory.page_size; 
-
-    memset(memory.frames_ocupados, 0, frameCount * sizeof(bool));
-}
-
-t_resize* recibir_resize(socket_cpu){
-    int size;
-    void *buffer = recibir_buffer(&size, socket_cpu);
-    if (buffer == NULL) {
-        return NULL;
-    }
-
-    t_resize* resize = deserializar_resize(buffer);
-    free(buffer);
-
-    return resize;
 }
