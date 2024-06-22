@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <utils/cpu.h>
 #include <files.h>
-
+#include "utils/cpu.h"
 typedef struct
 
 {    //char *espacio_usuario; lo declaré en pages.h

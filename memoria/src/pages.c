@@ -66,7 +66,7 @@ int initPaging(void) {
     // Función para crear la tabla de páginas y asignar marcos a cada página
 TablaPaginas crearTablaPaginas(int tamano_proceso, int tamano_marco) {
     // Calculamos el número de marcos necesarios para el proceso
-    int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
+    int num_marcos;// = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
 
     // Creamos la tabla de páginas
     TablaPaginas tabla;
