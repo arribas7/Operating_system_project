@@ -25,7 +25,8 @@ int cant_parametros;
 
 t_reg_cpu* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
-int cliente_fd; //el kenel
+int kernel_dispatch_socket;
+int kernel_interrupt_socket;
 
 int correr_servidor(void *arg);
 void *conexion_MEM(void *arg);
@@ -46,8 +47,7 @@ void fetch(t_pcb *pcb);
 void recibir_instruccion(int socket_cliente);
 int buscar(char *elemento, char **lista);
 
-t_list* interruptions_list; //nodo [pid,interrupcion]
-
+op_code interrupted_reason = 0;
 
 int main(int argc, char *argv[])
 {
@@ -92,94 +92,91 @@ void run_interrupt_server(void){
     handle_interrupt(server_fd);
 }
 
-t_pcb *procesar_pcb(t_pcb *pcb)
-{
+t_paquete *procesar_pcb(t_pcb *pcb){
     // Procesar el PCB y ejecutar el ciclo de instrucción
     log_info(logger, "Procesando el PCB con PID: %d", pcb->pid);
+    
     init_reg_proceso_actual(); //luego de procesar el proceso actual, verificar instrucciones, antes de pasar al nuevo proceso del sig PC, acordarse hacer "free(reg_proceso_actual)"
-    
-    // process
-    fetch(pcb);
-    decode(pcb);
-    execute(pcb);
-    pcb->pc++;
-    
-    //hacer hilo para checkear las interrupciones, envio el pcb actualizado y el motivo del desalojo
-    check_interrupt();
-    //el motivo sera el codeop del paquete que contenga el pcb actualizado
-    return NULL;
+    t_paquete *response = NULL;
+    pcb_en_ejecucion = pcb;
+
+    while(true){
+        fetch(pcb_en_ejecucion);
+        decode(pcb_en_ejecucion);
+        response = execute(pcb_en_ejecucion);
+        pcb_en_ejecucion->pc++;
+
+        if(response != NULL){
+            break;
+        }
+        
+        op_code actual_interrupt_reason = check_interrupt();
+        if(actual_interrupt_reason > 0){
+            response = crear_paquete(actual_interrupt_reason);
+            t_buffer* buffer = malloc(sizeof(t_buffer));
+
+            serialize_pcb(pcb_en_ejecucion, buffer);
+            agregar_a_paquete(response,buffer->stream,buffer->size);
+            break;
+        }
+    }
+    return response;
 }
 
 int handle_dispatch(int server_fd)
 {
     while (1)
     {
-        int cliente_fd = esperar_cliente(server_fd);
+        kernel_dispatch_socket = esperar_cliente(server_fd);
         log_info(logger, "Received PCB from kernel...");
         
-        int cod_op = recibir_operacion(cliente_fd);
+        int cod_op = recibir_operacion(kernel_dispatch_socket);
         if(cod_op != DISPATCH){
             log_error(logger, "Invalid operation code or disconnected from client for dispatch handler. cod_op: %s", cod_op);
-            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
+            enviar_respuesta(kernel_dispatch_socket, NOT_SUPPORTED);
             continue;
         }
 
-        t_pcb *pcb = recibir_pcb(cliente_fd);
+        t_pcb *pcb = recibir_pcb(kernel_dispatch_socket);
         if (pcb == NULL) {
             log_error(logger, "Error deserializing PCB.");
-            enviar_respuesta(cliente_fd, GENERAL_ERROR);
+            enviar_respuesta(kernel_dispatch_socket, GENERAL_ERROR);
             continue;
         }
 
         // Process dispatch and get the updated pcb
-        procesar_pcb(pcb);
-        // TODO Gabi: return updated pcb;
-        t_pcb *updated_pcb = new_pcb(pcb->pid, pcb->quantum, pcb->path, pcb->prev_state);
+        t_paquete *response = procesar_pcb(pcb);
 
-        t_buffer *buffer = malloc(sizeof(t_buffer));
-        serialize_pcb(updated_pcb, buffer);
-
-        t_paquete *paquete = crear_paquete(RELEASE);
-        agregar_a_paquete(paquete, buffer->stream, buffer->size);
-        enviar_paquete(paquete, cliente_fd);
-        eliminar_paquete(paquete);
-        free(buffer->stream);
-        free(buffer);
+        enviar_paquete(response, kernel_dispatch_socket);
+        eliminar_paquete(response);
         free(pcb);
 
-        liberar_conexion(cliente_fd);
+        liberar_conexion(kernel_dispatch_socket);
     }
     return EXIT_SUCCESS;
 }
 
 int handle_interrupt(int server_fd)
 {
-    interruptions_list = list_create();
     while (1)
     {
-        cliente_fd = esperar_cliente(server_fd);
+        kernel_interrupt_socket = esperar_cliente(server_fd);
         log_info(logger, "Received interrupt signal from kernel...");
-        int cod_op = recibir_operacion(cliente_fd);
-        if(cod_op != INTERRUPT){
-            log_error(logger, "Invalid operation code or disconnected from client for interrupt handler. cod_op: %s", cod_op);
-            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
-            continue;
-        }
-        t_list *lista = recibir_paquete(cliente_fd);
-        for (int i = 0; i < list_size(lista); i++)
+        int cod_op = recibir_operacion(kernel_interrupt_socket);
+        switch (cod_op)
         {
-            void *pcb_buffer = list_get(lista, i);
-            t_pcb *pcb = deserialize_pcb(pcb_buffer);
-            free(pcb_buffer);
-            if (pcb == NULL) {
-                log_error(logger, "Error deserializing PCB.");
-                enviar_respuesta(cliente_fd, GENERAL_ERROR);
-                continue;
-            }
-            // TODO: handle interrupt
-
-            enviar_respuesta(cliente_fd, NOT_SUPPORTED);
+            case INTERRUPT_BY_USER:
+            case INTERRUPT_TIMEOUT:
+                interrupted_reason = cod_op;
+                break;
+            
+            default:
+                log_error(logger, "Invalid operation code or disconnected from client for interrupt handler. cod_op: %s", cod_op);
+                enviar_respuesta(kernel_interrupt_socket, NOT_SUPPORTED);
+                break;
         }
+
+        enviar_respuesta(kernel_interrupt_socket, OK);
     }
     return EXIT_SUCCESS;
 }

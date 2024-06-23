@@ -88,7 +88,7 @@ void exit_process_from_pid(int pid, exit_reason reason) {
     pthread_mutex_lock(&mutex_running);
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
-        cpu_interrupt(config); // interrupt should answer dispatch and move it to running
+        cpu_interrupt(config, INTERRUPT_BY_USER); // interrupt should answer dispatch and move it to running
         pthread_mutex_unlock(&mutex_running);
         return;
     } else {
