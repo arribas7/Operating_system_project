@@ -31,6 +31,11 @@ typedef struct instruction {
     char* job_unit;
 } t_instruction;
 
+typedef struct{
+    u_int32_t pid;
+    u_int32_t tamanio;
+} t_resize;
+
 
 t_instruction* deserializar_instruction_IO (void* stream);
 void serializar_instruccion_IO(t_instruction* IO, t_buffer* buffer);

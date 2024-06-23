@@ -105,53 +105,79 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
 }
 
 void st_sched_ready_running(void* arg) {
+    
     char *selection_algorithm = (char *) arg;
     log_debug(logger, "Initializing short term scheduler (ready->running) with selection algorithm: %s...", selection_algorithm);
 
+    // Check if the selection algorithm is Round Robin (RR) or Virtual Round Robin (VRR)
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
         int *quantum_time = config_get_int_value(config, "QUANTUM");
 
+        // Create a thread to handle the quantum counter
         if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, quantum_time) != 0) {
             log_error(logger, "Error creating quantum thread");
             return;
         }
+        // Detach the thread to let it run independently
         pthread_detach(quantum_counter_thread);
     }
 
+    // Main loop to continuously check for ready processes to schedule
     while (1) {
-        sem_wait(&sem_all_scheduler); // Wait for the semaphore to be available
-        sem_post(&sem_all_scheduler); // Immediately release it for the next iteration
-        if (!list_is_empty(list_READY)) { // TODO: Do we need to improve it to avoid intensive busy-waiting polling?
+        // Wait for the semaphore indicating scheduling is allowed
+        sem_wait(&sem_all_scheduler); 
+        // Immediately release the semaphore for the next iteration
+        sem_post(&sem_all_scheduler); 
+
+        if (!list_is_empty(list_READY)) { 
             sem_wait(&sem_st_scheduler);
 
+            // Get the next process control block (PCB) based on the selection algorithm
             t_pcb *next_pcb = get_next_pcb(selection_algorithm);
+
+            // Lock the mutex to safely update the running PCB
             pthread_mutex_lock(&mutex_running);
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
 
+            // If using RR or VRR, signal the quantum semaphore
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
                 sem_post(&sem_quantum);
             }
+
+            // Dispatch the PCB to the CPU and get the result
             t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
+            log_info(logger, "Dispatched a PCB %s", next_pcb->path);
+
+            // Handle errors from the CPU dispatch
             if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
                 log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);
                 return;
             }
 
+            // Log the CPU dispatch response
             log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
 
+            // Lock the mutex to safely handle the PCB return
             pthread_mutex_lock(&mutex_running);
+            // Handle the returned PCB and update based on the response code
             handle_pcb_dispatch_return(ret->pcb_updated, ret->resp_code);
-            free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
+            // Free the running PCB as it has been handled
+            free(pcb_RUNNING); 
+            // Set the running PCB to NULL
             pcb_RUNNING = NULL;
+            // Unlock the mutex
             pthread_mutex_unlock(&mutex_running);
 
+            // Signal the short-term scheduler semaphore
             sem_post(&sem_st_scheduler);
         }
 
+        // Check if the scheduler is paused
         if (scheduler_paused) {
-            sem_wait(&sem_all_scheduler); // Block until planning is resumed
+            // Block until the scheduling is resumed
+            sem_wait(&sem_all_scheduler); 
             sem_post(&sem_all_scheduler);
         }
     }
