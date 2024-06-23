@@ -79,16 +79,20 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
         case INTERRUPT_BY_USER:
             exit_process(pcb, RUNNING, INTERRUPTED_BY_USER);
             break;
-        case TIMEOUT:
+        case INTERRUPT_TIMEOUT:
             move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
             // TODO: resource manager logic
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         case SIGNAL:
             // TODO: resource manager logic
             break;
+        case IO_GEN_SLEEP:
+            // TODO: handle instructions call to IO + updated pcb 
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            break;
+        /*TODO Other IO Cases*/
         default:
             log_warning(logger, "Unknown operation");
             break;

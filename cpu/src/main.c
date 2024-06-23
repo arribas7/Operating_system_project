@@ -103,7 +103,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
     while(true){
         fetch(pcb_en_ejecucion);
         decode(pcb_en_ejecucion);
-        t_paquete *response = execute(pcb_en_ejecucion);
+        response = execute(pcb_en_ejecucion);
         pcb_en_ejecucion->pc++;
 
         if(response != NULL){

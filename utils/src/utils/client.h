@@ -51,7 +51,6 @@ typedef enum {
     IO_FS_WRITE,
     IO_FS_READ,
     RELEASE,
-    TIMEOUT,
     WAIT,
     SIGNAL,
 
