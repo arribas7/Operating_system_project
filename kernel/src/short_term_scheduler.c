@@ -63,7 +63,7 @@ void run_quantum_counter(void* arg) {
 
         pthread_mutex_lock(&mutex_running);
         if (pcb_RUNNING != NULL) {
-            cpu_interrupt(config);
+            cpu_interrupt(config, INTERRUPT_TIMEOUT);
             pcb_RUNNING = NULL;
         }
         pthread_mutex_unlock(&mutex_running);
@@ -76,14 +76,23 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
         case RELEASE:
             exit_process(pcb, RUNNING, SUCCESS);
             break;
-        case TIMEOUT:
+        case INTERRUPT_BY_USER:
+            exit_process(pcb, RUNNING, INTERRUPTED_BY_USER);
+            break;
+        case INTERRUPT_TIMEOUT:
             move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            // TODO: resource manager logic
             break;
         case SIGNAL:
+            // TODO: resource manager logic
             break;
+        case IO_GEN_SLEEP:
+            // TODO: handle instructions call to IO + updated pcb 
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            break;
+        /*TODO Other IO Cases*/
         default:
             log_warning(logger, "Unknown operation");
             break;

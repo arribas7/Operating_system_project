@@ -32,10 +32,10 @@ t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     return ret;
 }
 
-op_code cpu_interrupt(t_config *config){
+op_code cpu_interrupt(t_config *config, op_code reason){
     int cpu_connection = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_INTERRUPT");
 
-    t_paquete *paquete = crear_paquete(INTERRUPT);
+    t_paquete *paquete = crear_paquete(reason);
     enviar_paquete(paquete, cpu_connection);
     eliminar_paquete(paquete);
 
