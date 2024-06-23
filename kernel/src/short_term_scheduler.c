@@ -118,11 +118,21 @@ void st_sched_ready_running(void* arg) {
     // Check if the selection algorithm is Round Robin (RR) or Virtual Round Robin (VRR)
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
-        int *quantum_time = config_get_int_value(config, "QUANTUM");
+        
+        int quantum_value = config_get_int_value(config, "QUANTUM");
+        int* quantum_time = malloc(sizeof(int));
+
+        if (quantum_time == NULL) {
+            log_error(logger, "Failed to allocate memory for quantum");
+            return;
+        }
+
+        *quantum_time = quantum_value;
 
         // Create a thread to handle the quantum counter
         if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, quantum_time) != 0) {
             log_error(logger, "Error creating quantum thread");
+            free(quantum_time);
             return;
         }
         // Detach the thread to let it run independently
