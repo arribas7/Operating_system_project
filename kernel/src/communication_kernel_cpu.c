@@ -6,6 +6,45 @@
 #include <utils/client.h>
 #include <commons/config.h>
 
+t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
+    t_return_dispatch *ret = malloc(sizeof(t_return_dispatch));
+
+    op_code resp_code = (op_code) recibir_operacion(cpu_connection);
+    t_ws *resp_ws = NULL;
+    t_instruction *instruction_IO = NULL;
+
+    switch (resp_code)
+    {
+        case WAIT:
+        case SIGNAL:
+            resp_ws = recibir_wait_o_signal(cpu_connection);
+            break;
+        case IO_GEN_SLEEP:
+            instruction_IO = recibir_instruction_IO(cpu_connection);
+            break;
+        case IO_STDIN_READ:
+        case IO_STDOUT_WRITE:
+            instruction_IO = recibir_io_stdin(cpu_connection);
+            break;
+        case IO_FS_CREATE:
+        case IO_FS_DELETE:
+        case IO_FS_TRUNCATE:
+        case IO_FS_WRITE:
+        case IO_FS_READ:
+            instruction_IO = recibir_interfaz(cpu_connection);
+
+            
+    }
+
+    t_pcb *pcb_updated = recibir_pcb(cpu_connection);
+    ret->resp_code = resp_code;
+    ret->pcb_updated = pcb_updated;
+    ret->resp_ws = resp_ws;
+    ret->instruction_IO = instruction_IO;
+
+    return ret;
+}
+
 t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     int cpu_connection = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
@@ -20,12 +59,7 @@ t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     free(buffer->stream);
     free(buffer);
 
-    op_code resp_code = (op_code) recibir_operacion(cpu_connection);
-    t_pcb *pcb_updated = recibir_pcb(cpu_connection);
-    
-    t_return_dispatch *ret= malloc(sizeof(t_return_dispatch));
-    ret->pcb_updated = pcb_updated;
-    ret->resp_code = resp_code;
+    t_return_dispatch *ret = handle_dispatch_deserialization(cpu_connection);
 
     liberar_conexion(cpu_connection);
     log_debug(logger, "CPU dispatch connection released");

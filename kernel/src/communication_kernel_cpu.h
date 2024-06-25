@@ -6,10 +6,14 @@
 #include <utils/kernel.h>
 #include <commons/config.h>
 #include <utils/client.h>
+#include <utils/cpu.h>
 
+// t_return_dispatch could have or not instruction or resp_ws.
 typedef struct {
     t_pcb *pcb_updated;
     op_code resp_code;
+    t_instruction* instruction_IO;
+    t_ws* resp_ws;
 } t_return_dispatch;
 
 //Serializes and then sends a pcb to the CPU module using the DISPATCH op code
