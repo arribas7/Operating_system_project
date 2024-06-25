@@ -289,7 +289,7 @@ t_paquete *io_gen_sleep(char* interfaz, char* job_unit){
     t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
     int tamInterfaz = string_length(interfaz);
     uint32_t int_job_unit = (uint32_t) atoi(job_unit);
-    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid, interfaz, int_job_unit);
+    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid, interfaz, int_job_unit, "test-path");
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_instruccion_IO(IO, buffer);

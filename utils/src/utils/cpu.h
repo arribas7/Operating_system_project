@@ -31,6 +31,8 @@ typedef struct
     uint32_t length_name;
     char* name;
     uint32_t job_unit;
+    uint32_t length_path;
+    char* path;
 } t_instruction;
 
 typedef struct{
@@ -61,7 +63,7 @@ typedef struct{
     char* recurso;
 } t_ws;
 
-t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit);
+t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, char* path);
 t_instruction* deserializar_instruction_IO (void* stream);
 void serializar_instruccion_IO(t_instruction* IO, t_buffer* buffer);
 t_instruction* recibir_instruction_IO(int socket_cliente);

@@ -137,7 +137,7 @@ void eliminar_reg(t_reg_cpu *reg) {
     free(reg);
 }
 
-t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit) {
+t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, char* path) {
     t_instruction* instruction = malloc(sizeof(t_instruction));
     if (instruction == NULL) {
         return NULL; 
@@ -153,6 +153,14 @@ t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit) {
     strcpy(instruction->name, name);
 
     instruction->job_unit = job_unit;
+
+    instruction->length_path = strlen(path) + 1;
+    instruction->path = malloc(instruction->length_path);
+    if (instruction->path == NULL) {
+        free(instruction);
+        return NULL;
+    }
+    strcpy(instruction->path, path);
 
     return instruction;
 }
@@ -179,6 +187,12 @@ void serializar_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
 
     memcpy(buffer->stream + buffer->offset, &(instruction->job_unit), sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(instruction->length_path), sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+    memcpy(buffer->stream + buffer->offset, instruction->path, instruction->length_path);
+    buffer->offset += instruction->length_path;
 }
 
 t_instruction* deserializar_instruction_IO(void* stream) {
@@ -205,6 +219,18 @@ t_instruction* deserializar_instruction_IO(void* stream) {
 
     memcpy(&(instruction->job_unit), stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+
+    memcpy(&(instruction->length_path), stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    instruction->path = malloc(instruction->length_path);
+    if (instruction->path == NULL) {
+        free(instruction->name);
+        free(instruction);
+        return NULL;
+    }
+    memcpy(instruction->path, stream + offset, instruction->length_path);
+    offset += instruction->length_path;
 
     return instruction;
 }
