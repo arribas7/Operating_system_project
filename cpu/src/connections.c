@@ -57,7 +57,6 @@ int requestFrameToMem (int numPag){
     serializar_request(request, buffer);
 
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
-    //armar la funcion deserializadora de este paquete para recibirlo bien en memoria
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
 
