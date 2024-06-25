@@ -108,6 +108,17 @@ void handle_client(void *arg) {
             case TAM_PAG:
                 enviar_mensaje(config_get_string_value(config,"TAM_PAG"),cliente_fd);
             break;
+            case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
+            break;
+            case TLB_MISS: //deserializar el request, dado un numero de pagina y pid debo enviar el frame asociado
+                //este caso es lo mismo que PAGE_REQUEST, dejar solo uno y modificar el code op cargado en la serializacion de cpu
+            break;
+            case INSTRUCTION: //nose para q es, creo que nunca lo use a este
+            break;
+            case COPY_STRING: //recibo pid, tamanio, di y si, copio bytes tamanio de si en di
+            break;
+            case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
+            break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
                 return;
