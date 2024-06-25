@@ -1,5 +1,6 @@
 #include <memoria.h>
 #include <files.h>
+//#include "cpu/connections.h"
 
 t_memory memory;
 t_config *config;
@@ -23,6 +24,26 @@ t_resize* recibir_resize(int socket_cpu){
 
     //return resize;
 }
+/* HABILITAR CUANDO INCLUYA CONNECTIONS.H
+t_request* recibir_pagina(int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_request* pagina = deserializar_request(buffer);
+    free(buffer);
+
+    return pagina;
+}
+*/
+/*
+void enviar_marco(int pagina,int pid){
+    int marco = buscar_marco_en_tabla_de_pagina(pid,pagina); //TO DO
+    enviar_mensaje(string_itoa(marco),cliente_fd); //send frame
+}
+*/
 
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
@@ -72,16 +93,20 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PAGE_REQUEST:
-                //pagina = recibir_pagina();
-                //marco = obtener_marco();
-                //enviar_marco(marco);
+                //t_request* request = recibir_pagina(cliente_fd);
+                //int pid = request->pid;
+                //int pagina = request->req;
+                //enviar_marco(pagina,pid);
             break;
             case RESIZE:
-                //t_resize* resize = recibir_resize(socket_cpu);
+                //t_resize* resize = recibir_resize(cliente_fd);
                 //int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
                 //if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
                 //if(caso == 1) ampliar_proceso(resize.pid);
                 //if(caso == 2) reducir_proceso(resize.pid);
+            break;
+            case TAM_PAG:
+                enviar_mensaje(config_get_string_value(config,"TAM_PAG"),cliente_fd);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
