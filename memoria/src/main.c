@@ -45,6 +45,10 @@ void enviar_marco(int pagina,int pid){
 }
 */
 
+void retardo_en_peticiones(){
+    sleep(config_get_int_value(config,"RETARDO_RESPUESTA")/1000);
+}
+
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
     free(arg);
@@ -93,12 +97,14 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PAGE_REQUEST:
+                retardo_en_peticiones();
                 //t_request* request = recibir_pagina(cliente_fd);
                 //int pid = request->pid;
                 //int pagina = request->req;
                 //enviar_marco(pagina,pid);
             break;
             case RESIZE:
+                retardo_en_peticiones();
                 //t_resize* resize = recibir_resize(cliente_fd);
                 //int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
                 //if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
@@ -113,8 +119,8 @@ void handle_client(void *arg) {
             case TLB_MISS: //deserializar el request, dado un numero de pagina y pid debo enviar el frame asociado
                 //este caso es lo mismo que PAGE_REQUEST, dejar solo uno y modificar el code op cargado en la serializacion de cpu
             break;
-            case INSTRUCTION: //nose para q es, creo que nunca lo use a este
-            break;
+            //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
+            //break;
             case COPY_STRING: //recibo pid, tamanio, di y si, copio bytes tamanio de si en di
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
