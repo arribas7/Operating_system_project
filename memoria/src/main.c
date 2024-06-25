@@ -1,5 +1,6 @@
 #include <memoria.h>
 #include <files.h>
+//#include "cpu/connections.h"
 
 t_memory memory;
 t_config *config;
@@ -22,6 +23,30 @@ t_resize* recibir_resize(int socket_cpu){
     free(buffer);
 
     //return resize;
+}
+/* HABILITAR CUANDO INCLUYA CONNECTIONS.H
+t_request* recibir_pagina(int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_request* pagina = deserializar_request(buffer);
+    free(buffer);
+
+    return pagina;
+}
+*/
+/*
+void enviar_marco(int pagina,int pid){
+    int marco = buscar_marco_en_tabla_de_pagina(pid,pagina); //TO DO
+    enviar_mensaje(string_itoa(marco),cliente_fd); //send frame
+}
+*/
+
+void retardo_en_peticiones(){
+    sleep(config_get_int_value(config,"RETARDO_RESPUESTA")/1000);
 }
 
 void handle_client(void *arg) {
@@ -72,16 +97,33 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PAGE_REQUEST:
-                //pagina = recibir_pagina();
-                //marco = obtener_marco();
-                //enviar_marco(marco);
+                retardo_en_peticiones();
+                //t_request* request = recibir_pagina(cliente_fd);
+                //int pid = request->pid;
+                //int pagina = request->req;
+                //enviar_marco(pagina,pid);
             break;
             case RESIZE:
-                //t_resize* resize = recibir_resize(socket_cpu);
+                retardo_en_peticiones();
+                //t_resize* resize = recibir_resize(cliente_fd);
                 //int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
                 //if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
                 //if(caso == 1) ampliar_proceso(resize.pid);
                 //if(caso == 2) reducir_proceso(resize.pid);
+            break;
+            case TAM_PAG:
+                enviar_mensaje(config_get_string_value(config,"TAM_PAG"),cliente_fd);
+            break;
+            case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
+            break;
+            case TLB_MISS: //deserializar el request, dado un numero de pagina y pid debo enviar el frame asociado
+                //este caso es lo mismo que PAGE_REQUEST, dejar solo uno y modificar el code op cargado en la serializacion de cpu
+            break;
+            //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
+            //break;
+            case COPY_STRING: //recibo pid, tamanio, di y si, copio bytes tamanio de si en di
+            break;
+            case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
