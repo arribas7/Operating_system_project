@@ -194,7 +194,7 @@ t_paquete *execute(t_pcb *pcb)
             response = io_fs_read(instr_decode[1],instr_decode[2],instr_decode[3],instr_decode[4],instr_decode[5]);
         break;
         case _EXIT:
-            response = release(pcb_en_ejecucion);
+            response = release();
         break;
         default:
         break;
@@ -288,13 +288,13 @@ t_paquete *io_gen_sleep(char* interfaz, char* job_unit){
 
     t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
     int tamInterfaz = string_length(interfaz);
-    int tamJobUnit = string_length(job_unit);
-    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid,interfaz,job_unit);
+    uint32_t int_job_unit = (uint32_t) atoi(job_unit);
+    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid, interfaz, int_job_unit, "test-path");
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_instruccion_IO(IO,buffer);
-
+    serializar_instruccion_IO(IO, buffer);
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
+    free(buffer);
 
     return peticion;
 
@@ -412,7 +412,7 @@ t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
     t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_io_stdin* io_stdin_read = new_io_stdin(interfaz, tamanio, atoi(logicalAdress));
+    t_io_stdin* io_stdin_read = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
 
     serializar_io_stdin(io_stdin_read,buffer);
     agregar_a_paquete(io_stdin_read_paq,buffer->stream,buffer->size);
@@ -427,81 +427,12 @@ t_paquete *io_stdin_write(char* interfaz, char* logicalAdress, int tamanio){
     t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_io_stdin* io_stdin_write = new_io_stdin(interfaz, tamanio, atoi(logicalAdress));
+    t_io_stdin* io_stdin_write = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
     serializar_io_stdin(io_stdin_write,buffer);
     agregar_a_paquete(io_stdin_write_paq,buffer->stream,buffer->size);
     free(io_stdin_write);
 
     return io_stdin_write_paq;
-}
-
-void serializar_io_stdin(t_io_stdin* io_stdin, t_buffer* buffer){
-    buffer->offset = 0;
-    size_t size = sizeof(u_int32_t) + sizeof(int) * 2;
-    if(io_stdin->interfaz != NULL){
-        size+= sizeof(u_int32_t); //largo interfaz
-        size+= string_length(io_stdin->interfaz_length) + 1;
-    }
-
-    buffer->size = size;
-    buffer->stream = malloc(size);
-
-    //serializo:
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->pid), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->tamanio), sizeof(int));
-    buffer->offset += sizeof(int);
-
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->fisical_dir), sizeof(int));
-    buffer->offset += sizeof(int);
-
-    u_int32_t interfaz_length = strlen(io_stdin->interfaz) + 1;
-    memcpy(buffer->stream + buffer->offset, &(interfaz_length), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, io_stdin->interfaz, interfaz_length);
-    buffer->offset += interfaz_length;
-}
-
-t_io_stdin* deserialize_io_stdin(void* stream){
-    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
-    int offset = 0;
-
-    memcpy(&(io_stdin->pid), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    memcpy(&(io_stdin->tamanio), stream + offset, sizeof(int));
-    offset += sizeof(int);
-
-    memcpy(&(io_stdin->fisical_dir), stream + offset, sizeof(int));
-    offset += sizeof(int);
-
-    u_int32_t interfaz_length;
-    memcpy(&interfaz_length, stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    io_stdin->interfaz_length = interfaz_length;
-
-    io_stdin->interfaz = malloc(interfaz_length);
-    memcpy(&(io_stdin->interfaz), stream + offset, interfaz_length);
-    offset += interfaz_length;
-
-    return io_stdin;
-}
-
-t_io_stdin* new_io_stdin(char* interfaz, int tamanio, int logical_address){
-    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
-    if (io_stdin == NULL) {
-        return NULL; 
-    }
-
-    io_stdin->pid = pcb_en_ejecucion->pid;
-    io_stdin->tamanio = tamanio;
-    io_stdin->interfaz = strdup(interfaz);
-    io_stdin->fisical_dir = mmu(string_itoa(logical_address));
-    
-    return io_stdin;
 }
 
 //IO_FS_CREATE e IO_FS_DELETE
@@ -528,106 +459,6 @@ t_paquete *io_fs_delete(char* interfaz, char* nombre_archivo){
     free(_interfaz);
     return io_fs_delete;
 }
-
-//IO_FS:
-
-void serializar_interfaz(t_interfaz* interfaz, t_buffer* buffer){
-    buffer->offset = 0;
-    size_t size;
-    if(interfaz->interfaz != NULL){
-        size+= sizeof(u_int32_t);
-        size+= string_length(interfaz->interfaz) + 1;
-    }
-
-    if(interfaz->nombre_archivo != NULL){
-        size+= sizeof(u_int32_t);
-        size+= string_length(interfaz->nombre_archivo) + 1;
-    }
-
-    size+= sizeof(u_int32_t) * 3;
-
-    buffer->size = size;
-    buffer->stream = malloc(size);
-
-    //serializo:
-    u_int32_t interfaz_length = strlen(interfaz->interfaz) + 1;
-    memcpy(buffer->stream + buffer->offset, &(interfaz_length), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, interfaz->interfaz, interfaz_length);
-    buffer->offset += interfaz_length;
-
-    u_int32_t nombre_archivo_length = strlen(interfaz->nombre_archivo) + 1;
-    memcpy(buffer->stream + buffer->offset, &(nombre_archivo_length), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, interfaz->nombre_archivo, nombre_archivo_length);
-    buffer->offset += nombre_archivo_length;
-
-    memcpy(buffer->stream + buffer->offset, &(interfaz->direccion_fisica), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, &(interfaz->tamanio_bytes), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, &(interfaz->puntero_archivo), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-}
-
-t_interfaz* deserializar_interfaz(void* stream){
-    t_interfaz* interfaz = malloc(sizeof(t_interfaz));
-    int offset = 0;
-
-    u_int32_t interfaz_length;
-    memcpy(&interfaz_length, stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    interfaz->interfaz_length = interfaz_length;
-
-    interfaz->interfaz = malloc(interfaz_length);
-    memcpy(&(interfaz->interfaz), stream + offset, interfaz_length);
-    offset += interfaz_length;
-
-    u_int32_t nombre_archivo_length;
-    memcpy(&nombre_archivo_length, stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    interfaz->nombre_archivo_length = nombre_archivo_length;
-
-    interfaz->nombre_archivo = malloc(nombre_archivo_length);
-    memcpy(&(interfaz->nombre_archivo), stream + offset, nombre_archivo_length);
-    offset += nombre_archivo_length;
-
-    memcpy(&(interfaz->direccion_fisica), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    memcpy(&(interfaz->tamanio_bytes), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    memcpy(&(interfaz->puntero_archivo), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    return interfaz;
-}
-
-//en caso de no necesitar algun argumento poner 0 o NULL
-t_interfaz* new_interfaz(char* interfazs, char* nombre_archivo, u_int32_t direccion_fisica, u_int32_t tamanio_bytes, u_int32_t puntero_archivo){
-    t_interfaz* interfaz = malloc(sizeof(t_interfaz));
-    if (interfaz == NULL) {
-        return NULL; 
-    }
-
-    interfaz->interfaz_length = string_length(interfazs);
-    interfaz->interfaz = strdup(interfazs);
-    interfaz->nombre_archivo_length = string_length(nombre_archivo);
-    interfaz->nombre_archivo = strdup(nombre_archivo);
-    interfaz->direccion_fisica = direccion_fisica;
-    interfaz->tamanio_bytes = tamanio_bytes;
-    interfaz->puntero_archivo = puntero_archivo;
-    
-    return interfaz;
-}
-
 
 //IO_FS_TRUNCATE:
 t_paquete *io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio){
@@ -666,14 +497,8 @@ t_paquete *io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direc
     return io_fs_read;
 }
 
-
-t_paquete *release(t_pcb* pcb_en_ejecucion){
-    t_paquete* contexto_actualizado = crear_paquete(RELEASE);
-    t_buffer* buffer = malloc(sizeof(t_buffer));  
-
-    serialize_pcb(pcb_en_ejecucion, buffer);
-    agregar_a_paquete(contexto_actualizado,buffer->stream,buffer->size);
-    return contexto_actualizado;
+t_paquete *release(){
+    return crear_paquete(RELEASE);
 }
 
 //del pcb en ejecucion
@@ -736,11 +561,7 @@ t_paquete *resize(char* tamanio){
 
     if(!strcmp(ack,"Out of memory")){
         //devolver contexto ej a kernel informando esto.
-        t_paquete* out_of_memory = crear_paquete(OUT_OF_MEMORY);
-        serialize_pcb(pcb_en_ejecucion,buffer);
-        agregar_a_paquete(out_of_memory,buffer->stream,buffer->size);
-        
-        return out_of_memory;
+        return crear_paquete(OUT_OF_MEMORY);
     } else {
         log_info(logger, "PID: <%d> - Accion: <%s> - New Size: <%d>", pcb_en_ejecucion->pid, "RESIZE", atoi(tamanio));   
     }
@@ -805,51 +626,3 @@ t_paquete *inst_signal(char* recurso){
     free(ws);
     return wsp;
 }
-
-
-t_ws* new_ws(char* recurso){
-    t_ws* ws = malloc(sizeof(t_ws));
-
-    ws->recurso_length = string_length(recurso);
-    ws->recurso = strdup(recurso);
-
-    return ws;
-}
-
-void serializar_wait_o_signal(t_ws* ws, t_buffer* buffer){
-    buffer->offset = 0;
-    size_t size;
-    if(ws->recurso != NULL){
-        size+= sizeof(u_int32_t);
-        size+= string_length(ws->recurso) + 1;
-    }
-
-    buffer->size = size;
-    buffer->stream = malloc(size);
-
-    //serializo:
-    u_int32_t recurso_length = strlen(ws->recurso) + 1;
-    memcpy(buffer->stream + buffer->offset, &(recurso_length), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, ws->recurso, recurso_length);
-    buffer->offset += recurso_length;
-}
-
-t_ws* deserializar_wait_o_signal(void* stream){
-    t_ws* ws = malloc(sizeof(t_ws));
-    int offset = 0;
-
-    u_int32_t recurso_length;
-    memcpy(&recurso_length, stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    ws->recurso_length = recurso_length;
-
-    ws->recurso = malloc(recurso_length);
-    memcpy(&(ws->recurso), stream + offset, recurso_length); //esta bien el primer argumento o es sin el &
-    offset += recurso_length;
-
-    return ws;
-}
-

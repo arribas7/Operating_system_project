@@ -140,12 +140,15 @@ t_list* recibir_paquete(int socket_cliente)
 
 t_pcb* recibir_pcb(int socket_cliente) {
     int size;
+    int offset = 0;
     void *buffer = recibir_buffer(&size, socket_cliente);
     if (buffer == NULL) {
         return NULL;
     }
+    
+    offset += sizeof(int);
 
-    t_pcb* pcb = deserialize_pcb(buffer);
+    t_pcb* pcb = deserialize_pcb(buffer, offset);
     free(buffer);
     return pcb;
 }

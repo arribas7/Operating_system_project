@@ -14,6 +14,7 @@
 #include <commons/txt.h>
 #include <pthread.h>
 #include "client.h"
+#include "cpu.h"
 
 // ----- STRUCTURES -----
 typedef struct 
@@ -30,16 +31,6 @@ typedef struct
     t_list* list;
     pthread_mutex_t mutex;
 } t_interface_list;
-
-typedef struct 
-{
-    uint32_t pid;
-    uint32_t length_name;
-    char* name;
-    uint32_t job_unit;
-    uint32_t length_path;
-    char* path;
-} t_instruction;
 
 // ----- FUNCTIONS -----
 

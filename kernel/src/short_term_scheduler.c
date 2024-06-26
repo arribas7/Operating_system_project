@@ -71,16 +71,16 @@ void run_quantum_counter(void* arg) {
     }
 }
 
-void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
-   switch (resp_code) {
+void handle_dispatch_return_action(t_return_dispatch *ret_data){
+   switch (ret_data->resp_code) {
         case RELEASE:
-            exit_process(pcb, RUNNING, SUCCESS);
+            exit_process(ret_data->pcb_updated, RUNNING, SUCCESS);
             break;
         case INTERRUPT_BY_USER:
-            exit_process(pcb, RUNNING, INTERRUPTED_BY_USER);
+            exit_process(ret_data->pcb_updated, RUNNING, INTERRUPTED_BY_USER);
             break;
         case INTERRUPT_TIMEOUT:
-            move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
+            move_pcb(ret_data->pcb_updated, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
             // TODO: resource manager logic
@@ -89,8 +89,12 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
             // TODO: resource manager logic
             break;
         case IO_GEN_SLEEP:
-            // TODO: handle instructions call to IO + updated pcb 
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            // TODO: handle instructions call to IO + updated pcb
+            move_pcb(ret_data->pcb_updated, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            break;
+        case IO_FS_CREATE:
+            // TODO: handle instructions call to IO + updated pcb
+            move_pcb(ret_data->pcb_updated, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         /*TODO Other IO Cases*/
         default:
@@ -137,7 +141,7 @@ void st_sched_ready_running(void* arg) {
             log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
 
             pthread_mutex_lock(&mutex_running);
-            handle_pcb_dispatch_return(ret->pcb_updated, ret->resp_code);
+            handle_dispatch_return_action(ret);
             free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
             pcb_RUNNING = NULL;
             pthread_mutex_unlock(&mutex_running);

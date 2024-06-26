@@ -113,12 +113,16 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         op_code actual_interrupt_reason = check_interrupt();
         if(actual_interrupt_reason > 0){
             response = crear_paquete(actual_interrupt_reason);
-            t_buffer* buffer = malloc(sizeof(t_buffer));
-
-            serialize_pcb(pcb_en_ejecucion, buffer);
-            agregar_a_paquete(response,buffer->stream,buffer->size);
             break;
         }
+    }
+
+    if(response != NULL){
+        t_buffer* buffer = malloc(sizeof(t_buffer));
+
+        serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
+        agregar_a_paquete(response,buffer->stream,buffer->size);
+        free(buffer);
     }
     return response;
 }
@@ -183,7 +187,6 @@ int handle_interrupt(int server_fd)
 
 int conexionMemoria(t_config *config)
 {
-
     log_info(logger, "CPU - MEMORIA");
 
     while (1)
