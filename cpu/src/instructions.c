@@ -293,8 +293,8 @@ t_paquete *io_gen_sleep(char* interfaz, char* job_unit){
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_instruccion_IO(IO, buffer);
-
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
+    free(buffer);
 
     return peticion;
 

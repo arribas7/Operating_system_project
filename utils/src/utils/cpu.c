@@ -202,6 +202,7 @@ t_instruction* deserializar_instruction_IO(void* stream) {
     }
 
     int offset = 0;
+    int tamanio;
 
     memcpy(&(instruction->pid), stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);

@@ -54,7 +54,7 @@ void serialize_pcb(t_pcb* pcb, t_buffer* buffer);
 * @fn    deserialize_pcb
 * @brief Deserialize pcb struct to be recognized in all the services.
 */
-t_pcb* deserialize_pcb(void* stream);
+t_pcb* deserialize_pcb(void* stream, int offset);
 
 t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char* path, t_state prev_state);
 

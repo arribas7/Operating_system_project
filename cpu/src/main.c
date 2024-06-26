@@ -122,6 +122,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
 
         serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
         agregar_a_paquete(response,buffer->stream,buffer->size);
+        free(buffer);
     }
     return response;
 }
