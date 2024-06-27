@@ -19,6 +19,8 @@ console_command get_command_type(const char *input) {
     if (strncmp(input, "MULTIPROGRAMACION", 17) == 0) return CMD_MULTIPROGRAMACION;
     if (strncmp(input, "PROCESO_ESTADO", 14) == 0) return CMD_PROCESO_ESTADO;
     if (strncmp(input, "EXIT", 4) == 0) return CMD_EXIT;
+    if (strncmp(input, "DESBLOQUEAR PROCESO", 4) == 0) return CMD_TEST_UNBLOCK;
+    if (strncmp(input, "LOG", 4) == 0) return CMD_TEST_LOG;
     return CMD_UNKNOWN;
 }
 
@@ -193,6 +195,13 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
             break;
         case CMD_PROCESO_ESTADO:
             handle_process_state();
+            break;
+        case CMD_TEST_LOG:
+            log_list_contents(logger, list_BLOCKED, mutex_blocked);
+            log_list_contents(logger, list_READY, mutex_ready);
+        break;
+        case CMD_TEST_UNBLOCK:
+            move_pcb(list_get_first(list_BLOCKED), BLOCKED, READY, list_READY, &mutex_blocked);
             break;
         case CMD_EXIT:
             log_info(logger, "Exiting console.");

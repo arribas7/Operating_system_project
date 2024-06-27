@@ -51,6 +51,10 @@ void state_list_destroy(t_list * list);
 //Returns NULL if the list is empty
 void *list_get_first(t_list *list);
 
+//Removes the last item from a list and returns it
+//Returns NULL if the list is empty
+void *list_pop_last(t_list *list);
+
 void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_list* destination_list, pthread_mutex_t* mutex);
 /* ---------------- Lists Usage example ---------------- */
     /*t_pcb *testpcb = new_pcb(1,0,"");

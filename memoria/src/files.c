@@ -65,7 +65,6 @@ FILE *open_file(const char *file_path) {
     if (file != NULL) {
         printf("File successfully opened: %s\n", file_path);
     } else {
-        printf("File path: %s\n", file_path);
         perror("Error opening file");
     }
     return file;

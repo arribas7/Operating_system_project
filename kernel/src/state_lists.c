@@ -172,3 +172,11 @@ void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_lis
 	list_add(destination_list, pcb);
 	pthread_mutex_unlock(mutex);
 }
+
+void *list_pop_last(t_list *list) {
+    if (list == NULL || list->elements_count == 0) {
+        return NULL;
+    }
+    t_pcb *popped_element = (t_pcb *)list_remove(list, list->elements_count - 1);
+    return popped_element;
+}
