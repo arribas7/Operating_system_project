@@ -49,6 +49,7 @@ typedef struct {
 typedef struct {
     PaginaMemoria* paginas; // Array de páginas
     int num_paginas;        // Número total de páginas
+    int pid_tabla;
     pthread_mutex_t mutex_tabla;
 } TablaPaginas;
 

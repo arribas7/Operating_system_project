@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <utils/cpu.h>
 #include <files.h>
+#include <math.h>
 
 typedef struct
 
