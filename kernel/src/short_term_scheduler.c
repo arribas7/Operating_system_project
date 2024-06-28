@@ -4,6 +4,12 @@
 #include <commons/temporal.h>
 #include <long_term_scheduler.h>
 
+// Round Robin (RR) Priority:
+// 1. RUNNING state PCBs have the highest priority.
+// 2. BLOCKED state PCBs are prioritized over NEW state PCBs.
+// 3. If the previous state of pcb1 is RUNNING and pcb2 is not RUNNING, pcb1 has higher priority.
+// 4. If the previous state of pcb1 is BLOCKED and pcb2 is NEW, pcb1 has higher priority.
+// 5. In all other cases, pcb2 is either equal or higher in priority.
 bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if we're managing well the fourth criteria, order.
     t_pcb* a = (t_pcb*)pcb1;
     t_pcb* b = (t_pcb*)pcb2;
@@ -19,6 +25,12 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if 
     This is because if a process completes its quantum it's sent back to ready, not BLOCKED
     Therefore any process that goes from BLOCKED to READY will have priority over EXECUTING to READY
 */
+// Virtual Round Robin (VRR) Priority:
+// 1. BLOCKED state PCBs have the highest priority since they haven't completed their quantum.
+// 2. RUNNING state PCBs are prioritized over NEW state PCBs.
+// 3. If pcb1 was previously BLOCKED and pcb2 wasn't, pcb1 has higher priority.
+// 4. If pcb1 was previously RUNNING and pcb2 was NEW, pcb1 has higher priority.
+// 5. In all other cases, pcb2 is either equal or higher in priority.
 bool vrr_pcb_priority(void* pcb1, void* pcb2) {
     t_pcb* a = (t_pcb*)pcb1;
     t_pcb* b = (t_pcb*)pcb2;
