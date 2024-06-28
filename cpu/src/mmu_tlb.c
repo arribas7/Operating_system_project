@@ -168,7 +168,7 @@ uint32_t mmu(char* logicalAddress){
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }   
         else{   //algoritmo LRU
@@ -181,7 +181,7 @@ uint32_t mmu(char* logicalAddress){
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }
     }
