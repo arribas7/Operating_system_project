@@ -66,9 +66,9 @@ void handle_client(void *arg) {
                 log_info(logger, "pc: %d", pcb->pc);               
                 log_info(logger, "quantum: %d", pcb->quantum);
                 log_info(logger, "path: %s", pcb->path);
-                const char *path_info = pcb->path; 
                 u_int32_t pid = pcb->pid; 
-                handle_create_process(*path_info,pid);
+                handle_create_process(pcb->path,pid); //funciona con scripts-pruebas/file1
+                printf("Path recibido: %s", pcb->path);
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
@@ -79,8 +79,8 @@ void handle_client(void *arg) {
                 log_info(logger, "path: %s", pcb->path);
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
-                const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
-
+                //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
+                enviar_mensaje(get_complete_instruction(pcb->pid, pcb->pc),cliente_fd);
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
@@ -112,7 +112,7 @@ void handle_client(void *arg) {
                 //if(caso == 2) reducir_proceso(resize.pid);
             break;
             case TAM_PAG:
-                enviar_mensaje(config_get_string_value(config,"TAM_PAG"),cliente_fd);
+                enviar_mensaje(config_get_string_value(config,"TAM_PAGINA"),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
             break;
@@ -122,6 +122,7 @@ void handle_client(void *arg) {
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
             case COPY_STRING: //recibo pid, tamanio, di y si, copio bytes tamanio de si en di
+
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
             break;
@@ -195,15 +196,17 @@ int main(int argc, char *argv[]) {
     initPaging();
 
     /*-------------------Test diccionary----------------------------*/
+    /*
     const char *file_path="scripts-pruebas/file1";
+    //recibir_path();
     uint32_t TIPO1=1; //tipo es el PID1
-     uint32_t TIPO2=2; //tipo es el PID2
+    uint32_t TIPO2=2; //tipo es el PID2
     printf("Step PID1: %s\n",file_path);
     handle_create_process(file_path,TIPO1);
     printf("Step PID2: %s\n",file_path);
     handle_create_process(file_path,TIPO2);
     
-
+*/
 
     /* ---------------- Hilos ---------------- */
 
@@ -221,4 +224,3 @@ int main(int argc, char *argv[]) {
          
     return 0;
 }
-
