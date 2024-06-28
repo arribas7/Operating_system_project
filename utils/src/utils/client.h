@@ -57,6 +57,7 @@ typedef enum {
     // IO -> KERNEL
     // KERNEL -> IO
     IO,
+    IO_DISCONNECT,
 } op_code;
 
 typedef struct {
