@@ -13,6 +13,24 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if 
     return false;
 }
 
+/*
+    VRR Handles priority by first selecting PCBS that have not been able to complete their quantum 
+    This means that a process that has been interrupted for any reason and sent to BLOCKED was unable to complete its quantum
+    This is because if a process completes its quantum it's sent back to ready, not BLOCKED
+    Therefore any process that goes from BLOCKED to READY will have priority over EXECUTING to READY
+*/
+bool vrr_pcb_priority(void* pcb1, void* pcb2) {
+    t_pcb* a = (t_pcb*)pcb1;
+    t_pcb* b = (t_pcb*)pcb2;
+
+    // BLOCKED > RUNNING > NEW
+    // If PCB1 has been interrupted by IO and PCB2 hasn't
+    if (a->prev_state == BLOCKED && b->prev_state != BLOCKED) return true;
+    // If PCB1 came into READY from RUNNING and PCB2 was just created
+    if (a->prev_state == RUNNING && b->prev_state == NEW) return true;
+    return false;
+}
+
 t_pcb* fifo(){
     pthread_mutex_lock(&mutex_ready);
     t_pcb *next_pcb = list_pop(list_READY);
@@ -34,6 +52,11 @@ t_pcb* round_robin(){
 t_pcb* virtual_round_robin(){ // TODO: Implement
     // order by RR priority
     // take a consideration an extra blocked list.
+    pthread_mutex_lock(&mutex_ready);
+    list_sort(list_READY, rr_pcb_priority);
+
+    t_pcb *next_pcb = list_pop(list_READY);
+    pthread_mutex_unlock(&mutex_ready);
     return NULL;
 }
 
