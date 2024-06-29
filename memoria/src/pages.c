@@ -1,5 +1,7 @@
 #include <pages.h>
 #include <memoria.h>
+pthread_mutex_t mutex_bitmap = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_usuario = PTHREAD_MUTEX_INITIALIZER;
 
 
 int initPaging(void) {
@@ -77,5 +79,25 @@ void liberarTablaPaginas(TablaPaginas tabla) {
 }
 
 //HACER FUNCION PARA ESCRIBIR EN ESPACIO DE USUARIO, Y ACTUALIZAR A LA VEZ EL BITMAP SINCRONIZADAMENTE (dados una cantidad de bytes y algo para escribir)
+// Asigna un marco libre y devuelve su índice, o -1 si no hay marcos libres
+int asignarMarcoLibre(void) {
+    int frameCount = memory.memory_size / memory.page_size;
+    for (int i = 0; i < frameCount; ++i) {
+        if (!memory.frames_ocupados[i]) {
+            memory.frames_ocupados[i] = true;
+            return i;
+        }
+    }
+    return -1; // No hay marcos libres
+}
 
+    // Crear un proceso con un tamaño específico
+   void handle_paging(const char *buffer, uint32_t tamano_proceso, int pid){
+     int tamano_proceso = 256; // Por ejemplo, 256 bytes
+     TablaPaginas tabla = crearTablaPaginas(tamano_proceso); //cada proceso tiene su propia tabla de pagina
+     PageCount=num_marcos //calcular paginas necesarias, usar ceil
+     guardamensaje();//Guarda el buffer en el espacio de usuario espacio_usuario
+     actualizar_bitmap() //actualizar el bitmap , asi queda asociado al espacio de usuario
+   
+  }
 //HACER FUNCION QUE DADO UN PID SE ENCUENTRE LA TABLA DE PAGINA ASOCIADA 
