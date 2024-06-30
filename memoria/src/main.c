@@ -174,9 +174,9 @@ void testing_paging(void) {
     const char* mensaje = "Este es un mensaje para el proceso.";
     handle_paging(mensaje, strlen(mensaje) + 1, 1);
 
-    pthread_mutex_destroy(&mutex_espacio_usuario);
-    pthread_mutex_destroy(&memory.mutex_frames_ocupados);
-    free(espacio_usuario);
+  //  pthread_mutex_destroy(&mutex_espacio_usuario);
+  //  pthread_mutex_destroy(&memory.mutex_frames_ocupados);
+   // free(espacio_usuario);
     free(memory.frames_ocupados);
 }
 

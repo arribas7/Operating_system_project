@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+/*
 Memory memory;
 void* espacio_usuario;
 char* espacio_usuario_ptr;
@@ -126,7 +126,7 @@ int initPaging(void) {
 void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     
   
-     char* buffer = "hola";
+     buffer = "hola";
      //falta:
 
     //determinar cuanto espacio necesita
@@ -146,7 +146,10 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
         printf("Página %d -> Marco %d\n", tabla.paginas[i].pagina_id, tabla.paginas[i].numero_marco);
     }
     //3.- Actualiza
-    actualizarBitmap(marcos_necesarios);
+    //actualizarBitmap(marcos_necesarios);
 
     liberarTablaPaginas(tabla);
 }
+
+
+*/

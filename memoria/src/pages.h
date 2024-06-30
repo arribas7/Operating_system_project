@@ -52,5 +52,6 @@ typedef struct {
     int pid_tabla;
     pthread_mutex_t mutex_tabla;
 } TablaPaginas;
-
+pthread_mutex_t mutex_frames_ocupados;
+pthread_mutex_t mutex_espacio_usuario;
 #endif // PAGES_H
