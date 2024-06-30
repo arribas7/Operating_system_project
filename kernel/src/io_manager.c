@@ -25,7 +25,7 @@ void io_block_instruction(t_pcb* pcb, t_instruction *instruction) {
         exit_process(pcb, RUNNING, INVALID_INTERFACE);
         return;
     }
-    // TODO: send instruction
+    // TODO: send instruction to
     move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
 }
 
