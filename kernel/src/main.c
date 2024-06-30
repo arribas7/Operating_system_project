@@ -13,6 +13,7 @@
 #include <stdatomic.h>
 #include <semaphore.h>
 #include <utils/inout.h>
+#include <utils/cpu.h>
 #include <short_term_scheduler.h>
 #include <long_term_scheduler.h>
 #include <communication_kernel_cpu.h>
@@ -85,37 +86,53 @@ void run_server(void *arg) {
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
             case IO:
-                uint32_t response = 0;
+                uint32_t status;
                 lista = recibir_paquete(cliente_fd);
-                t_interface* interface = list_to_interface(lista, cliente_fd);
+                t_interface* interface = list_to_interface(lista, cliente_fd);                
                 char* name = get_interface_name(interface);
 
                 if(find_interface_by_name(name) != NULL) {
                     log_error(logger, "La interfaz %s ya existe", name);
                     delete_interface(interface);
+                    status = 0;
                 } else {
-                    char* type = get_interface_type(interface);
+                    char* type = type_from_list(lista);
                     log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
                     add_interface_to_list(interface_list, interface);
-                    response = 1;
+                    free(name); free(type);
+                    status = 1;
                 }
 
-                send_confirmation(cliente_fd, &(response));
+                log_info(logger, "%d", status);
+                send_confirmation(cliente_fd, status);
 
-                // Prueba de instruction
+                // INSTRUCTION - 1
 
-                t_instruction* instruction = create_instruction(1, "prueba", 5, "myPath");
-                send_instruction(IO_GEN_SLEEP, instruction, cliente_fd);
-                log_info(logger, "Instruction sended");
-                delete_instruction(instruction);
+                t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, "myPath");
+                send_instruction_IO(instruction_1, cliente_fd);
+                log_info(logger, "INSTRUCTION_SENDED");
+                delete_instruction_IO(instruction_1);
 
-                receive_confirmation(cliente_fd, &(response));
-                if (response == 0) 
-                {
-                    log_error(logger, "An error has ocurred");
-                } else {
-                    log_info(logger, "Successfull operation");
-                }
+                // INSTRUCTION - 2
+
+                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 500, "myOtherPath");
+                send_instruction_IO(instruction_2, cliente_fd);
+                log_info(logger, "INSTRUCTION_SENDED");
+                delete_instruction_IO(instruction_2);
+
+                // INSTRUCTION - 3
+
+                t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, "myOtherPath");
+                send_instruction_IO(instruction_3, cliente_fd);
+                log_info(logger, "INSTRUCTION_SENDED");
+                delete_instruction_IO(instruction_3);
+
+                break;
+            case REPORT:
+                lista = recibir_paquete(cliente_fd);
+                t_report* report = list_to_report(lista);
+                log_info(logger, "PID: %d", report->pid);
+                log_info(logger, "OPERATION_RESULT: %d", report->result); // 0 - ERROR / 1 - OK
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing server...");
