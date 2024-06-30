@@ -170,11 +170,22 @@ void clean(t_config *config) {
     config_destroy(config);
 }
 
+void testing_paging(void) {
+    const char* mensaje = "Este es un mensaje para el proceso.";
+    handle_paging(mensaje, strlen(mensaje) + 1, 1);
+
+  //  pthread_mutex_destroy(&mutex_espacio_usuario);
+  //  pthread_mutex_destroy(&memory.mutex_frames_ocupados);
+   // free(espacio_usuario);
+    free(memory.frames_ocupados);
+}
+
+
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
     
   
-    config = config_create("memoria.config");
+      config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);
@@ -193,14 +204,18 @@ int main(int argc, char *argv[]) {
     }
      /*-------------------Pagination----------------------------*/
 
-    initPaging();
+    if (!initPaging()) {
+        return EXIT_FAILURE;
+    }
+
+    testing_paging();
 
     /*-------------------Test diccionary----------------------------*/
     /*
     const char *file_path="scripts-pruebas/file1";
     //recibir_path();
     uint32_t TIPO1=1; //tipo es el PID1
-    uint32_t TIPO2=2; //tipo es el PID2
+     uint32_t TIPO2=2; //tipo es el PID2
     printf("Step PID1: %s\n",file_path);
     handle_create_process(file_path,TIPO1);
     printf("Step PID2: %s\n",file_path);
