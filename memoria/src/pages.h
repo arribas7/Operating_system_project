@@ -46,6 +46,8 @@ typedef struct {
     pthread_mutex_t mutex_tabla;
 } TablaPaginas;
 
+t_dictionary* listaTablasDePaginas;
+
 int initPaging(void);
 void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid);
 #endif // PAGES_H
