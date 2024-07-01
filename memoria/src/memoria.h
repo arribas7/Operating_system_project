@@ -28,6 +28,12 @@ typedef struct
      pthread_mutex_t mutex_frames_ocupados;
 } t_memory;
         
+typedef struct{
+    u_int32_t pid;
+    int req;
+} t_request;
+
+        
 extern t_memory memory;
 
 

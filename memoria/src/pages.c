@@ -9,7 +9,7 @@ void inicializarEspacioUsuario() {
         exit(EXIT_FAILURE);
     }
     pthread_mutex_init(&memory.mutex_espacio_usuario, NULL); 
-   }
+}
 
 void inicializarBitmap() {
     int frameCount = memory.memory_size / memory.page_size;
@@ -23,7 +23,9 @@ void inicializarBitmap() {
     pthread_mutex_init(&memory.mutex_frames_ocupados, NULL); 
 }
 
-
+void inicializarListaDeTablasDePaginas(){
+    listaTablasDePaginas = dictionary_create();
+}
 
 int initPaging(void) {
     printf("TAMAÑO MEMORIA TOTAL: %d\n",memory.memory_size);
@@ -33,6 +35,7 @@ int initPaging(void) {
      inicializarBitmap();
  /* ----------------Third Structure ---------------- */
  // inicializarTabla(); no creo q sea necesario, reviso
+    inicializarListaDeTablasDePaginas();
   return 1;
     
 }
@@ -104,7 +107,7 @@ void actualizarBitmap(int marcos_necesarios) {
 void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
     pthread_mutex_lock(&memory.mutex_espacio_usuario);
     memcpy(espacio_usuario, buffer, strlen(buffer) + 1); // +1 para incluir el carácter nulo de terminación
-    espacio_usuario = (char*)espacio_usuario + tamano_proceso;
+    espacio_usuario = (char*)espacio_usuario + tamano_proceso;  //ESTO DEBERIA SER CIRCULAR, EL ESPACIO DE USUARIO ES LIMITADO, POSIBLE SOLUCION: % memory.memory_size
     pthread_mutex_unlock(&memory.mutex_espacio_usuario);     
      int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
     actualizarBitmap(marcos_necesarios);
@@ -136,6 +139,9 @@ TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
         tabla.paginas[i].numero_marco = marco;
     }
  
+    //agrego la tabla al diccionario de tablas de paginas
+    dictionary_put(listaTablasDePaginas,string_itoa(tabla.pid_tabla),&tabla);
+
     return tabla;
 }
 
@@ -158,10 +164,25 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     liberarTablaPaginas(tabla);
 }
 
-
   
-//HACER FUNCION QUE DADO UN PID SE ENCUENTRE LA TABLA DE PAGINA ASOCIADA falta implementar
+//Dado un pid se encuentra la tabla de paginas asociada
+TablaPaginas* tablaDePaginasAsociada (int pid){
+    return dictionary_get(listaTablasDePaginas,string_itoa(pid));
+}
 
+//Dado un numero de pagina y una tabla de paginas asociada, retorna el marco asociado
+int marcoAsociado(int numero_pagina, TablaPaginas* tablaAsociada){
+    int i=0;
+    int marco = -1; //en caso no find nunca se modificara y devolvera este
+    for (i=0; i<tablaAsociada->num_paginas ; i++){
+        if(numero_pagina == tablaAsociada->paginas[i].pagina_id){
+            marco = tablaAsociada->paginas[i].numero_marco;
+            break;
+        }
+    }
+
+    return marco;
+}
 
 
  //Estaria para ponerlo en algun lado:
