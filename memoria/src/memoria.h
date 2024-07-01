@@ -24,7 +24,7 @@ typedef struct
      int respond_time;
      t_list *tablas_paginas;  // Lista de tablas de páginas
      bool *frames_ocupados; 
-     pthread_mutex_t mutex_memoria;
+     pthread_mutex_t mutex_espacio_usuario;
      pthread_mutex_t mutex_frames_ocupados;
 } t_memory;
         

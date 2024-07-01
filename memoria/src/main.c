@@ -155,7 +155,7 @@ int correr_servidor(void *arg) {
         int *new_sock = malloc(sizeof(int));
         *new_sock = cliente_fd;
 
-        if (pthread_create(&client_thread, NULL, handle_client, (void*)new_sock) != 0) {
+        if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
             log_error(logger, "Error al crear el hilo para el cliente");
             free(new_sock);
         }
@@ -174,9 +174,9 @@ void testing_paging(void) {
     const char* mensaje = "Este es un mensaje para el proceso.";
     handle_paging(mensaje, strlen(mensaje) + 1, 1);
 
-  //  pthread_mutex_destroy(&mutex_espacio_usuario);
-  //  pthread_mutex_destroy(&memory.mutex_frames_ocupados);
-   // free(espacio_usuario);
+    pthread_mutex_destroy(&memory.mutex_espacio_usuario);
+    pthread_mutex_destroy(&memory.mutex_frames_ocupados);
+    //free(espacio_usuario); FALTA LIBERARLO. PERO VER DONDE.
     free(memory.frames_ocupados);
 }
 
