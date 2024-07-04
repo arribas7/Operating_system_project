@@ -5,6 +5,7 @@
 #include <commons/config.h>
 #include <utils/client.h>
 #include "cpu.h"
+#include "server.h"
 
 t_reg_cpu* nuevo_reg(uint8_t pc) { // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
     t_reg_cpu *reg_cpu = malloc(sizeof(t_reg_cpu));
@@ -137,13 +138,16 @@ void eliminar_reg(t_reg_cpu *reg) {
     free(reg);
 }
 
-t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, char* path) {
+// INSTRUCTION
+
+t_instruction* create_instruction_IO(uint32_t pid, op_code code, char* name, uint32_t time, char* path) {
     t_instruction* instruction = malloc(sizeof(t_instruction));
     if (instruction == NULL) {
         return NULL; 
     }
 
     instruction->pid = pid;
+    instruction->code = code;
     instruction->length_name = strlen(name) + 1;
     instruction->name = malloc(instruction->length_name);
     if (instruction->name == NULL) {
@@ -152,7 +156,7 @@ t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, c
     }
     strcpy(instruction->name, name);
 
-    instruction->job_unit = job_unit;
+    instruction->time = time;
 
     instruction->length_path = strlen(path) + 1;
     instruction->path = malloc(instruction->length_path);
@@ -165,9 +169,9 @@ t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, c
     return instruction;
 }
 
-void serializar_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
+void serialize_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
     buffer->offset = 0;
-    size_t size = sizeof(uint32_t) * 4 + instruction->length_name + instruction->length_path;
+    size_t size = sizeof(uint32_t) * 4 + sizeof(op_code) + instruction->length_name + instruction->length_path;
     buffer->size = size;
     buffer->stream = malloc(size);
 
@@ -175,9 +179,13 @@ void serializar_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
         return;
     }
 
-    // Serializo:
+    // Serialize:
     memcpy(buffer->stream + buffer->offset, &(instruction->pid), sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(instruction->code), sizeof(op_code));
+    buffer->offset += sizeof(op_code);
+
 
     memcpy(buffer->stream + buffer->offset, &(instruction->length_name), sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
@@ -185,7 +193,7 @@ void serializar_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
     memcpy(buffer->stream + buffer->offset, instruction->name, instruction->length_name);
     buffer->offset += instruction->length_name;
 
-    memcpy(buffer->stream + buffer->offset, &(instruction->job_unit), sizeof(uint32_t));
+    memcpy(buffer->stream + buffer->offset, &(instruction->time), sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
 
     memcpy(buffer->stream + buffer->offset, &(instruction->length_path), sizeof(uint32_t));
@@ -195,17 +203,19 @@ void serializar_instruccion_IO(t_instruction* instruction, t_buffer* buffer) {
     buffer->offset += instruction->length_path;
 }
 
-t_instruction* deserializar_instruction_IO(void* stream) {
+t_instruction* deserialize_instruction_IO(void* stream) {
     t_instruction* instruction = malloc(sizeof(t_instruction));
     if (instruction == NULL) {
         return NULL;
     }
 
     int offset = 0;
-    int tamanio;
 
     memcpy(&(instruction->pid), stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+
+    memcpy(&(instruction->code), stream + offset, sizeof(op_code));
+    offset += sizeof(op_code);
 
     memcpy(&(instruction->length_name), stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
@@ -218,7 +228,7 @@ t_instruction* deserializar_instruction_IO(void* stream) {
     memcpy(instruction->name, stream + offset, instruction->length_name);
     offset += instruction->length_name;
 
-    memcpy(&(instruction->job_unit), stream + offset, sizeof(uint32_t));
+    memcpy(&(instruction->time), stream + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
 
     memcpy(&(instruction->length_path), stream + offset, sizeof(uint32_t));
@@ -231,22 +241,36 @@ t_instruction* deserializar_instruction_IO(void* stream) {
         return NULL;
     }
     memcpy(instruction->path, stream + offset, instruction->length_path);
-    offset += instruction->length_path;
 
     return instruction;
 }
 
-t_instruction* recibir_instruction_IO(int socket_cliente) {
+t_instruction* receive_instruction_IO(int socket_cliente) {
     int size;
     void *buffer = recibir_buffer(&size, socket_cliente);
     if (buffer == NULL) {
         return NULL;
     }
 
-    t_instruction* instruction = deserializar_instruction_IO(buffer);
+    t_instruction* instruction = deserialize_instruction_IO(buffer);
     free(buffer);
     return instruction;
 }
+
+void send_instruction_IO(t_instruction* instruction, int socket_cliente) {
+
+    t_paquete* package = crear_paquete(instruction->code);
+    serialize_instruccion_IO(instruction, package->buffer);
+    enviar_paquete(package, socket_cliente);
+}
+
+void delete_instruction_IO(t_instruction* instruction) {
+    free(instruction->name);
+    free(instruction->path);
+    free(instruction);
+}
+
+// ----------
 
 t_ws* new_ws(char* recurso){
     t_ws* ws = malloc(sizeof(t_ws));
@@ -415,85 +439,4 @@ t_interfaz* recibir_interfaz(int socket_cliente) {
     t_interfaz* interfaz = deserializar_interfaz(buffer);
     free(buffer);
     return interfaz;
-}
-
-void serializar_io_stdin(t_io_stdin* io_stdin, t_buffer* buffer){
-    buffer->offset = 0;
-    size_t size = sizeof(u_int32_t) + sizeof(int) * 2;
-    if(io_stdin->interfaz != NULL){
-        size+= sizeof(u_int32_t); //largo interfaz
-        size+= string_length(io_stdin->interfaz_length) + 1;
-    }
-
-    buffer->size = size;
-    buffer->stream = malloc(size);
-
-    //serializo:
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->pid), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->tamanio), sizeof(int));
-    buffer->offset += sizeof(int);
-
-    memcpy(buffer->stream + buffer->offset, &(io_stdin->fisical_dir), sizeof(int));
-    buffer->offset += sizeof(int);
-
-    u_int32_t interfaz_length = strlen(io_stdin->interfaz) + 1;
-    memcpy(buffer->stream + buffer->offset, &(interfaz_length), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
-
-    memcpy(buffer->stream + buffer->offset, io_stdin->interfaz, interfaz_length);
-    buffer->offset += interfaz_length;
-}
-
-t_io_stdin* deserialize_io_stdin(void* stream){
-    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
-    int offset = 0;
-
-    memcpy(&(io_stdin->pid), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    memcpy(&(io_stdin->tamanio), stream + offset, sizeof(int));
-    offset += sizeof(int);
-
-    memcpy(&(io_stdin->fisical_dir), stream + offset, sizeof(int));
-    offset += sizeof(int);
-
-    u_int32_t interfaz_length;
-    memcpy(&interfaz_length, stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
-
-    io_stdin->interfaz_length = interfaz_length;
-
-    io_stdin->interfaz = malloc(interfaz_length);
-    memcpy(&(io_stdin->interfaz), stream + offset, interfaz_length);
-    offset += interfaz_length;
-
-    return io_stdin;
-}
-
-t_io_stdin* new_io_stdin(u_int32_t pid, char* interfaz, int tamanio, int logical_address, int fisical_dir){
-    t_io_stdin* io_stdin = malloc(sizeof(t_io_stdin));
-    if (io_stdin == NULL) {
-        return NULL; 
-    }
-
-    io_stdin->pid = pid;
-    io_stdin->tamanio = tamanio;
-    io_stdin->interfaz = strdup(interfaz);
-    io_stdin->fisical_dir = fisical_dir;
-    
-    return io_stdin;
-}
-
-t_io_stdin* recibir_io_stdin(int socket_cliente) {
-    int size;
-    void *buffer = recibir_buffer(&size, socket_cliente);
-    if (buffer == NULL) {
-        return NULL;
-    }
-
-    t_io_stdin* io_stdin = deserialize_io_stdin(buffer);
-    free(buffer);
-    return io_stdin;
 }

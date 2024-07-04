@@ -5,92 +5,168 @@
 #include <commons/config.h>
 #include <utils/client.h>
 #include <utils/server.h>
+#include <utils/cpu.h>
 #include <utils/inout.h>
-#include "generic.h"
-#include "stdin_stdout.h"
+#include <pthread.h>
+#include <semaphore.h>
+#include "generic_st.h"
 
-// Global variables
+// GLOBAL VARIABLES
 
-t_list* process_list;
-pthread_mutex_t mutex_process_list;
+t_instruction_queue* i_queue;
+sem_t sem_instruction;
+sem_t use_time;
 t_log* logger;
 t_config* config;
 char* name;
+char* type;
+
+int create_connection(t_config* config, char* c_ip, char* c_puerto) 
+{
+    char* ip = config_get_string_value(config, c_ip);
+    char* port = config_get_string_value(config, c_puerto);
+    return crear_conexion(ip, port); 
+}
+
+void respond_to_requests(void* arg) 
+{
+    int connection = atoi((char *) arg);
+    while(1) 
+    {
+        int cod_op = recibir_operacion(connection);
+        t_instruction* instruction = receive_instruction_IO(connection);
+
+        // PRUEBA - LLEGADA INSTRUCTION
+        /*
+        log_info(logger, "NOMBRE: %s", instruction->name);
+        log_info(logger, "PID: %d", instruction->pid);
+        log_info(logger, "PATH: %s", instruction->path);
+        */
+
+        if(is_valid_instruction(cod_op, config)) 
+        {
+            add_instruction_to_queue(i_queue, instruction);
+            sem_post(&(sem_instruction));
+        } else {
+            send_report(instruction, false, connection);
+            return;
+        }
+    }
+}
+
+void execute_instruction(void* arg) 
+{
+    int connection = atoi((char *) arg);
+    while(1) 
+    {
+        // Bloquea el hilo para ejecutar una instrucción
+        sem_wait(&(use_time));
+        // Toma la siguiente instruccion y resta una
+        sem_wait(&(sem_instruction));
+        t_instruction* instruction = get_next_instruction(i_queue);
+        
+        char* code = type_from_code(instruction->code);
+        log_info(logger, "PID: %i - Operación a realizar: %s", instruction->pid, code);
+        uint32_t response;
+
+        switch(instruction->code) 
+        {
+            case IO_GEN_SLEEP:
+                int result = interface_wait(instruction, config);
+                response = (result == 0) ? 1 : 0;
+                log_info(logger, "INSTRUCTION_COMPLETE");
+                send_report(instruction, (bool) response, connection);
+                break;
+            case IO_STDIN_READ:
+                int stdin_ms = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+                char* w_word = write_console();
+                write_in_memory(instruction, w_word, stdin_ms);
+                break;
+            case IO_STDOUT_WRITE:
+                int stdout_ms = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+                char* r_word = read_from_memory(instruction, stdout_ms);
+                log_info(logger, "PALABRA LEIDA: %s", r_word);
+                break;
+            case IO_FS_CREATE:
+                break;
+            case IO_FS_DELETE:
+                break;
+            case IO_FS_READ:
+                break;
+            case IO_FS_TRUNCATE:
+                break;
+            case IO_FS_WRITE:
+                break;
+            default:
+                log_error(logger, "INVALID_INSTRUCTION");
+                send_report(instruction, false, connection);
+                break;
+        }
+        sem_post(&(use_time));
+    }
+}
 
 int main(int argc, char* argv[]) {
     
-    // Create log and config for the initial connection
-
+    // INITIALIZE VARIABLES
+    
     logger = log_create("in_out.log", "IN_OUT", true, LOG_LEVEL_INFO);
     
-    // In each instance of the module I can change the path of the configuration file
-
     config = config_create(argv[1]);
-    char* name = argv[2];
-    char* type = type_from_config(config);
-    t_interface* interface = create_interface(name, type, 0);
-
-    // Connect to the Kernel
-
-    char* ip = config_get_string_value(config, "IP_KERNEL");
-    char* port = config_get_string_value(config, "PUERTO_KERNEL");
+    name = argv[2];
+    type = type_from_config(config);
+    t_info* info = create_info(name, type);
     
-    // I create the client connection
+    // CREATE KERNEL CONNECTION
     
-    int connection = crear_conexion(ip, port);
-    log_info(logger, "La conexion es: %d", connection);
+    int kernel_socket = create_connection(config, "IP_KERNEL", "PUERTO_KERNEL");
+    log_info(logger, "La conexion es: %d", kernel_socket);
 
-    // I send a package to Kernel to inform the interface created
+    // CONNECTION TO STRING (TO THREADS)
 
-    t_paquete* package = interface_to_package(interface);
-    enviar_paquete(package, connection);
+    char* str_conn = int_to_string(kernel_socket);
+
+    // SEND INFO TO KERNEL FROM CONNECTION
+
+    t_paquete* package = info_to_package(info);
+    enviar_paquete(package, kernel_socket);
     eliminar_paquete(package);
-    delete_interface(interface);
+    delete_info(info);
 
-    uint32_t response;
-    receive_confirmation(connection, &(response));
+    uint32_t status = 0;
+    receive_confirmation(kernel_socket, status);
 
-    if (response == 0) 
+    if (status) 
     {
-        return EXIT_FAILURE;
+        log_info(logger, "ERROR. FINISHING ...");
+        return -1;
     } else {
         log_info(logger, "CONNECTION SUCESSFULL");
+        i_queue = create_instruction_queue();
+        sem_init(&(sem_instruction), 0, 0);
+        sem_init(&(use_time), 0, 1);
     }
     
-    while(1) 
+    // CREATE THREADS
+
+    pthread_t connection_thread, instruction_manager_thread;
+
+    if(pthread_create(&(connection_thread), NULL, (void *) respond_to_requests, str_conn) != 0) 
     {
-        int cod_op; char* code;
-        cod_op = recibir_operacion(connection);
-
-        if(is_valid_instruction(cod_op, code, config)) 
-        {
-            t_instruction* instruction = receive_instruction(connection);
-
-            switch(cod_op) 
-            {
-                case IO_GEN_SLEEP:
-                    log_info(logger, "PID: %i - Operación a realizar: %s", instruction->pid, code);
-                    int result = generic_interface_wait(instruction->job_unit, config);
-                    response = (result == 0) ? 1 : 0;
-                    log_info(logger, "Operation finished");
-                    send_confirmation(connection, &(response));
-                    break;
-                case IO_STDIN_READ:
-                    break;
-                case IO_STDOUT_WRITE:
-                    break;
-                default:
-                    log_error(logger, "Invalid instruction");
-                    break;
-            }
-        } else {
-            log_error(logger, "Invalid instruction");
-            enviar_mensaje("Invalid instruction", connection);
-            break;
-        }
+        log_info(logger, "Error creating connection thread");
+        return -1;
     }
 
-    liberar_conexion(connection);
+    if(pthread_create(&(instruction_manager_thread), NULL, (void *) execute_instruction, str_conn) != 0) 
+    {
+        log_info(logger, "Error creating instruction manager thread");
+        return -1;
+    }
+
+    pthread_join(connection_thread, NULL);
+    pthread_join(instruction_manager_thread, NULL);
+    free(str_conn);
+    liberar_conexion(kernel_socket);
 
     return 0;
 }
