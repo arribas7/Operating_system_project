@@ -2,7 +2,8 @@
 #ifndef PAGES_H
 #define PAGES_H
 #include <utils/client.h>
-#include <commons/bitarray.h>
+#include <stdbool.h>
+//#include <commons/bitarray.h>
 
 
 /*
@@ -27,17 +28,9 @@ Al finalizar un proceso, se actualizará el bitmap.
 
 */
 
-char *mapabits;
-t_bitarray* frames;
+
 char* espacio_usuario;
-
-
-// Estructura para representar la memoria en general
-char* mainMemory;
-
-
-// Estructura para representar una tabla de páginas
-
+//extern void* espacio_usuario;
 
 // Estructura para representar una página de memoria
 typedef struct {
@@ -53,4 +46,8 @@ typedef struct {
     pthread_mutex_t mutex_tabla;
 } TablaPaginas;
 
+t_dictionary* listaTablasDePaginas;
+
+int initPaging(void);
+void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid);
 #endif // PAGES_H

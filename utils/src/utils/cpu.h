@@ -28,20 +28,13 @@ typedef struct {
 typedef struct 
 {
     uint32_t pid;
+    op_code code;
     uint32_t length_name;
     char* name;
-    uint32_t job_unit;
+    uint32_t time;
     uint32_t length_path;
     char* path;
 } t_instruction;
-
-typedef struct{
-    u_int32_t pid;
-    int tamanio;
-    int fisical_dir;
-    u_int32_t interfaz_length;
-    char* interfaz;    
-} t_io_stdin;
 
 typedef struct{
     u_int32_t interfaz_length;
@@ -51,7 +44,7 @@ typedef struct{
     u_int32_t direccion_fisica;
     u_int32_t tamanio_bytes;
     u_int32_t puntero_archivo;
-} t_interfaz; //para las fs
+} t_interfaz; // FS
 
 typedef struct{
     u_int32_t pid;
@@ -63,10 +56,14 @@ typedef struct{
     char* recurso;
 } t_ws;
 
-t_instruction* new_instruction_IO(uint32_t pid, char* name, uint32_t job_unit, char* path);
-t_instruction* deserializar_instruction_IO (void* stream);
-void serializar_instruccion_IO(t_instruction* IO, t_buffer* buffer);
-t_instruction* recibir_instruction_IO(int socket_cliente);
+// INSTRUCTION
+
+t_instruction* create_instruction_IO(uint32_t pid, op_code code, char* name, uint32_t time, char* path);
+t_instruction* deserialize_instruction_IO (void* stream);
+void serialize_instruccion_IO(t_instruction* interface, t_buffer* buffer);
+t_instruction* receive_instruction_IO(int socket_cliente);
+void send_instruction_IO(t_instruction* instruction, int socket_cliente);
+void delete_instruction_IO(t_instruction* instruction);
 
 t_reg_cpu* nuevo_reg(uint8_t pc);
 
@@ -85,10 +82,5 @@ void serializar_interfaz(t_interfaz* interfaz, t_buffer* buffer);
 t_interfaz* deserializar_interfaz(void* stream);
 t_interfaz* new_interfaz(char* interfazs, char* nombre_archivo, u_int32_t direccion_fisica, u_int32_t tamanio_bytes, u_int32_t puntero_archivo);
 t_interfaz* recibir_interfaz(int socket_cliente);
-
-void serializar_io_stdin(t_io_stdin* io_stdin, t_buffer* buffer);
-t_io_stdin* deserialize_io_stdin(void* stream);
-t_io_stdin* new_io_stdin(u_int32_t pid, char* interfaz, int tamanio, int logical_address, int fisical_dir);
-t_io_stdin* recibir_io_stdin(int socket_cliente);
 
 #endif

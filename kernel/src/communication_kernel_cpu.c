@@ -25,11 +25,9 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
             resp_ws = deserializar_wait_o_signal(buffer);
             break;
         case IO_GEN_SLEEP:
-            instruction_IO = deserializar_instruction_IO(buffer);
-            break;
         case IO_STDIN_READ:
         case IO_STDOUT_WRITE:
-            resp_stdin = deserialize_io_stdin(buffer);
+            instruction_IO = deserialize_instruction_IO(buffer);
             break;
         case IO_FS_CREATE:
         case IO_FS_DELETE:

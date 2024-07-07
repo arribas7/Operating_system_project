@@ -1,6 +1,6 @@
 #include <memoria.h>
 #include <files.h>
-//#include "cpu/connections.h"
+//#include "cpu/connections.h
 
 t_memory memory;
 t_config *config;
@@ -12,6 +12,21 @@ void end_process(){
     memset(memory.frames_ocupados, 0, frameCount * sizeof(bool));
 }
 
+/*********************************************************//********INCLUIR EN ALGUN.H*******/
+t_resize* deserializar_resize(void* stream){
+    t_resize* resize = malloc(sizeof(t_resize));
+    int offset = 0;
+
+    memcpy(&(resize->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(resize->tamanio), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    return resize;
+}
+/*********************************************************/ 
+
 t_resize* recibir_resize(int socket_cpu){
     int size;
     void *buffer = recibir_buffer(&size, socket_cpu);
@@ -19,11 +34,12 @@ t_resize* recibir_resize(int socket_cpu){
         return NULL;
     }
 
-    //t_resize* resize = deserializar_resize(buffer);
+    t_resize* resize = deserializar_resize(buffer);
     free(buffer);
 
-    //return resize;
+    return resize;
 }
+
 /* HABILITAR CUANDO INCLUYA CONNECTIONS.H
 t_request* recibir_pagina(int socket_cpu){
     int size;
@@ -38,16 +54,70 @@ t_request* recibir_pagina(int socket_cpu){
     return pagina;
 }
 */
-/*
-void enviar_marco(int pagina,int pid){
-    int marco = buscar_marco_en_tabla_de_pagina(pid,pagina); //TO DO
-    enviar_mensaje(string_itoa(marco),cliente_fd); //send frame
+
+
+/*********************************************************/ /********INCLUIR EN ALGUN.H*******/
+t_request* deserializar_request(void* stream){
+    t_request* request = malloc(sizeof(t_request));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(request->req), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return request;
 }
-*/
+/*********************************************************/
 
 void retardo_en_peticiones(){
     sleep(config_get_int_value(config,"RETARDO_RESPUESTA")/1000);
 }
+
+t_request* recibir_pagina(int socket_cpu){
+    int size;
+    void* buffer = recibir_buffer(&size,socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_request* pagina = deserializar_request(buffer);
+    free(buffer);
+
+    return pagina;
+}
+
+/********LISTA PARA DESCOMENTAR CUANDO ARREGLE BIEN EL ORDEN DE LOS .H*******/
+/*
+void enviar_marco(int pagina, int pid, int cliente_fd){
+    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+    int marco = marcoAsociado(pagina,tablAsociada);
+    enviar_mensaje(string_itoa(marco),cliente_fd);
+}
+*/ 
+
+/*
+void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu){
+    int tam_actual_proceso = tamanio_proceso(resize->pid);
+    int nuevo_tamanio;
+
+    switch (tam_actual_proceso > resize->tamanio){
+        case true: //reduccion de tamanio de proceso
+            nuevo_tamanio = resize->tamanio;
+            reducir_proceso(resize->pid,nuevo_tamanio);
+        break;
+        case false: //ampliacion tamanio proceso        
+            nuevo_tamanio = tam_actual_proceso + (resize->tamanio - tam_actual_proceso);
+            //memoria_llena me indicara si no tengo marcos suficientes para agrandar el proceso
+            if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else ampliar_proceso(resize->pid,nuevo_tamanio);
+        break;
+        default:
+        break;
+    }
+
+}
+*/
 
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
@@ -98,26 +168,22 @@ void handle_client(void *arg) {
                 break;
             case PAGE_REQUEST:
                 retardo_en_peticiones();
-                //t_request* request = recibir_pagina(cliente_fd);
-                //int pid = request->pid;
-                //int pagina = request->req;
-                //enviar_marco(pagina,pid);
+                t_request* request = recibir_pagina(cliente_fd);
+                int pagina = request->req;
+                //enviar_marco(pagina,request->pid, cliente_fd); //ACA FALTA MIRAR BIEN LOS .H PARA QUE ME DEJE INCLUIR LAS FUNCIONES DE BUSCAR TABLA DE PAGINAS ASOCIADA
             break;
             case RESIZE:
                 retardo_en_peticiones();
-                //t_resize* resize = recibir_resize(cliente_fd);
-                //int caso = nuevo_tamaño_proceso(resize.tamanio) //deberiamos comparar este tamaño con el del proceso para ver si se amplia o se reduce
-                //if(caso == 0) enviar_mensaje("Out of memory",socket_cpu);
-                //if(caso == 1) ampliar_proceso(resize.pid);
-                //if(caso == 2) reducir_proceso(resize.pid);
+                t_resize* resize = recibir_resize(cliente_fd);
+                //nuevo_tamanio_proceso(resize,cliente_fd);
             break;
             case TAM_PAG:
                 enviar_mensaje(config_get_string_value(config,"TAM_PAGINA"),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
             break;
-            case TLB_MISS: //deserializar el request, dado un numero de pagina y pid debo enviar el frame asociado
-                //este caso es lo mismo que PAGE_REQUEST, dejar solo uno y modificar el code op cargado en la serializacion de cpu
+            case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
+                retardo_en_peticiones();
             break;
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
@@ -155,7 +221,7 @@ int correr_servidor(void *arg) {
         int *new_sock = malloc(sizeof(int));
         *new_sock = cliente_fd;
 
-        if (pthread_create(&client_thread, NULL, handle_client, (void*)new_sock) != 0) {
+        if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
             log_error(logger, "Error al crear el hilo para el cliente");
             free(new_sock);
         }
@@ -170,11 +236,22 @@ void clean(t_config *config) {
     config_destroy(config);
 }
 
+void testing_paging(void) {
+    const char* mensaje = "Este es un mensaje para el proceso.";
+    handle_paging(mensaje, strlen(mensaje) + 1, 1);
+
+    pthread_mutex_destroy(&memory.mutex_espacio_usuario);
+    pthread_mutex_destroy(&memory.mutex_frames_ocupados);
+    //free(espacio_usuario); FALTA LIBERARLO. PERO VER DONDE.
+    free(memory.frames_ocupados);
+}
+
+
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
     
   
-    config = config_create("memoria.config");
+      config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);
@@ -193,14 +270,18 @@ int main(int argc, char *argv[]) {
     }
      /*-------------------Pagination----------------------------*/
 
-    initPaging();
+    if (!initPaging()) {
+        return EXIT_FAILURE;
+    }
+
+    testing_paging();
 
     /*-------------------Test diccionary----------------------------*/
     /*
     const char *file_path="scripts-pruebas/file1";
     //recibir_path();
     uint32_t TIPO1=1; //tipo es el PID1
-    uint32_t TIPO2=2; //tipo es el PID2
+     uint32_t TIPO2=2; //tipo es el PID2
     printf("Step PID1: %s\n",file_path);
     handle_create_process(file_path,TIPO1);
     printf("Step PID2: %s\n",file_path);
