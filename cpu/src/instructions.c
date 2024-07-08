@@ -289,10 +289,10 @@ t_paquete *io_gen_sleep(char* interfaz, char* job_unit){
     t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
     int tamInterfaz = string_length(interfaz);
     uint32_t int_job_unit = (uint32_t) atoi(job_unit);
-    t_instruction* IO = new_instruction_IO(pcb_en_ejecucion->pid, interfaz, int_job_unit, "test-path");
+    t_instruction* IO = create_instruction_IO(pcb_en_ejecucion->pid, IO_GEN_SLEEP, interfaz, int_job_unit, "test-path");
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
-    serializar_instruccion_IO(IO, buffer);
+    serialize_instruccion_IO(IO, buffer);
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
     free(buffer);
 
@@ -410,12 +410,12 @@ t_copy_string* new_copy_string(int tamanio){
 
 t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
     t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
-    t_buffer* buffer = malloc(sizeof(t_buffer));
+    /*t_buffer* buffer = malloc(sizeof(t_buffer));
 
     t_io_stdin* io_stdin_read = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
     serializar_io_stdin(io_stdin_read,buffer);
     agregar_a_paquete(io_stdin_read_paq,buffer->stream,buffer->size);
-    free(io_stdin_read);
+    free(io_stdin_read);*/
 
     return io_stdin_read_paq;
 }
@@ -424,12 +424,12 @@ t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
 
 t_paquete *io_stdin_write(char* interfaz, char* logicalAdress, int tamanio){
     t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
-    t_buffer* buffer = malloc(sizeof(t_buffer));
+    /*t_buffer* buffer = malloc(sizeof(t_buffer));
 
     t_io_stdin* io_stdin_write = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
     serializar_io_stdin(io_stdin_write,buffer);
     agregar_a_paquete(io_stdin_write_paq,buffer->stream,buffer->size);
-    free(io_stdin_write);
+    free(io_stdin_write);*/
 
     return io_stdin_write_paq;
 }
