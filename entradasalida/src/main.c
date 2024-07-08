@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <libgen.h>
 #include <commons/txt.h>
 #include <commons/log.h>
 #include <commons/config.h>
@@ -9,6 +10,7 @@
 #include <utils/inout.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <string.h>
 #include "generic_st.h"
 
 // GLOBAL VARIABLES
@@ -18,7 +20,7 @@ sem_t sem_instruction;
 sem_t use_time;
 t_log* logger;
 t_config* config;
-char* name;
+char* io_name;
 char* type;
 
 int create_connection(t_config* config, char* c_ip, char* c_puerto) 
@@ -106,16 +108,38 @@ void execute_instruction(void* arg)
     }
 }
 
+// Function to extract the name from the config file path
+char* extract_name_from_path(const char* path) {
+    char* path_dup = strdup(path);
+    char* base = basename(path_dup);
+    
+    char* dot = strrchr(base, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+    
+    char* name = strdup(base);
+    free(path_dup);
+    return name;
+}
+
 int main(int argc, char* argv[]) {
-    
-    // INITIALIZE VARIABLES
-    
-    logger = log_create("in_out.log", "IN_OUT", true, LOG_LEVEL_INFO);
-    
+    // INITIALIZE VARIABLES    
     config = config_create(argv[1]);
-    name = argv[2];
+    io_name = extract_name_from_path(argv[1]);
+
+    // Create the log file name
+    size_t log_name_length = strlen(io_name) + strlen(".log") + 1;
+    char* log_name = malloc(log_name_length);
+    snprintf(log_name, log_name_length, "%s.log", io_name);
+    
+    // Create the logger
+    logger = log_create(log_name, io_name, true, LOG_LEVEL_INFO);
+
     type = type_from_config(config);
-    t_info* info = create_info(name, type);
+    t_info* info = create_info(io_name, type);
+    
+    free(log_name);
     
     // CREATE KERNEL CONNECTION
     
@@ -166,6 +190,7 @@ int main(int argc, char* argv[]) {
     pthread_join(connection_thread, NULL);
     pthread_join(instruction_manager_thread, NULL);
     free(str_conn);
+    free(io_name);
     liberar_conexion(kernel_socket);
 
     return 0;

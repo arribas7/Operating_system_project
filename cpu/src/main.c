@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    config = config_create("cpu.config");
+    config = config_create(argv[1]);
     if (config == NULL)
     {
         return -1;

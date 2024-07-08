@@ -250,9 +250,7 @@ void testing_paging(void) {
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
-    
-  
-      config = config_create("memoria.config");
+    config = config_create(argv[1]);
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);

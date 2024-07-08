@@ -180,8 +180,8 @@ int main(int argc, char *argv[]) {
     initialize_lists();
 
     interface_list = create_interface_list();
-
-    config = config_create("kernel.config");
+    
+    config = config_create(argv[1]);
     if (config == NULL) {
         return -1;
     }
