@@ -285,6 +285,23 @@ void add_interface_to_list(t_interface_list* interface_list, t_interface* interf
     pthread_mutex_unlock(&(interface_list->mutex));
 }
 
+void delete_interface_from_list(t_interface_list* interface_list, char* name) 
+{
+    bool _is_interface_searched(void *interface) 
+    {
+        return (strcmp(((t_interface *)interface)->name, name) == 0);
+    }
+
+    pthread_mutex_lock(&(interface_list->mutex));
+    t_interface* interface = list_remove_by_condition(interface_list->list, (void*) _is_interface_searched);
+    pthread_mutex_unlock(&(interface_list->mutex));
+
+    if (interface != NULL) 
+    {
+        delete_interface(interface);
+    }
+}
+
 t_interface* find_interface_by_name(char* name) 
 {
     bool _is_interface_searched(void *interface) 
