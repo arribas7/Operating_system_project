@@ -194,6 +194,7 @@ void handle_client(void *arg) {
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
+                liberar_conexion(cliente_fd);
                 return;
             default:
                 log_warning(logger, "Operación desconocida. No quieras meter la pata");

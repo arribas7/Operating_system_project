@@ -97,7 +97,7 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
         case IO_FS_TRUNCATE:
         case IO_FS_WRITE:
         case IO_FS_READ:
-            io_block_instruction(ret_data->pcb_updated, ret_data->instruction_IO);
+            io_block_instruction(ret_data->pcb_updated, ret_data->resp_code, ret_data->instruction_IO);
             break;
         default:
             log_warning(logger, "Unknown operation");
@@ -147,8 +147,10 @@ void st_sched_ready_running(void* arg) {
             free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
             pcb_RUNNING = NULL;
             pthread_mutex_unlock(&mutex_running);
-
             sem_post(&sem_st_scheduler);
+            
+            // TODO: free other rets
+            delete_instruction_IO(ret->instruction_IO);
         }
 
         if (scheduler_paused) {

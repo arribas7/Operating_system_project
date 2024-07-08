@@ -57,7 +57,6 @@ typedef enum {
     // IO -> KERNEL
     // KERNEL -> IO
     IO,
-    IO_DISCONNECT,
     REPORT,
 } op_code;
 

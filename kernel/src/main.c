@@ -74,14 +74,15 @@ void clean(t_config *config) {
     free(pcb_RUNNING);
 }
 
-void run_server(void *arg) {
-    char *puerto = (char *) arg;
 
-    int server_fd = iniciar_servidor(puerto);
-    log_info(logger, "Server ready to receive clients...");
+void handle_client(void *arg) {
+    int cliente_fd = *(int*)arg;
+    free(arg);
+    log_info(logger, "Nuevo cliente conectado, socket fd: %d", cliente_fd);
 
     t_list *lista;
-    int cliente_fd = esperar_cliente(server_fd);
+    char* interface_name;
+
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
         switch (cod_op) {
@@ -89,17 +90,18 @@ void run_server(void *arg) {
                 uint32_t status;
                 lista = recibir_paquete(cliente_fd);
                 t_interface* interface = list_to_interface(lista, cliente_fd);                
-                char* name = get_interface_name(interface);
+                interface_name = get_interface_name(interface);
 
-                if(find_interface_by_name(name) != NULL) {
-                    log_error(logger, "La interfaz %s ya existe", name);
+                if(find_interface_by_name(interface_name) != NULL) {
+                    log_error(logger, "La interfaz %s ya existe", interface_name);
                     delete_interface(interface);
                     status = 0;
                 } else {
                     char* type = type_from_list(lista);
-                    log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", name, type);
+                    log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", interface_name, type);
                     add_interface_to_list(interface_list, interface);
-                    free(name); free(type);
+                    free(interface_name); 
+                    free(type);
                     status = 1;
                 }
 
@@ -135,12 +137,35 @@ void run_server(void *arg) {
                 log_info(logger, "OPERATION_RESULT: %d", report->result); // 0 - ERROR / 1 - OK
                 break;
             case -1:
-                log_info(logger, "Client disconnected. Finishing server...");
+                delete_interface_from_list(interface_list, interface_name);
+                liberar_conexion(cliente_fd);
+                log_info(logger, "Client disconnected. Finishing client connection...");
                 return;
             default:
                 log_warning(logger, "Unknown operation.");
                 break;
         }
+    }
+}
+
+void run_server(void *arg) {
+    char *puerto = (char *) arg;
+
+    int server_fd = iniciar_servidor(puerto);
+    log_info(logger, "Server ready to receive clients...");
+
+    while (1) {
+        int cliente_fd = esperar_cliente(server_fd);
+
+        pthread_t client_thread;
+        int *new_sock = malloc(sizeof(int));
+        *new_sock = cliente_fd;
+
+        if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
+            log_error(logger, "Error al crear el hilo para el cliente");
+            free(new_sock);
+        }
+        pthread_detach(&client_thread);
     }
     return EXIT_SUCCESS;
 }

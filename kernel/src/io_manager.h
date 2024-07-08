@@ -13,6 +13,6 @@
 extern t_list *list_BLOCKED;
 extern pthread_mutex_t mutext_blocked;
 
-void io_block_instruction(t_pcb* pcb, t_instruction *instruction);
+void io_block_instruction(t_pcb* pcb, op_code code, t_instruction *instruction);
 
 #endif 
