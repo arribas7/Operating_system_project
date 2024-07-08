@@ -12,7 +12,6 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
     op_code resp_code = (op_code) recibir_operacion(cpu_connection);
     t_ws *resp_ws = NULL;
     t_instruction *instruction_IO = NULL;
-    t_interfaz *resp_interfaz = NULL;
 
     t_list* list_package = recibir_paquete(cpu_connection);
     void *buffer = list_get(list_package, 0);
@@ -26,24 +25,21 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
         case IO_GEN_SLEEP:
         case IO_STDIN_READ:
         case IO_STDOUT_WRITE:
-            instruction_IO = deserialize_instruction_IO(buffer);
-            break;
         case IO_FS_CREATE:
         case IO_FS_DELETE:
         case IO_FS_TRUNCATE:
         case IO_FS_WRITE:
         case IO_FS_READ:
-            resp_interfaz = deserializar_interfaz(buffer);
+            instruction_IO = deserialize_instruction_IO(buffer);
             break;
     }
     void *pcb_updated_buffer = list_get(list_package, 1);
     t_pcb *pcb_updated = deserialize_pcb(pcb_updated_buffer, 0);
 
-    ret->resp_code = resp_code;
     ret->pcb_updated = pcb_updated;
+    ret->resp_code = resp_code;
     ret->resp_ws = resp_ws;
     ret->instruction_IO = instruction_IO;
-
     log_debug(logger, "PCB PC updated: %d",pcb_updated->pc);
 
     return ret;
