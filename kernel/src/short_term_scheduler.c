@@ -90,18 +90,14 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
             // TODO: resource manager logic
             break;
         case IO_GEN_SLEEP:
-            io_block_instruction(ret_data->pcb_updated, ret_data->instruction_IO);
-            break;
         case IO_STDIN_READ:
         case IO_STDOUT_WRITE:
-            io_block_stdin(ret_data->pcb_updated, ret_data->resp_stdin);
-            break;
         case IO_FS_CREATE:
         case IO_FS_DELETE:
         case IO_FS_TRUNCATE:
         case IO_FS_WRITE:
         case IO_FS_READ:
-            io_block_interfaz_fs(ret_data->pcb_updated, ret_data->interfaz_fs);
+            io_block_instruction(ret_data->pcb_updated, ret_data->instruction_IO);
             break;
         default:
             log_warning(logger, "Unknown operation");

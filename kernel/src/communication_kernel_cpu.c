@@ -12,8 +12,6 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
     op_code resp_code = (op_code) recibir_operacion(cpu_connection);
     t_ws *resp_ws = NULL;
     t_instruction *instruction_IO = NULL;
-    t_io_stdin *resp_stdin = NULL;
-    t_interfaz *resp_interfaz_fs = NULL;
 
     t_list* list_package = recibir_paquete(cpu_connection);
     void *buffer = list_get(list_package, 0);
@@ -44,7 +42,6 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
     ret->resp_code = resp_code;
     ret->resp_ws = resp_ws;
     ret->instruction_IO = instruction_IO;
-    ret->resp_stdin = resp_stdin;
     ret->interfaz_fs = resp_interfaz_fs;
 
     log_debug(logger, "PCB PC updated: %d",pcb_updated->pc);

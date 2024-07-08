@@ -413,7 +413,6 @@ t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
     t_io_stdin* io_stdin_read = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
-
     serializar_io_stdin(io_stdin_read,buffer);
     agregar_a_paquete(io_stdin_read_paq,buffer->stream,buffer->size);
     free(io_stdin_read);

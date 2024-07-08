@@ -14,7 +14,6 @@ typedef struct {
     op_code resp_code;
     t_instruction* instruction_IO;
     t_ws* resp_ws;
-    t_interfaz *interfaz_fs;
 } t_return_dispatch;
 
 //Serializes and then sends a pcb to the CPU module using the DISPATCH op code
