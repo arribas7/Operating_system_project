@@ -17,6 +17,7 @@
 #include <short_term_scheduler.h>
 #include <long_term_scheduler.h>
 #include <communication_kernel_cpu.h>
+#include <resources_manager.h>
 
 extern t_interface_list* interface_list;
 
@@ -50,11 +51,7 @@ char* scheduler_algorithm;
 t_log *logger;
 t_config *config;
 
-void iterator(char *value) {
-    log_info(logger, "%s", value);
-}
-
-void clean(t_config *config) {
+void destroy_all() {
     log_destroy(logger);
     config_destroy(config);
     sem_destroy(&sem_multiprogramming);
@@ -71,14 +68,14 @@ void clean(t_config *config) {
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
     state_list_destroy(list_EXIT);
+    destroy_resource_list();
     free(pcb_RUNNING);
 }
-
 
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
     free(arg);
-    log_info(logger, "Nuevo cliente conectado, socket fd: %d", cliente_fd);
+    log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 
     t_list *lista;
     char* interface_name;
@@ -178,13 +175,13 @@ int main(int argc, char *argv[]) {
     }
 
     initialize_lists();
-
     interface_list = create_interface_list();
     
     config = config_create(argv[1]);
     if (config == NULL) {
         return -1;
     }
+    initialize_resources();
 
     atomic_init(&pid_count, 0);
     int multiprogramming_grade = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
@@ -200,6 +197,8 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&mutex_running, NULL);
     pthread_mutex_init(&mutex_blocked, NULL);
     pthread_mutex_init(&mutex_exit, NULL);
+
+    initialize_resources(config);
 
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
@@ -232,6 +231,6 @@ int main(int argc, char *argv[]) {
     pthread_join(lt_sched_new_ready_thread, NULL);
     pthread_join(st_sched_ready_running_thread, NULL);
 
-    clean(config);
+    destroy_all();
     return 0;
 }

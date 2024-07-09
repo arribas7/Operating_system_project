@@ -3,6 +3,9 @@
 		"debug.onTaskErrors": "abort",
 		"files.associations": {
 			"*.h": "c",
+			"memory_resource": "c",
+			"typeinfo": "c",
+			"functional": "c"
 		},
 		"C_Cpp.errorSquiggles": "disabled",
 	},

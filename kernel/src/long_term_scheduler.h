@@ -12,6 +12,7 @@ typedef enum {
     SUCCESS,
     INVALID_RESOURCE,
     INVALID_INTERFACE,
+    INVALID_OPERATION,
     INTERRUPTED_BY_USER,
     NUM_REASONS // This helps in determining the number of reasons
 } exit_reason;

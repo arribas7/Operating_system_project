@@ -4,6 +4,7 @@
 #include <commons/temporal.h>
 #include <long_term_scheduler.h>
 #include <io_manager.h>
+#include <resources_manager.h>
 
 bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if we're managing well the fourth criteria, order.
     t_pcb* a = (t_pcb*)pcb1;
@@ -72,6 +73,52 @@ void run_quantum_counter(void* arg) {
     }
 }
 
+void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
+    t_resource_op_return op_ret;
+    switch (code) {
+        case WAIT:
+            op_ret = resource_wait(pcb, resp_ws->recurso);
+            break;
+        case SIGNAL:
+            op_ret = resource_signal(resp_ws->recurso);
+            break;
+    }
+            
+    switch (op_ret.result) {
+        case RESOURCE_NOT_FOUND:
+            exit_process(pcb, RUNNING, INVALID_RESOURCE);
+            break;
+        case RESOURCE_BLOCKED:
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            break;
+        case RESOURCE_RELEASED:
+            pthread_mutex_lock(&mutex_blocked);
+            t_pcb *pcb_released = list_remove_by_pid(list_BLOCKED, op_ret.pcb_released->pid);
+            if (pcb_released != NULL){
+                move_pcb(pcb_released, BLOCKED, READY, list_READY, &mutex_ready);
+            } else {
+                log_warning(logger, "PCB released from resource not found on blocked list");
+            }
+            pthread_mutex_unlock(&mutex_blocked);
+        default: // success and resource_released
+            move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
+            break;
+    }
+}
+
+void handle_io(t_pcb* pcb, t_instruction* instruction_IO){
+    t_io_block_return ret = io_block_instruction(pcb, instruction_IO);
+
+    switch (ret) {
+        case IO_NOT_FOUND:
+            exit_process(pcb, RUNNING, INVALID_INTERFACE);
+            break;
+        default:
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            break;
+    }
+}
+
 void handle_dispatch_return_action(t_return_dispatch *ret_data){
    switch (ret_data->resp_code) {
         case RELEASE:
@@ -84,10 +131,8 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
             move_pcb(ret_data->pcb_updated, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
-            // TODO: resource manager logic
-            break;
         case SIGNAL:
-            // TODO: resource manager logic
+            handle_resource(ret_data->pcb_updated, ret_data->resp_code, ret_data->resp_ws);
             break;
         case IO_GEN_SLEEP:
         case IO_STDIN_READ:
@@ -97,10 +142,11 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
         case IO_FS_TRUNCATE:
         case IO_FS_WRITE:
         case IO_FS_READ:
-            io_block_instruction(ret_data->pcb_updated, ret_data->resp_code, ret_data->instruction_IO);
+            handle_io(ret_data->pcb_updated, ret_data->instruction_IO);
             break;
         default:
-            log_warning(logger, "Unknown operation");
+            log_warning(logger, "Unknown operation for pid %d",ret_data->pcb_updated->pid);
+            exit_process(ret_data->pcb_updated, RUNNING, INVALID_OPERATION);
             break;
     }
 }

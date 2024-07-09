@@ -95,7 +95,6 @@ void exit_process_from_pid(int pid, exit_reason reason) {
         pthread_mutex_unlock(&mutex_running);
     }
 
-
     pthread_mutex_lock(&mutex_ready);
     pcb = list_pid_element(list_READY, pid);
     if (pcb != NULL){
