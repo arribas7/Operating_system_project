@@ -188,4 +188,12 @@ void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pt
 	} else {
 		log_error(logger, "PID %d doesn't exist on list", pid);
 	}
+  
+}
+void *list_pop_last(t_list *list) {
+    if (list == NULL || list->elements_count == 0) {
+        return NULL;
+    }
+    t_pcb *popped_element = (t_pcb *)list_remove(list, list->elements_count - 1);
+    return popped_element;
 }

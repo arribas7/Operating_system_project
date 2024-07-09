@@ -25,7 +25,10 @@ typedef enum {
     CMD_MULTIPROGRAMACION,
     CMD_PROCESO_ESTADO,
     CMD_EXIT,
-    CMD_UNKNOWN
+    CMD_UNKNOWN,
+    CMD_TEST_UNBLOCK,
+    CMD_TEST_LOG,
+    CMD_TEST_TIMEOUT
 } console_command;
 
 void *interactive_console(void *arg);
