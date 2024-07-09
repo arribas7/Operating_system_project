@@ -203,6 +203,14 @@ void handle_client(void *arg) {
                 //con ese pid buscas la tabla de pagina asociada
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
+                pcb = recibir_pcb(cliente_fd);
+                log_info(logger, "pid: %d", pcb->pid);
+                log_info(logger, "pc: %d", pcb->pc);               
+                log_info(logger, "quantum: %d", pcb->quantum);
+                log_info(logger, "path: %s", pcb->path);
+                int direc_fis_1;
+                int direc_fis_2;
+                copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
                 t_request* reg_request = recibir_pagina(cliente_fd);
