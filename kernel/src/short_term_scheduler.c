@@ -113,7 +113,7 @@ void handle_io(t_pcb* pcb, t_instruction* instruction_IO){
         case IO_NOT_FOUND:
             exit_process(pcb, RUNNING, INVALID_INTERFACE);
             break;
-        case SUCCESS:
+        default:
             move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
     }
@@ -145,7 +145,8 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
             handle_io(ret_data->pcb_updated, ret_data->instruction_IO);
             break;
         default:
-            log_warning(logger, "Unknown operation");
+            log_warning(logger, "Unknown operation for pid %d",ret_data->pcb_updated->pid);
+            exit_process(ret_data->pcb_updated, RUNNING, INVALID_OPERATION);
             break;
     }
 }
