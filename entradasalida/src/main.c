@@ -93,25 +93,25 @@ void execute_instruction(void* arg)
                 log_info(logger, "PALABRA LEIDA: %s", r_word);
                 break;
             case IO_FS_CREATE:
-                io_fs_create(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid, logger);
+                io_fs_create(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid);
                 break;
             case IO_FS_DELETE:
-                io_fs_delete(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid, logger);
+                io_fs_delete(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid);
                 break;
             case IO_FS_READ:
-                io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid, logger);
+                io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
                 // TODO: add when instruction changes 
-                // io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid, logger);
+                // io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
-                io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, 0, instruction->pid, logger);
+                io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, 0, instruction->pid);
                 // TODO: add when instruction changes 
-                // io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->size, instruction->pid, logger);
+                // io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->size, instruction->pid);
                 break;
             case IO_FS_WRITE:
-                io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid, logger);
+                io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
                 // TODO: add when instruction changes 
-                // io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid, logger);
+                // io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
