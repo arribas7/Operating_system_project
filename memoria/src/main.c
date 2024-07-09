@@ -199,12 +199,16 @@ void handle_client(void *arg) {
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
             case COPY_STRING: //recibo pid, tamanio, di(direccion fisica es un int) y si(direccion fisica), copio (bytes = tamanio) de si en di
-
+                //recibis pid
+                //con ese pid buscas la tabla de pagina asociada
+                //la direccion fisica es el numero de pagina dentro de la tabla de paginas
+                //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
                 //obtener_valor(reg_request->pid,reg_request->req);
+                //aqui en obtener_valor seria con marcoAsociado
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
