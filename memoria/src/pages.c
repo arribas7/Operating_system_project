@@ -1,6 +1,8 @@
 #include <pages.h>
 #include <memoria.h>
 
+char* espacio_usuario;
+t_dictionary* listaTablasDePaginas;
 
 void inicializarEspacioUsuario() {
     espacio_usuario = malloc(memory.memory_size);
@@ -184,6 +186,11 @@ int marcoAsociado(int numero_pagina, TablaPaginas* tablaAsociada){
     return marco;
 }
 
+void enviar_marco(int pagina, int pid, int cliente_fd){
+    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+    int marco = marcoAsociado(pagina,tablaAsociada);
+    enviar_mensaje(string_itoa(marco),cliente_fd);
+}
 
  //Estaria para ponerlo en algun lado:
     //for (int i = 0; i < tabla.num_paginas; ++i) {

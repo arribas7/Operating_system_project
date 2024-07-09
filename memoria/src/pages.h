@@ -29,7 +29,6 @@ Al finalizar un proceso, se actualizará el bitmap.
 */
 
 
-char* espacio_usuario;
 //extern void* espacio_usuario;
 
 // Estructura para representar una página de memoria
@@ -46,8 +45,14 @@ typedef struct {
     pthread_mutex_t mutex_tabla;
 } TablaPaginas;
 
-t_dictionary* listaTablasDePaginas;
+
 
 int initPaging(void);
 void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid);
+TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco);
+TablaPaginas* tablaDePaginasAsociada (int pid);
+void enviar_marco(int pagina, int pid, int cliente_fd);
+void liberarTablaPaginas(TablaPaginas tabla);
+bool hayEspacioEnBitmap(int marcos_necesarios);
+
 #endif // PAGES_H
