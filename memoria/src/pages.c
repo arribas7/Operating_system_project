@@ -56,6 +56,9 @@ void logMemoryInfo() {
     log_info(logger, "Memory has %d frames of %d bytes", frameCount, pageSize);
 }
 */
+
+
+/********************************Handle Paging*************************************/
 int calcularMarcosNecesarios(int tamano_proceso, int tamano_marco) {
     return( ceil(tamano_proceso / tamano_marco)); //calculamos la cantidad de marcos para el proceso redondeando siempre para arriba
    // return (tamano_proceso + tamano_marco - 1) / tamano_marco;
@@ -166,30 +169,76 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     liberarTablaPaginas(tabla);
 }
 
+/********************************Sending Frame*************************************/
   
-//Dado un pid se encuentra la tabla de paginas asociada
-TablaPaginas* tablaDePaginasAsociada (int pid){
-    return dictionary_get(listaTablasDePaginas,string_itoa(pid));
-}
-
 //Dado un numero de pagina y una tabla de paginas asociada, retorna el marco asociado
 int marcoAsociado(int numero_pagina, TablaPaginas* tablaAsociada){
-    int i=0;
-    int marco = -1; //en caso no find nunca se modificara y devolvera este
-    for (i=0; i<tablaAsociada->num_paginas ; i++){
-        if(numero_pagina == tablaAsociada->paginas[i].pagina_id){
-            marco = tablaAsociada->paginas[i].numero_marco;
-            break;
-        }
-    }
-
-    return marco;
-}
+   int i=0;
+   int marco = -1; //en caso no find nunca se modificara y devolvera este
+   for (i=0; i<tablaAsociada->num_paginas ; i++){
+       if(numero_pagina == tablaAsociada->paginas[i].pagina_id){
+           marco = tablaAsociada->paginas[i].numero_marco;
+           break;
+       }
+   }
+  return marco;
+ }
 
 void enviar_marco(int pagina, int pid, int cliente_fd){
     TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
     int marco = marcoAsociado(pagina,tablaAsociada);
     enviar_mensaje(string_itoa(marco),cliente_fd);
+}
+
+
+
+/********************************COPY STRING**************************************/
+ //Dado un pid se encuentra la tabla de paginas asociada
+TablaPaginas* tablaDePaginasAsociada (int pid){
+   return dictionary_get(listaTablasDePaginas,string_itoa(pid));
+}
+
+
+int calcularNumeroPagina(int direccion_fisica) {
+   return direccion_fisica / memory.page_size;
+}
+
+int calcularDesplazamiento(int direccion_fisica) {
+   return direccion_fisica % memory.page_size;
+   //Suponiendo que el tamaño de la página es 4096 bytes (4 KB). La dirección física es 8195.
+   //desplazamiento = 8195 % 4096 = 3;  Es el resto!
+}
+
+
+char* obtenerDireccionFisica(int marco, int desplazamiento) {
+   return (char*)espacio_usuario + (marco * memory.page_size) + desplazamiento;
+}
+
+
+// Obtener la dirección física completa
+char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsociada) {
+    int marco = marcoAsociado(direccion_fisica, tablaAsociada);
+    if (marco == -1) return NULL;
+    int desplazamiento = calcularDesplazamiento(direccion_fisica);
+    return obtenerDireccionFisica(marco, desplazamiento);
+}
+void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config) {
+   TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+   if (!tablaAsociada) {
+       perror("Tabla de páginas no encontrada para el PID proporcionado");
+       return;
+   }
+   char *dir_fisica_1 = obtenerDireccionFisicafull(direc_fis_1, tablaAsociada);
+   char *dir_fisica_2 = obtenerDireccionFisicafull(direc_fis_2, tablaAsociada);
+  
+   if (!dir_fisica_1 || !dir_fisica_2) {
+       perror("No se pudo obtener la dirección física");
+       return;
+   }
+
+   pthread_mutex_lock(&memory.mutex_espacio_usuario);
+   strcpy(dir_fisica_2, dir_fisica_1);
+   pthread_mutex_unlock(&memory.mutex_espacio_usuario);
 }
 
  //Estaria para ponerlo en algun lado:
