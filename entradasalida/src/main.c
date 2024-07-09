@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
+#include <dialfs.h>
 #include "generic_st.h"
 
 // GLOBAL VARIABLES
@@ -22,6 +23,8 @@ t_log* logger;
 t_config* config;
 char* io_name;
 char* type;
+
+
 
 int create_connection(t_config* config, char* c_ip, char* c_puerto) 
 {
@@ -90,14 +93,25 @@ void execute_instruction(void* arg)
                 log_info(logger, "PALABRA LEIDA: %s", r_word);
                 break;
             case IO_FS_CREATE:
+                io_fs_create(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid, logger);
                 break;
             case IO_FS_DELETE:
+                io_fs_delete(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->pid, logger);
                 break;
             case IO_FS_READ:
+                io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid, logger);
+                // TODO: add when instruction changes 
+                // io_fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid, logger);
                 break;
             case IO_FS_TRUNCATE:
+                io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, 0, instruction->pid, logger);
+                // TODO: add when instruction changes 
+                // io_fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->path, instruction->size, instruction->pid, logger);
                 break;
             case IO_FS_WRITE:
+                io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid, logger);
+                // TODO: add when instruction changes 
+                // io_fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), instruction->phys_addr, instruction->buffer, instruction->size, instruction->pid, logger);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
@@ -140,6 +154,14 @@ int main(int argc, char* argv[]) {
     t_info* info = create_info(io_name, type);
     
     free(log_name);
+
+    // Initialize DialFS if needed
+    if (strcmp(type, "dialfs") == 0) {
+        int block_size = config_get_int_value(config, "BLOCK_SIZE");
+        int block_count = config_get_int_value(config, "BLOCK_COUNT");
+        const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
+        initialize_dialfs(path_base_dialfs, block_size, block_count);
+    }
     
     // CREATE KERNEL CONNECTION
     
