@@ -10,14 +10,6 @@
 // 3. If the previous state of pcb1 is RUNNING and pcb2 is not RUNNING, pcb1 has higher priority.
 // 4. If the previous state of pcb1 is BLOCKED and pcb2 is NEW, pcb1 has higher priority.
 // 5. In all other cases, pcb2 is either equal or higher in priority.
-bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if we're managing well the fourth criteria, order.
-    t_pcb* a = (t_pcb*)pcb1;
-    t_pcb* b = (t_pcb*)pcb2;
-    // Priority: RUNNING > BLOCKED > NEW
-    if (a->prev_state == RUNNING && b->prev_state != RUNNING) return true;
-    if (a->prev_state == BLOCKED && b->prev_state == NEW) return true;
-    return false;
-}
 
 /*
     VRR Handles priority by first selecting PCBS that have not been able to complete their quantum 
@@ -31,6 +23,16 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if 
 // 3. If pcb1 was previously BLOCKED and pcb2 wasn't, pcb1 has higher priority.
 // 4. If pcb1 was previously RUNNING and pcb2 was NEW, pcb1 has higher priority.
 // 5. In all other cases, pcb2 is either equal or higher in priority.
+
+bool rr_pcb_priority(void* pcb1, void* pcb2) { 
+    t_pcb* a = (t_pcb*)pcb1;
+    t_pcb* b = (t_pcb*)pcb2;
+    // Priority: RUNNING > BLOCKED > NEW
+    if (a->prev_state == RUNNING && b->prev_state != RUNNING) return true;
+    if (a->prev_state == BLOCKED && b->prev_state == NEW) return true;
+    return false;
+}
+
 bool vrr_pcb_priority(void* pcb1, void* pcb2) {
     t_pcb* a = (t_pcb*)pcb1;
     t_pcb* b = (t_pcb*)pcb2;
@@ -70,7 +72,7 @@ t_pcb* virtual_round_robin(){ // TODO: Implement
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
-    return NULL;
+    return next_pcb;
 }
 
 t_pcb* get_next_pcb(char *selection_algorithm) {
@@ -87,7 +89,8 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
 
 void *run_quantum_counter(void *arg) {
     struct quantum_thread_args *args = (struct quantum_thread_args *)arg;
-    int quantum_time = args->quantum_time;
+    int quantum_time = *(args->quantum_time);
+    //log_info(logger, "Valor del quantumasdasdasd: %d", quantum_time);
 
     while (1) {
         //Wait for initialization
@@ -150,36 +153,41 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
 }
 
 void st_sched_ready_running(void* arg) {
-    
     char *selection_algorithm = (char *) arg;
     log_debug(logger, "Initializing short term scheduler (ready->running) with selection algorithm: %s...", selection_algorithm);
 
     // Check if the selection algorithm is Round Robin (RR) or Virtual Round Robin (VRR)
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
-        struct quantum_thread_args quantum_args;
+        struct quantum_thread_args *quantum_args = malloc(sizeof(struct quantum_thread_args));
         
+        if (quantum_args == NULL) {
+            log_error(logger, "Failed to allocate memory for quantum args");
+            return;
+        }
+
+        quantum_args->quantum_time = malloc(sizeof(int));
+        quantum_args->interrupted = malloc(sizeof(bool));
+
+        if (quantum_args->quantum_time == NULL || quantum_args->interrupted == NULL) {
+            log_error(logger, "Failed to allocate memory for quantum args fields");
+            free(quantum_args->quantum_time);
+            free(quantum_args->interrupted);
+            free(quantum_args);
+            return;
+        }
+
         int quantum_value = config_get_int_value(config, "QUANTUM");
-        quantum_args.quantum_time = (int *)malloc(sizeof(int));
-        quantum_args.interrupted = (bool *)malloc(sizeof(bool));;
-
-        if (quantum_args.interrupted == NULL) {
-            log_error(logger, "Failed to allocate memory for quantum");
-            free(quantum_args.quantum_time);
-            return;
-        }
-        if (quantum_args.quantum_time == NULL) {
-            log_error(logger, "Failed to allocate memory for quantum");
-            return;
-        }
-
-        *(quantum_args.quantum_time) = quantum_value;
-        *(quantum_args.interrupted) = false;
+        *(quantum_args->quantum_time) = quantum_value;
+        *(quantum_args->interrupted) = false;
+        //log_info(logger, "VALOR QUATUM %d", *(quantum_args->quantum_time));
 
         // Create a thread to handle the quantum counter
-        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, &quantum_args) != 0) {
+        if (pthread_create(&quantum_counter_thread, NULL, run_quantum_counter, quantum_args) != 0) {
             log_error(logger, "Error creating quantum thread");
-            free(quantum_args.quantum_time);
+            free(quantum_args->quantum_time);
+            free(quantum_args->interrupted);
+            free(quantum_args);
             return;
         }
         // Detach the thread to let it run independently
@@ -205,8 +213,22 @@ void st_sched_ready_running(void* arg) {
             pthread_mutex_unlock(&mutex_running);
 
             // If using RR or VRR, signal the quantum semaphore
+            
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
                 sem_post(&sem_quantum);
+            }
+            
+
+           if(pcb_RUNNING != NULL) {
+                log_info(logger, "RUNNING PCB PATH: %s", pcb_RUNNING->path);
+            } else {
+                log_error(logger, "RUNNING PCB IS NULL!");
+            }
+
+            if(next_pcb != NULL) {
+                log_info(logger, "NEXT PCB PATH: %s", next_pcb->path);
+            } else {
+                log_error(logger, "NEXT PCB IS NULL!");
             }
 
             // Dispatch the PCB to the CPU and get the result
