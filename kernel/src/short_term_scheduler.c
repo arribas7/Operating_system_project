@@ -90,7 +90,6 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
 void *run_quantum_counter(void *arg) {
     struct quantum_thread_args *args = (struct quantum_thread_args *)arg;
     int quantum_time = *(args->quantum_time);
-    //log_info(logger, "Valor del quantumasdasdasd: %d", quantum_time);
 
     while (1) {
         //Wait for initialization
@@ -101,22 +100,27 @@ void *run_quantum_counter(void *arg) {
         log_info(logger, "Quantum Iniciado");
         temporal_resume(timer);
 
+        *(args->interrupted) == false;
+
         //Check for the completion of the timer
-        while (temporal_gettime(timer) < quantum_time) {
+        while (temporal_gettime(timer) < quantum_time && *(args->interrupted) == false) {
             usleep(1000); // sleep 1 ms to wait busy-waiting
         }
 
-        //Quantum is finished
-        log_info(logger, "Quantum Cumplido");
+        if (*(args->interrupted) == false) {
+            //Quantum is finished
+            log_info(logger, "Quantum Cumplido");
 
-        //Wait until no one is interacting with RUNNING
-        pthread_mutex_lock(&mutex_running);
-        if (pcb_RUNNING != NULL) {
-            cpu_interrupt(config, INTERRUPT_TIMEOUT);
-            pcb_RUNNING = NULL;
+            //Wait until no one is interacting with RUNNING
+            pthread_mutex_lock(&mutex_running);
+            if (pcb_RUNNING != NULL) {
+                cpu_interrupt(config, INTERRUPT_TIMEOUT);
+                pcb_RUNNING = NULL;
+            }
+            pthread_mutex_unlock(&mutex_running);
+        } else {
+            log_info(logger, "Quantum Interrumpido");
         }
-        pthread_mutex_unlock(&mutex_running);
-
         //Destroy timer
         temporal_destroy(timer);
     }
@@ -156,15 +160,18 @@ void st_sched_ready_running(void* arg) {
     char *selection_algorithm = (char *) arg;
     log_debug(logger, "Initializing short term scheduler (ready->running) with selection algorithm: %s...", selection_algorithm);
 
+    //Define quantum thread args
+    struct quantum_thread_args *quantum_args = malloc(sizeof(struct quantum_thread_args));
+        
+    if (quantum_args == NULL) {
+        log_error(logger, "Failed to allocate memory for quantum args");
+        return;
+    }
     // Check if the selection algorithm is Round Robin (RR) or Virtual Round Robin (VRR)
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
-        struct quantum_thread_args *quantum_args = malloc(sizeof(struct quantum_thread_args));
+
         
-        if (quantum_args == NULL) {
-            log_error(logger, "Failed to allocate memory for quantum args");
-            return;
-        }
 
         quantum_args->quantum_time = malloc(sizeof(int));
         quantum_args->interrupted = malloc(sizeof(bool));
@@ -212,25 +219,18 @@ void st_sched_ready_running(void* arg) {
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
 
+            if (pcb_RUNNING == NULL) {
+                log_error(logger, "PCB RUNNING IS NULL");
+            }
+            if (next_pcb == NULL) {
+                log_error(logger, "NEXT PCB IS NULL");
+            }
+
             // If using RR or VRR, signal the quantum semaphore
-            
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
                 sem_post(&sem_quantum);
             }
-            
-
-           if(pcb_RUNNING != NULL) {
-                log_info(logger, "RUNNING PCB PATH: %s", pcb_RUNNING->path);
-            } else {
-                log_error(logger, "RUNNING PCB IS NULL!");
-            }
-
-            if(next_pcb != NULL) {
-                log_info(logger, "NEXT PCB PATH: %s", next_pcb->path);
-            } else {
-                log_error(logger, "NEXT PCB IS NULL!");
-            }
-
+           
             // Dispatch the PCB to the CPU and get the result
             t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
             log_info(logger, "Dispatched a PCB %s", next_pcb->path);
@@ -246,6 +246,14 @@ void st_sched_ready_running(void* arg) {
 
             // Lock the mutex to safely handle the PCB return
             pthread_mutex_lock(&mutex_running);
+
+            // If using quantum, interrupt its execution
+             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+                *(quantum_args->interrupted) = true;
+                // Sleep 1 ms to sync up with the independent quantum thread
+                usleep(1000);
+             }
+
             // Handle the returned PCB and update based on the response code
             handle_pcb_dispatch_return(ret->pcb_updated, ret->resp_code);
             // Free the running PCB as it has been handled
