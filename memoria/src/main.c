@@ -6,6 +6,8 @@ t_memory memory;
 t_config *config;
 t_log* logger;
 
+extern t_dictionary* listaTablasDePaginas;
+
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
 
@@ -88,36 +90,41 @@ t_request* recibir_pagina(int socket_cpu){
     return pagina;
 }
 
-/********LISTA PARA DESCOMENTAR CUANDO ARREGLE BIEN EL ORDEN DE LOS .H*******/
-/*
-void enviar_marco(int pagina, int pid, int cliente_fd){
-    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
-    int marco = marcoAsociado(pagina,tablAsociada);
-    enviar_mensaje(string_itoa(marco),cliente_fd);
-}
-*/ 
+int tamanio_proceso(int pid){
+    
+} 
 
-/*
-void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu){
+bool memoria_llena (int tam_actual,int nuevo_tam){
+    return !hayEspacioEnBitmap(tam_actual - nuevo_tam);
+}
+
+void modificar_tamanio_proceso (int pid, int nuevo_tamanio,t_config* config){
+    TablaPaginas* tablaAsoc = tablaDePaginasAsociada(pid);
+    TablaPaginas tablaAux;
+    tablaAux = *tablaAsoc;
+
+    dictionary_remove(listaTablasDePaginas,string_itoa(pid));
+    liberarTablaPaginas(*tablaAsoc);
+
+    crearTablaPaginas(pid,nuevo_tamanio,config_get_int_value(config,"TAM_PAGINA"));
+
+    TablaPaginas* tablaNew = dictionary_get(listaTablasDePaginas,string_itoa(pid));
+    *tablaNew = tablaAux;
+}
+
+void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu, t_config* config){
     int tam_actual_proceso = tamanio_proceso(resize->pid);
     int nuevo_tamanio;
 
-    switch (tam_actual_proceso > resize->tamanio){
-        case true: //reduccion de tamanio de proceso
-            nuevo_tamanio = resize->tamanio;
-            reducir_proceso(resize->pid,nuevo_tamanio);
-        break;
-        case false: //ampliacion tamanio proceso        
-            nuevo_tamanio = tam_actual_proceso + (resize->tamanio - tam_actual_proceso);
-            //memoria_llena me indicara si no tengo marcos suficientes para agrandar el proceso
-            if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else ampliar_proceso(resize->pid,nuevo_tamanio);
-        break;
-        default:
-        break;
+    if(tam_actual_proceso > resize->tamanio){ //reduccion de tamanio de proceso
+        nuevo_tamanio = resize->tamanio;
+        modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
     }
-
+    else{
+        nuevo_tamanio = tam_actual_proceso + (resize->tamanio - tam_actual_proceso);
+        if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
+    } 
 }
-*/
 
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
@@ -137,7 +144,7 @@ void handle_client(void *arg) {
                 log_info(logger, "quantum: %d", pcb->quantum);
                 log_info(logger, "path: %s", pcb->path);
                 u_int32_t pid = pcb->pid; 
-                handle_create_process(pcb->path,pid); //funciona con scripts-pruebas/file1
+                handle_create_process(pcb->path,pid,config); //funciona con scripts-pruebas/file1
                 printf("Path recibido: %s", pcb->path);
                 enviar_respuesta(cliente_fd, OK);
                 break;
@@ -150,9 +157,10 @@ void handle_client(void *arg) {
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
                 //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
+                retardo_en_peticiones();
                 enviar_mensaje(get_complete_instruction(pcb->pid, pcb->pc),cliente_fd);
                 //enviar_mensaje((char *)instruction, cliente_fd);
-                enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
+                //enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
             case FINISH_PROCESS:
                 pcb = recibir_pcb(cliente_fd);
@@ -170,12 +178,12 @@ void handle_client(void *arg) {
                 retardo_en_peticiones();
                 t_request* request = recibir_pagina(cliente_fd);
                 int pagina = request->req;
-                //enviar_marco(pagina,request->pid, cliente_fd); //ACA FALTA MIRAR BIEN LOS .H PARA QUE ME DEJE INCLUIR LAS FUNCIONES DE BUSCAR TABLA DE PAGINAS ASOCIADA
+                enviar_marco(pagina,request->pid, cliente_fd); 
             break;
             case RESIZE:
                 retardo_en_peticiones();
                 t_resize* resize = recibir_resize(cliente_fd);
-                //nuevo_tamanio_proceso(resize,cliente_fd);
+                nuevo_tamanio_proceso(resize,cliente_fd,config);
             break;
             case TAM_PAG:
                 enviar_mensaje(config_get_string_value(config,"TAM_PAGINA"),cliente_fd);
@@ -184,17 +192,26 @@ void handle_client(void *arg) {
             break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 retardo_en_peticiones();
+                t_request* tlb_request = recibir_pagina(cliente_fd);
+                int pagina_tlb = tlb_request->req;
+                enviar_marco(pagina_tlb,tlb_request->pid, cliente_fd); 
             break;
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
-            case COPY_STRING: //recibo pid, tamanio, di y si, copio bytes tamanio de si en di
-
+            case COPY_STRING: //recibo pid, tamanio, di(direccion fisica es un int) y si(direccion fisica), copio (bytes = tamanio) de si en di
+                //recibis pid
+                //con ese pid buscas la tabla de pagina asociada
+                //la direccion fisica es el numero de pagina dentro de la tabla de paginas
+                //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
+                t_request* reg_request = recibir_pagina(cliente_fd);
+                int direccion_fisica = reg_request->req;
+                //obtener_valor(reg_request->pid,reg_request->req);
+                //aqui en obtener_valor seria con marcoAsociado
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
-                liberar_conexion(cliente_fd);
                 return;
             default:
                 log_warning(logger, "Operación desconocida. No quieras meter la pata");
@@ -250,7 +267,9 @@ void testing_paging(void) {
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
-    config = config_create(argv[1]);
+    
+  
+      config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);
