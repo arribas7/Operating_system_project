@@ -52,6 +52,8 @@ void state_list_destroy(t_list * list);
 void *list_get_first(t_list *list);
 
 void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_list* destination_list, pthread_mutex_t* mutex);
+
+void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pthread_mutex_t* from_mutex, t_state to_status, t_list* to_list, pthread_mutex_t* to_mutex);
 /* ---------------- Lists Usage example ---------------- */
     /*t_pcb *testpcb = new_pcb(1,0,"");
     t_pcb *testpcb2 = new_pcb(2,0,"");

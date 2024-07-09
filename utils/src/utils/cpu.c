@@ -258,10 +258,10 @@ t_instruction* receive_instruction_IO(int socket_cliente) {
 }
 
 void send_instruction_IO(t_instruction* instruction, int socket_cliente) {
-
     t_paquete* package = crear_paquete(instruction->code);
     serialize_instruccion_IO(instruction, package->buffer);
     enviar_paquete(package, socket_cliente);
+    eliminar_paquete(package);
 }
 
 void delete_instruction_IO(t_instruction* instruction) {
@@ -329,6 +329,12 @@ t_ws* recibir_wait_o_signal(int socket_cliente) {
     free(buffer);
     return ws;
 }
+
+void destroy_ws(t_ws* ws) {
+    free(ws->recurso);
+    free(ws);
+}
+
 
 //IO_FS:
 

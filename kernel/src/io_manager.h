@@ -11,13 +11,11 @@
 #include <utils/inout.h>
 
 extern t_list *list_BLOCKED;
-extern pthread_mutex_t mutext_blocked;
+extern pthread_mutex_t mutex_blocked;
+extern t_list *list_READY;
+extern pthread_mutex_t mutex_ready;
 
-typedef enum {
-    IO_SUCCESS_OP,
-    IO_NOT_FOUND,
-} t_io_block_return;
-
-t_io_block_return io_block_instruction(t_pcb* pcb, t_instruction *instruction);
+void io_block(t_pcb* pcb, t_instruction *instruction);
+void io_unblock(int pid);
 
 #endif 

@@ -77,6 +77,7 @@ t_ws* new_ws(char* recurso);
 void serializar_wait_o_signal(t_ws* ws, t_buffer* buffer);
 t_ws* deserializar_wait_o_signal(void* stream);
 t_ws* recibir_wait_o_signal(int socket_cliente);
+void destroy_ws(t_ws* ws);
 
 void serializar_interfaz(t_interfaz* interfaz, t_buffer* buffer);   
 t_interfaz* deserializar_interfaz(void* stream);

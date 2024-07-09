@@ -3,8 +3,8 @@
 #include <utils/cpu.h>
 #include <commons/temporal.h>
 #include <long_term_scheduler.h>
-#include <io_manager.h>
 #include <resources_manager.h>
+#include <utils/inout.h>
 
 bool rr_pcb_priority(void* pcb1, void* pcb2) { // TODO: Check with ayudantes if we're managing well the fourth criteria, order.
     t_pcb* a = (t_pcb*)pcb1;
@@ -106,19 +106,6 @@ void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
     }
 }
 
-void handle_io(t_pcb* pcb, t_instruction* instruction_IO){
-    t_io_block_return ret = io_block_instruction(pcb, instruction_IO);
-
-    switch (ret) {
-        case IO_NOT_FOUND:
-            exit_process(pcb, RUNNING, INVALID_INTERFACE);
-            break;
-        default:
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
-            break;
-    }
-}
-
 void handle_dispatch_return_action(t_return_dispatch *ret_data){
    switch (ret_data->resp_code) {
         case RELEASE:
@@ -142,7 +129,7 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
         case IO_FS_TRUNCATE:
         case IO_FS_WRITE:
         case IO_FS_READ:
-            handle_io(ret_data->pcb_updated, ret_data->instruction_IO);
+            io_block(ret_data->pcb_updated, ret_data->instruction_IO);
             break;
         default:
             log_warning(logger, "Unknown operation for pid %d",ret_data->pcb_updated->pid);
@@ -197,6 +184,8 @@ void st_sched_ready_running(void* arg) {
             
             // TODO: free other rets
             delete_instruction_IO(ret->instruction_IO);
+            destroy_ws(ret->resp_ws);
+            free(ret);
         }
 
         if (scheduler_paused) {
