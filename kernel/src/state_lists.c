@@ -172,3 +172,20 @@ void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_lis
 	list_add(destination_list, pcb);
 	pthread_mutex_unlock(mutex);
 }
+
+void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pthread_mutex_t* from_mutex, t_state to_status, t_list* to_list, pthread_mutex_t* to_mutex) {
+	log_info(logger, "“PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>”", pid, t_state_to_string(from_status), t_state_to_string(to_status));
+	
+	pthread_mutex_lock(from_mutex);
+    t_pcb* pcb = list_remove_by_pid(from_list, pid);
+    pthread_mutex_unlock(from_mutex);
+	if(pcb != NULL){
+		pcb->prev_state = from_status;
+		
+		pthread_mutex_lock(to_mutex);
+		list_add(to_list, pcb);
+		pthread_mutex_unlock(to_mutex);
+	} else {
+		log_error(logger, "PID %d doesn't exist on list", pid);
+	}
+}

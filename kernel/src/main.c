@@ -82,10 +82,10 @@ void handle_client(void *arg) {
 
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
+        lista = recibir_paquete(cliente_fd);
         switch (cod_op) {
             case IO:
                 uint32_t status;
-                lista = recibir_paquete(cliente_fd);
                 t_interface* interface = list_to_interface(lista, cliente_fd);                
                 interface_name = get_interface_name(interface);
 
@@ -105,7 +105,7 @@ void handle_client(void *arg) {
                 log_info(logger, "%d", status);
                 send_confirmation(cliente_fd, status);
 
-                // INSTRUCTION - 1
+                // INSTRUCTION - 1 - TODO: Remove, only for tests.
 
                 t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, "myPath");
                 send_instruction_IO(instruction_1, cliente_fd);
@@ -114,7 +114,7 @@ void handle_client(void *arg) {
 
                 // INSTRUCTION - 2
 
-                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 500, "myOtherPath");
+                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 300, "myOtherPath");
                 send_instruction_IO(instruction_2, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_2);
@@ -128,15 +128,15 @@ void handle_client(void *arg) {
 
                 break;
             case REPORT:
-                lista = recibir_paquete(cliente_fd);
                 t_report* report = list_to_report(lista);
                 log_info(logger, "PID: %d", report->pid);
                 log_info(logger, "OPERATION_RESULT: %d", report->result); // 0 - ERROR / 1 - OK
+                io_unblock(report->pid);
                 break;
             case -1:
+                log_info(logger, "Client disconnected. Finishing client connection...");
                 delete_interface_from_list(interface_list, interface_name);
                 liberar_conexion(cliente_fd);
-                log_info(logger, "Client disconnected. Finishing client connection...");
                 return;
             default:
                 log_warning(logger, "Unknown operation.");
@@ -159,7 +159,7 @@ void run_server(void *arg) {
         *new_sock = cliente_fd;
 
         if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
-            log_error(logger, "Error al crear el hilo para el cliente");
+            log_error(logger, "Error creating thread for the client.");
             free(new_sock);
         }
         pthread_detach(&client_thread);
@@ -199,7 +199,6 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&mutex_exit, NULL);
 
     initialize_resources(config);
-
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
     pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;

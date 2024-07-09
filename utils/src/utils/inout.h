@@ -145,6 +145,7 @@ void delete_interface(t_interface* interface);
 // Extract the information from a list and create a pointer to a struct t_interface 
 t_interface* list_to_interface(t_list* list, int connection);
 
+void delete_interface_from_list(t_interface_list* interface_list, char* name);
 
 // GETTERS
 
