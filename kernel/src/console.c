@@ -19,8 +19,9 @@ console_command get_command_type(const char *input) {
     if (strncmp(input, "MULTIPROGRAMACION", 17) == 0) return CMD_MULTIPROGRAMACION;
     if (strncmp(input, "PROCESO_ESTADO", 14) == 0) return CMD_PROCESO_ESTADO;
     if (strncmp(input, "EXIT", 4) == 0) return CMD_EXIT;
-    if (strncmp(input, "DESBLOQUEAR PROCESO", 4) == 0) return CMD_TEST_UNBLOCK;
-    if (strncmp(input, "LOG", 4) == 0) return CMD_TEST_LOG;
+    if (strncmp(input, "DESBLOQUEAR PROCESO", 19) == 0) return CMD_TEST_UNBLOCK;
+    if (strncmp(input, "LOG", 3) == 0) return CMD_TEST_LOG;
+    if (strncmp(input, "TIMEOUT", 7) == 0) return CMD_TEST_TIMEOUT;
     return CMD_UNKNOWN;
 }
 
@@ -197,6 +198,15 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
             handle_process_state();
             break;
         case CMD_TEST_LOG:
+             if(pcb_RUNNING != NULL) {
+                log_info(logger, "Running Process PID: %d", pcb_RUNNING->pid);
+            } else {
+                log_info(logger, "No process running.");
+            }
+            log_list_contents(logger, list_BLOCKED, mutex_blocked);
+            log_list_contents(logger, list_READY, mutex_ready);
+        break;
+        case CMD_TEST_TIMEOUT:
             log_list_contents(logger, list_BLOCKED, mutex_blocked);
             log_list_contents(logger, list_READY, mutex_ready);
         break;

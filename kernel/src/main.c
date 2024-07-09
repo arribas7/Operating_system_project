@@ -49,6 +49,8 @@ char* scheduler_algorithm;
 t_log *logger;
 t_config *config;
 
+int test_quantum = 0;
+
 void iterator(char *value) {
     log_info(logger, "%s", value);
 }

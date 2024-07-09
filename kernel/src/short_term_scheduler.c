@@ -64,8 +64,9 @@ t_pcb* round_robin(){
 t_pcb* virtual_round_robin(){ // TODO: Implement
     // order by RR priority
     // take a consideration an extra blocked list.
+    // Matias: There's no need for an extra blocked list since PCBS that completed their quantum go back to READY
     pthread_mutex_lock(&mutex_ready);
-    list_sort(list_READY, rr_pcb_priority);
+    list_sort(list_READY, vrr_pcb_priority);
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
@@ -84,9 +85,10 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
     return fifo();
 }
 
-void run_quantum_counter(void* arg) {
-    int quantum_time = *(int*) arg;
-    
+void *run_quantum_counter(void *arg) {
+    struct quantum_thread_args *args = (struct quantum_thread_args *)arg;
+    int quantum_time = args->quantum_time;
+
     while (1) {
         //Wait for initialization
         sem_wait(&sem_quantum);
@@ -126,6 +128,7 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
             exit_process(pcb, RUNNING, INTERRUPTED_BY_USER);
             break;
         case INTERRUPT_TIMEOUT:
+            log_info(logger, "KERNEL DETECTED A TIMEOUT");
             move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
@@ -136,6 +139,7 @@ void handle_pcb_dispatch_return(t_pcb* pcb, op_code resp_code){
             break;
         case IO_GEN_SLEEP:
             // TODO: handle instructions call to IO + updated pcb 
+            log_info(logger, "KERNEL DETECTED A IO INTERRUPTION");
             move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         /*TODO Other IO Cases*/
@@ -153,21 +157,29 @@ void st_sched_ready_running(void* arg) {
     // Check if the selection algorithm is Round Robin (RR) or Virtual Round Robin (VRR)
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
+        struct quantum_thread_args quantum_args;
         
         int quantum_value = config_get_int_value(config, "QUANTUM");
-        int* quantum_time = malloc(sizeof(int));
+        quantum_args.quantum_time = (int *)malloc(sizeof(int));
+        quantum_args.interrupted = (bool *)malloc(sizeof(bool));;
 
-        if (quantum_time == NULL) {
+        if (quantum_args.interrupted == NULL) {
+            log_error(logger, "Failed to allocate memory for quantum");
+            free(quantum_args.quantum_time);
+            return;
+        }
+        if (quantum_args.quantum_time == NULL) {
             log_error(logger, "Failed to allocate memory for quantum");
             return;
         }
 
-        *quantum_time = quantum_value;
+        *(quantum_args.quantum_time) = quantum_value;
+        *(quantum_args.interrupted) = false;
 
         // Create a thread to handle the quantum counter
-        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, quantum_time) != 0) {
+        if (pthread_create(&quantum_counter_thread, NULL, (void*) run_quantum_counter, &quantum_args) != 0) {
             log_error(logger, "Error creating quantum thread");
-            free(quantum_time);
+            free(quantum_args.quantum_time);
             return;
         }
         // Detach the thread to let it run independently
