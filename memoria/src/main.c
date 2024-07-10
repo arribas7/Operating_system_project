@@ -163,17 +163,17 @@ void handle_client(void *arg) {
                 //enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
                 break;
             case FINISH_PROCESS:
+                retardo_en_peticiones();
                 pcb = recibir_pcb(cliente_fd);
                 log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
-                /* TODO Jannet: end process
-                //enviar_mensaje((char *)instruction, cliente_fd);
-                */
-                //end_process();
+                finish_process(pcb->pid);
+                char mensaje[50];
+                //snprintf formatea una cadena y escribirla en un búfer de caracteres
+                snprintf(mensaje, sizeof(mensaje), "Process %d has finished", pcb->pid);
+                enviar_mensaje((char *)mensaje, cliente_fd);
                 enviar_respuesta(cliente_fd, OK);
                 break;
+                
             case PAGE_REQUEST:
                 retardo_en_peticiones();
                 t_request* request = recibir_pagina(cliente_fd);
@@ -203,6 +203,7 @@ void handle_client(void *arg) {
                 //con ese pid buscas la tabla de pagina asociada
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
+                retardo_en_peticiones();
                 pcb = recibir_pcb(cliente_fd);
                 log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
@@ -213,6 +214,7 @@ void handle_client(void *arg) {
                 copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
+                retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
                 //obtener_valor(reg_request->pid,reg_request->req);

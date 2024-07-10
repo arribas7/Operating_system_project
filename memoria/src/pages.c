@@ -240,6 +240,32 @@ void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_co
    strcpy(dir_fisica_2, dir_fisica_1);
    pthread_mutex_unlock(&memory.mutex_espacio_usuario);
 }
+/********************************FINISH PROCESS**************************************/
+
+//Solo actualiza bitmap (no se sobre-escribe nada en el espacio de usuario)
+void free_frame(TablaPaginas* tabla) {
+    pthread_mutex_lock(&memory.mutex_frames_ocupados);
+    for (int i = 0; i < tabla->num_paginas; ++i) {
+        int marco = tabla->paginas[i].numero_marco;
+        memory.frames_ocupados[marco] = false;
+    }
+    pthread_mutex_unlock(&memory.mutex_frames_ocupados);
+}
+
+void free_TablaDePaginas(int pid) {
+    dictionary_remove_and_destroy(listaTablasDePaginas, string_itoa(pid), (void(*)(void*)) liberarTablaPaginas);
+}
+
+void finish_process(int pid) {
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    if (!tabla) {
+        perror("Tabla de páginas not found for PID ");
+        return;
+    }
+
+    free_frame(tabla);
+    free_TablaDePaginas(pid);
+}
 
  //Estaria para ponerlo en algun lado:
     //for (int i = 0; i < tabla.num_paginas; ++i) {
