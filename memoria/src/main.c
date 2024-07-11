@@ -125,7 +125,7 @@ void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu, t_config* config){
         if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
     } 
 }
-
+//aaa
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
     free(arg);
