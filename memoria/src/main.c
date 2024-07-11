@@ -71,6 +71,25 @@ t_request* deserializar_request(void* stream){
 
     return request;
 }
+
+t_request2* deserializar_request2(void* stream){
+    t_request2* request = malloc(sizeof(t_request2));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(request->req), stream + offset, sizeof(int));
+    offset += sizeof(int);
+    
+    memcpy(&(request->val), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+
+    return request;
+}
+
+
 /*********************************************************/
 
 void retardo_en_peticiones(){
@@ -88,6 +107,19 @@ t_request* recibir_pagina(int socket_cpu){
     free(buffer);
 
     return pagina;
+}
+
+t_request2* recibir_mov_out(int socket_cpu){
+    int size;
+    void* buffer = recibir_buffer(&size,socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_request2* req = deserializar_request2(buffer);
+    free(buffer);
+
+    return req;
 }
 
 int tamanio_proceso(int pid){
@@ -125,6 +157,8 @@ void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu, t_config* config){
         if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
     } 
 }
+
+
 
 void handle_client(void *arg) {
     int cliente_fd = *(int*)arg;
@@ -189,6 +223,9 @@ void handle_client(void *arg) {
                 enviar_mensaje(config_get_string_value(config,"TAM_PAGINA"),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
+                retardo_en_peticiones();
+                t_request2* write = recibir_mov_out(cliente_fd);
+                escribir_en_direcc_fisica(write->pid,write->req,write->val);
             break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 retardo_en_peticiones();
@@ -217,8 +254,7 @@ void handle_client(void *arg) {
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
-                //obtener_valor(reg_request->pid,reg_request->req);
-                //aqui en obtener_valor seria con marcoAsociado
+                enviar_mensaje(obtener_valor(reg_request->pid,direccion_fisica),cliente_fd);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");

@@ -54,5 +54,10 @@ TablaPaginas* tablaDePaginasAsociada (int pid);
 void enviar_marco(int pagina, int pid, int cliente_fd);
 void liberarTablaPaginas(TablaPaginas tabla);
 bool hayEspacioEnBitmap(int marcos_necesarios);
-
+void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config);
+char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsociada);
+int calcularDesplazamiento(int direccion_fisica);
+char* obtenerDireccionFisica(int marco, int desplazamiento);
+void escribir_en_direcc_fisica(int pid,int df,int val);
+char* obtener_valor(int pid,int df);
 #endif // PAGES_H

@@ -117,8 +117,16 @@ void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
      int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
     actualizarBitmap(marcos_necesarios);
 }   
-
-
+/*
+void escribirEnEspacioUsuarioIndex(const char* buffer, int tamano_proceso) {
+    pthread_mutex_lock(&memory.mutex_espacio_usuario);
+    memcpy(espacio_usuario, buffer, strlen(buffer) + 1); // +1 para incluir el carácter nulo de terminación
+    espacio_usuario = (char*)espacio_usuario + tamano_proceso;  //ESTO DEBERIA SER CIRCULAR, EL ESPACIO DE USUARIO ES LIMITADO, POSIBLE SOLUCION: % memory.memory_size
+    pthread_mutex_unlock(&memory.mutex_espacio_usuario);     
+     int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
+    actualizarBitmap(marcos_necesarios);
+}  
+*/ 
 // Función para crear la tabla de páginas de un proceso (y asignar marcos a cada página)
 TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     TablaPaginas tabla;
@@ -222,6 +230,7 @@ char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsocia
     int desplazamiento = calcularDesplazamiento(direccion_fisica);
     return obtenerDireccionFisica(marco, desplazamiento);
 }
+
 void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config) {
    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
    if (!tablaAsociada) {
@@ -272,4 +281,21 @@ void finish_process(int pid) {
     //    printf("Página %d -> Marco %d\n", tabla.paginas[i].pagina_id, tabla.paginas[i].numero_marco);
     //}
 
+void escribir_en_direcc_fisica(int pid,int df,int val){
+    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+    char *dir_fisica = obtenerDireccionFisicafull(df, tablaAsociada);
   
+   if (!dir_fisica) {
+       perror("No se pudo obtener la dirección física");
+       return;
+   }
+
+   pthread_mutex_lock(&memory.mutex_espacio_usuario);
+   strcpy(dir_fisica, string_itoa(val));
+   pthread_mutex_unlock(&memory.mutex_espacio_usuario);
+}
+
+char* obtener_valor(int pid,int df){
+    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+    return obtenerDireccionFisicafull(df, tablaAsociada);
+}

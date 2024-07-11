@@ -84,4 +84,7 @@ t_interfaz* deserializar_interfaz(void* stream);
 t_interfaz* new_interfaz(char* interfazs, char* nombre_archivo, u_int32_t direccion_fisica, u_int32_t tamanio_bytes, u_int32_t puntero_archivo);
 t_interfaz* recibir_interfaz(int socket_cliente);
 
+
+
+
 #endif

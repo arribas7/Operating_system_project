@@ -33,6 +33,11 @@ typedef struct{
     int req;
 } t_request;
 
+typedef struct{
+    u_int32_t pid;
+    int req;
+    int val;
+} t_request2;
         
 extern t_memory memory;
 

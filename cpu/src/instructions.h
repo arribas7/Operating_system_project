@@ -72,6 +72,7 @@ void copy_string (char* tamanio);
 
 
 int buscar(char *elemento, char **lista); //to find comando decode
+int obtener_valor_reg(char* reg);
 
 t_resize* new_resize(u_int32_t tamanio);
 t_paquete *resize(char* tamanio);

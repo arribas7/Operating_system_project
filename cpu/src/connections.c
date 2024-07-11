@@ -70,18 +70,15 @@ int requestFrameToMem (int numPag){
 
 void putRegValueToMem(int fisicalAddress, int valor){
     t_paquete* peticion = crear_paquete(WRITE); //this opcode receive in mem
-    //int tamReg = obtenerTamanioReg(reg);
+    t_request2* request = new_request2(pcb_en_ejecucion->pid, fisicalAddress,valor);
 
-    agregar_a_paquete(peticion, &(pcb_en_ejecucion->pid), sizeof(uint32_t));
-    agregar_a_paquete(peticion, &fisicalAddress, sizeof(int));
-    agregar_a_paquete(peticion, &valor, sizeof(int)); 
-    //armar la funcion deserializadora de este paquete para recibirlo bien en memoria
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serializar_request2(request, buffer);
+
+    agregar_a_paquete(peticion, buffer->stream, buffer->size);
+ 
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
-
-    recibir_operacion(conexion_mem);
-    recibir_mensaje(conexion_mem); //receive ack from mem "guarde lo q me pediste"
-
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "WRITE", fisicalAddress, valor);
 }
 
@@ -103,4 +100,51 @@ int requestRegToMem (int fisicalAddr){
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "READ", fisicalAddr, valor);
 
     return valor;
+}
+
+void serializar_request2(t_request2* request, t_buffer* buffer){
+    buffer->offset = 0;
+    size_t size = sizeof(u_int32_t) + sizeof(int) + sizeof(int);
+    buffer->size = size;
+    buffer->stream = malloc(size);
+
+    //serializo:
+    memcpy(buffer->stream + buffer->offset, &(request->pid), sizeof(u_int32_t));
+    buffer->offset += sizeof(u_int32_t);
+
+    memcpy(buffer->stream + buffer->offset, &(request->req), sizeof(int));
+    buffer->offset += sizeof(int);
+
+    memcpy(buffer->stream + buffer->offset, &(request->val), sizeof(int));
+    buffer->offset += sizeof(int);
+}
+
+t_request2* deserializar_request2(void* stream){
+    t_request2* request = malloc(sizeof(t_request2));
+    int offset = 0;
+
+    memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(request->req), stream + offset, sizeof(int));
+    offset += sizeof(int);
+    
+    memcpy(&(request->val), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+
+    return request;
+}
+
+t_request2* new_request2(u_int32_t pid, int logAdd, int valor){
+    t_request2* new_req = malloc(sizeof(t_request2));
+    if (new_req == NULL) {
+        return NULL; 
+    }
+
+    new_req->pid = pid;
+    new_req->req = logAdd;
+    new_req->val = valor;
+
+    return new_req;
 }

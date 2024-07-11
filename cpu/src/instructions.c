@@ -261,27 +261,33 @@ void mov_in(char* registro, char* logicalAddress){
         reg_proceso_actual->EDX = valor;
 }
 
-void mov_out(char* logicalAddr, char* reg){
+void mov_out(char* reg1, char* reg2){
 
     int valor;
-    int fisicalAddress = mmu(logicalAddr);
 
-    if (strcmp(reg, "AX") == 0)
-        valor = reg_proceso_actual->AX;
-    if (strcmp(reg, "BX") == 0) 
-        valor = reg_proceso_actual->BX;
-    if (strcmp(reg, "CX") == 0) 
-        valor = reg_proceso_actual->CX;
-    if (strcmp(reg, "EAX") == 0)
-        valor = reg_proceso_actual->EAX;
-    if (strcmp(reg, "EBX") == 0)
-        valor = reg_proceso_actual->EBX;
-    if (strcmp(reg, "ECX") == 0)
-        valor = reg_proceso_actual->ECX;
-    if (strcmp(reg, "EDX") == 0)
-        valor = reg_proceso_actual->EDX;
+    valor = obtener_valor_reg(reg2);
+    int direccion_logica = obtener_valor_reg(reg1);
+
+    int fisicalAddress = mmu(direccion_logica);
 
     putRegValueToMem(fisicalAddress,valor);
+}
+
+int obtener_valor_reg(char* reg){
+    if (strcmp(reg, "AX") == 0)
+        return reg_proceso_actual->AX;
+    if (strcmp(reg, "BX") == 0) 
+        return reg_proceso_actual->BX;
+    if (strcmp(reg, "CX") == 0) 
+        return reg_proceso_actual->CX;
+    if (strcmp(reg, "EAX") == 0)
+        return reg_proceso_actual->EAX;
+    if (strcmp(reg, "EBX") == 0)
+        return reg_proceso_actual->EBX;
+    if (strcmp(reg, "ECX") == 0)
+        return reg_proceso_actual->ECX;
+    if (strcmp(reg, "EDX") == 0)
+        return reg_proceso_actual->EDX;
 }
 
 t_paquete *io_gen_sleep(char* interfaz, char* job_unit){

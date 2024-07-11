@@ -3,11 +3,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "utils/cpu.h"
 #include "utils/kernel.h"
 #include <utils/server.h>
 #include "math.h"
+#include <utils/cpu.h>
 #include "connections.h"
+
 
 extern t_log *logger;
 extern t_log *loggerError;
@@ -41,5 +42,6 @@ int solicitar_tam_pag_a_mem(void);
 int recibir_tam_pag(int socket_cliente);
 void agregar_a_TLB_LRU(int pid, int pagina, int marco);
 int find_LRU_index();
+
 
 #endif
