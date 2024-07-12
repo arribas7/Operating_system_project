@@ -301,7 +301,8 @@ void clean(t_config *config) {
 }
 
 void testing_paging(void) {
-    const char* mensaje = "Este es un mensaje para el proceso.";
+    //const char* mensaje = "SOY UN MENSAJE DE PRUEBA PARA EL MÓDULO DE MEMORIA";
+    const char* mensaje = "Procede a escribir en memoria entonces escribe soy un mensaje ESTHETIC";
     handle_paging(mensaje, strlen(mensaje) + 1, 1);
 
     pthread_mutex_destroy(&memory.mutex_espacio_usuario);
