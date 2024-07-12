@@ -187,7 +187,7 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
             io_block(ret_data->pcb_updated, ret_data->instruction_IO);
             // TODO: handle instructions call to IO + updated pcb 
             //log_info(logger, "KERNEL DETECTED A IO INTERRUPTION");
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
+            move_pcb(ret_data->pcb_updated, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         default:
             log_warning(logger, "Unknown operation for pid %d",ret_data->pcb_updated->pid);
