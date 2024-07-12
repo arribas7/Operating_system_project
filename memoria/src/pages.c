@@ -4,6 +4,26 @@
 char* espacio_usuario;
 t_dictionary* listaTablasDePaginas;
 
+/********************************init Paging*************************************/
+
+void logMemoryInfo() {
+    int pageSize = memory.page_size;
+    int frameCount = memory.memory_size / pageSize;
+    log_info(logger, "TAMAÑO MEMORIA TOTAL: %d bytes - Memory has %d frames of %d bytes", memory.memory_size, frameCount, pageSize);
+}
+
+void verifyPagesize() {
+   int pageSize = memory.page_size;
+   int totalMemorySize = memory.memory_size;
+    if (totalMemorySize % pageSize == 0) {
+      // printf("Multiplicity pageSize ok\n"); //si está todo bien que no reporte nada.
+   } else {
+       printf("Multiplicity pageSize failed.\n");
+       exit(EXIT_FAILURE); // Terminar el programa si falla la verificación
+   }
+}
+
+
 void inicializarEspacioUsuario() {
     espacio_usuario = malloc(memory.memory_size);
     if (espacio_usuario == NULL) {
@@ -30,8 +50,9 @@ void inicializarListaDeTablasDePaginas(){
 }
 
 int initPaging(void) {
-    printf("TAMAÑO MEMORIA TOTAL: %d\n",memory.memory_size);
- /* ----------------First Structure ---------------- */
+    verifyPagesize();
+    logMemoryInfo();
+/* ----------------First Structure ---------------- */
      inicializarEspacioUsuario();
  /* ----------------Second Structure ---------------- */ 
      inicializarBitmap();
@@ -41,27 +62,16 @@ int initPaging(void) {
   return 1;
     
 }
-/*
- void calculos(void){
- int pageSize = memory.page_size; //TAMAÑO DE MARCO = TAMAÑO DE PAGINA
-    int frameCount = memory.memory_size / pageSize; 
-    printf("NUMERO DE MARCOS: %d\n",frameCount);
-    log_info(logger, "Memory has %d frames of %d bytes", frameCount, pageSize);
-}
-
-void logMemoryInfo() {
-    int pageSize = memory.page_size;
-    int frameCount = memory.memory_size / pageSize;
-    printf("NUMERO DE MARCOS: %d\n", frameCount);
-    log_info(logger, "Memory has %d frames of %d bytes", frameCount, pageSize);
-}
-*/
 
 
 /********************************Handle Paging*************************************/
 int calcularMarcosNecesarios(int tamano_proceso, int tamano_marco) {
-    return( ceil(tamano_proceso / tamano_marco)); //calculamos la cantidad de marcos para el proceso redondeando siempre para arriba
-   // return (tamano_proceso + tamano_marco - 1) / tamano_marco;
+     //calculamos la cantidad de marcos para el proceso redondeando siempre para arriba
+    int num_marcos = ceil((double)tamano_proceso / tamano_marco); 
+    //printf("Número de marcos necesarios: %d\n", num_marcos); just for check. devuelve bien!
+    // Suponiendo que tamano_proceso = 41 bytes y tamano_marco = 32 bytes,
+    // Se necesitan ceil(41 / 32) = 2 marcos. redondea para arriba!
+    return num_marcos;
 }
 
 bool hayEspacioEnBitmap(int marcos_necesarios) {
@@ -112,9 +122,11 @@ void actualizarBitmap(int marcos_necesarios) {
 void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
     pthread_mutex_lock(&memory.mutex_espacio_usuario);
     memcpy(espacio_usuario, buffer, strlen(buffer) + 1); // +1 para incluir el carácter nulo de terminación
+    // Avanzar el puntero del espacio de usuario
     espacio_usuario = (char*)espacio_usuario + tamano_proceso;  //ESTO DEBERIA SER CIRCULAR, EL ESPACIO DE USUARIO ES LIMITADO, POSIBLE SOLUCION: % memory.memory_size
-    pthread_mutex_unlock(&memory.mutex_espacio_usuario);     
-     int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
+    pthread_mutex_unlock(&memory.mutex_espacio_usuario); 
+    // Actualizar el bitmap con los marcos necesarios    
+    int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
     actualizarBitmap(marcos_necesarios);
 }   
 /*
@@ -131,6 +143,7 @@ void escribirEnEspacioUsuarioIndex(const char* buffer, int tamano_proceso) {
 TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     TablaPaginas tabla;
     int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
+    log_info(logger, "PID: %d - Tamaño del Proceso: %d - Número de marcos necesarios: %d marcos",pid,tamano_proceso, num_marcos);
     tabla.pid_tabla = pid;
     tabla.num_paginas = num_marcos;
     tabla.paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
@@ -154,6 +167,9 @@ TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
  
     //agrego la tabla al diccionario de tablas de paginas
     dictionary_put(listaTablasDePaginas,string_itoa(tabla.pid_tabla),&tabla);
+    log_info(logger, "****Se registra la creación de la tabla de páginas***");
+    log_info(logger, "PID: %d - Tabla de páginas creada - Tamaño: %d páginas", pid, num_marcos);
+    log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
 
     return tabla;
 }
@@ -162,6 +178,17 @@ void liberarTablaPaginas(TablaPaginas tabla) {
     pthread_mutex_destroy(&tabla.mutex_tabla);
     free(tabla.paginas);
 }
+//ESTA FUNCION ES SOLO PARA LAS PRUEBAS:
+void mostrarContenidoMemoria(int tamano_proceso) {
+    pthread_mutex_lock(&memory.mutex_espacio_usuario);
+    printf("Contenido de la memoria:\n");
+  
+    for (int i = -tamano_proceso; i < 0 + 1; ++i) {
+        printf("0x%p: %c\n", (void*)(espacio_usuario + i), *(char*)(espacio_usuario + i));
+    }
+    pthread_mutex_unlock(&memory.mutex_espacio_usuario);
+}
+
 
 void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     int tamano_marco=memory.page_size;
@@ -171,9 +198,14 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
         exit(EXIT_FAILURE);
     }
      TablaPaginas tabla = crearTablaPaginas(pid, tamano_proceso, memory.page_size);
-    printf("Tabla de Páginas del Proceso %d:\n", pid);
+     log_info(logger, "PID: %d - Acción: ESCRIBIR - Direccion física: %p - Tamaño: %d", pid, (void*)espacio_usuario, tamano_proceso);
+
     escribirEnEspacioUsuario(buffer, tamano_proceso);
     actualizarBitmap(marcos_necesarios);
+    log_info(logger, "PID: %d - Proceso de escritura completado - Tamaño total escrito: %d bytes", pid, tamano_proceso);
+    mostrarContenidoMemoria(tamano_proceso);
+    char* nueva_direccion = (char*)espacio_usuario;
+    log_info(logger, "Nueva posición de la dirección física: %p", (void*)nueva_direccion);
     liberarTablaPaginas(tabla);
 }
 
@@ -186,6 +218,9 @@ int marcoAsociado(int numero_pagina, TablaPaginas* tablaAsociada){
    for (i=0; i<tablaAsociada->num_paginas ; i++){
        if(numero_pagina == tablaAsociada->paginas[i].pagina_id){
            marco = tablaAsociada->paginas[i].numero_marco;
+            // Access to the page table
+           log_info(logger, "Acceso a Tabla de Páginas - PID: %d - Página: %d - Marco: %d", tablaAsociada->pid_tabla, numero_pagina, marco);
+           log_info(logger, "PID: %d - Pagina: %d - Marco: %d", tablaAsociada->pid_tabla, numero_pagina, marco);
            break;
        }
    }
@@ -220,6 +255,11 @@ int calcularDesplazamiento(int direccion_fisica) {
 
 char* obtenerDireccionFisica(int marco, int desplazamiento) {
    return (char*)espacio_usuario + (marco * memory.page_size) + desplazamiento;
+   //calcula la dirección física basada en el marco y el desplazamiento dentro de ese marco, 
+   //Suponiendo que el espacio_usuario apunta a la dirección 0x1000(dirección base del espacio de usuario)
+   // marco = 2 y el desplazamiento = 5 
+   //Se sabe que TAM_PAGINA=32
+   //direccionFisica = 0x1000 + (2 * 32) + 5  = 0x1045
 }
 
 
@@ -262,8 +302,18 @@ void free_frame(TablaPaginas* tabla) {
 }
 
 void free_TablaDePaginas(int pid) {
+     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    if (tabla != NULL) {
+        int num_marcos = tabla->num_paginas; // Obtener el número de marcos
+        // Registrar el evento de destrucción de la tabla de páginas
+        log_info(logger, "Destrucción de Tabla de Páginas - PID: %d - Cantidad de Páginas: %d (Tamaño de la Tabla)", pid, num_marcos);
+        log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
+
     dictionary_remove_and_destroy(listaTablasDePaginas, string_itoa(pid), (void(*)(void*)) liberarTablaPaginas);
-}
+      } else {
+        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
+     }
+ }
 
 void finish_process(int pid) {
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
