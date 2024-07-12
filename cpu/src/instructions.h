@@ -58,7 +58,6 @@ typedef struct{
 } t_copy_string;
 
 int init_reg_proceso_actual(void);
-t_paquete *io_gen_sleep(char* interfaz, char* job_unit);
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
 void recibir_instruccion(int socket_cliente);
@@ -84,13 +83,19 @@ t_copy_string* new_copy_string(int tamanio);
 void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer);
 t_copy_string* deserializar_copy_string(void* stream);
 
-t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio);
-t_paquete *io_stdin_write(char* interfaz, char* logicalAdress, int tamanio);
-t_paquete *io_fs_create(char* interfaz, char* nombre_archivo);
-t_paquete *io_fs_delete(char* interfaz, char* nombre_archivo);
-t_paquete *io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio);
-t_paquete *io_fs_write(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
-t_paquete *io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo);
+// To IO
+
+t_paquete *io_gen_sleep(char* name, char* time);
+t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size);
+t_paquete *io_stdin_write(char* name, char* logicalAdress, char* size);
+t_paquete *io_fs_create(char* name, char* file_name);
+t_paquete *io_fs_delete(char* name, char* file_name);
+t_paquete *io_fs_truncate(char* name, char* file_name, char* size);
+t_paquete *io_fs_write(char* name, char* file_name, char* logicalAdress, char* size, char* file_pointer);
+t_paquete *io_fs_read(char* name, char* file_name, char* logicalAdress, char* size, char* file_pointer);
+
+// ----------
+
 t_paquete *release();
 t_paquete *wait(char* recurso);
 t_paquete *inst_signal(char* recurso);

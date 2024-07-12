@@ -211,8 +211,6 @@ op_code check_interrupt(void){
     return 0;
 }
 
-//INSTRUCTIONS:
-
 void set(char* registro, char* valor){
 
     if (strcmp(registro, "AX") == 0)
@@ -288,27 +286,6 @@ int obtener_valor_reg(char* reg){
         return reg_proceso_actual->ECX;
     if (strcmp(reg, "EDX") == 0)
         return reg_proceso_actual->EDX;
-}
-
-t_paquete *io_gen_sleep(char* interfaz, char* job_unit){
-
-    t_paquete* peticion = crear_paquete(IO_GEN_SLEEP); //this opcode receive in KERNEL
-    int tamInterfaz = string_length(interfaz);
-    uint32_t int_job_unit = (uint32_t) atoi(job_unit);
-    t_instruction* IO = create_instruction_IO(pcb_en_ejecucion->pid, IO_GEN_SLEEP, interfaz, int_job_unit, "test-path");
-
-    t_buffer *buffer = malloc(sizeof(t_buffer));
-    serialize_instruccion_IO(IO, buffer);
-    agregar_a_paquete(peticion, buffer->stream, buffer->size);
-    free(buffer);
-
-    return peticion;
-
-    //log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
-    /*
-    recibir_operacion(kernel_dispatch_socket);
-    recibir_mensaje(kernel_dispatch_socket); //receive ack from kermel
-    */
 }
 
 void sum(char* destReg, char* origReg){                 
@@ -412,95 +389,141 @@ t_copy_string* new_copy_string(int tamanio){
     return copy_string;
 }
 
-//, IO_STDIN_READ:,
+// INSTRUCTIONS PACKAGE - TO IO
 
-t_paquete *io_stdin_read(char* interfaz, char* logicalAdress, int tamanio){
+t_paquete *io_gen_sleep(char* name, char* time) 
+{
+    t_paquete* package = crear_paquete(IO_GEN_SLEEP); // This op_code receive in KERNEL
+    uint32_t ui_time = (uint32_t) atoi(time);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_GEN_SLEEP, name, ui_time, 0, 0, "", 0);
+
+    t_buffer *buffer = malloc(sizeof(t_buffer));
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(package, buffer->stream, buffer->size);
+    
+    free(instruction);
+    free(buffer);
+
+    return package;
+
+    //log_info(logger, "PID: <%d> - Accion: <%s> - IO: <%s>", pcb_en_ejecucion->pid, "IO_GEN_SLEEP", interfaz);
+    /*
+    recibir_operacion(kernel_dispatch_socket);
+    recibir_mensaje(kernel_dispatch_socket); //receive ack from kermel
+    */
+}
+
+t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size) 
+{
     t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
-    /*t_buffer* buffer = malloc(sizeof(t_buffer));
+    uint32_t ui_size = (uint32_t) atoi(size);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_io_stdin* io_stdin_read = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
-    serializar_io_stdin(io_stdin_read,buffer);
-    agregar_a_paquete(io_stdin_read_paq,buffer->stream,buffer->size);
-    free(io_stdin_read);*/
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDIN_READ, name, 0, mmu(logicalAdress), ui_size, "", 0);
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_stdin_read_paq, buffer->stream, buffer->size);
+
+    free(instruction);
+    free(buffer);
 
     return io_stdin_read_paq;
 }
 
-// IO_STDOUT_WRITE:
-
-t_paquete *io_stdin_write(char* interfaz, char* logicalAdress, int tamanio){
+t_paquete *io_stdin_write(char* name, char* logicalAdress, char* size) 
+{
     t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
-    /*t_buffer* buffer = malloc(sizeof(t_buffer));
+    uint32_t ui_size = (uint32_t) atoi(size);
+    t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_io_stdin* io_stdin_write = new_io_stdin(pcb_en_ejecucion->pid, interfaz, tamanio, atoi(logicalAdress), mmu(logicalAdress));
-    serializar_io_stdin(io_stdin_write,buffer);
-    agregar_a_paquete(io_stdin_write_paq,buffer->stream,buffer->size);
-    free(io_stdin_write);*/
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDOUT_WRITE, name, 0, mmu(logicalAdress), ui_size, "", 0);
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_stdin_write_paq, buffer->stream, buffer->size);
+
+    free(instruction);
+    free(buffer);
 
     return io_stdin_write_paq;
 }
 
-//IO_FS_CREATE e IO_FS_DELETE
-t_paquete *io_fs_create(char* interfaz, char* nombre_archivo){
+t_paquete *io_fs_create(char* name, char* file_name) 
+{
     t_paquete* io_fs_create = crear_paquete(IO_FS_CREATE);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,0,0);
-    serializar_interfaz(_interfaz,buffer);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_CREATE, name, 0, 0, 0, file_name, 0);
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_fs_create, buffer->stream, buffer->size);
+    
+    free(instruction);
+    free(buffer);
 
-    agregar_a_paquete(io_fs_create,buffer->stream,buffer->size);
-    free(_interfaz);
     return io_fs_create;
 }
 
-t_paquete *io_fs_delete(char* interfaz, char* nombre_archivo){
+t_paquete *io_fs_delete(char* name, char* file_name) 
+{
     t_paquete* io_fs_delete = crear_paquete(IO_FS_DELETE);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,0,0);
-    serializar_interfaz(_interfaz,buffer);
-
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_DELETE, name, 0, 0, 0, file_name, 0);
+    serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_delete,buffer->stream,buffer->size);
-    free(_interfaz);
+    
+    free(instruction);
+    free(buffer);
+
     return io_fs_delete;
 }
 
-//IO_FS_TRUNCATE:
-t_paquete *io_fs_truncate(char* interfaz, char* nombre_archivo, char* registro_tamanio){
+t_paquete *io_fs_truncate(char* name, char* file_name, char* size) 
+{
     t_paquete* io_fs_truncate = crear_paquete(IO_FS_TRUNCATE);
+    uint32_t ui_size = (uint32_t) atoi(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,0,/*resolver que aqui se ponga el valor del registro_tamanio*/0,0);
-    serializar_interfaz(_interfaz,buffer);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_TRUNCATE, name, 0, 0, ui_size, file_name, 0);
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_fs_truncate, buffer->stream, buffer->size);
 
-    agregar_a_paquete(io_fs_truncate,buffer->stream,buffer->size);
-    free(_interfaz);
+    free(instruction);
+    free(buffer);
+
     return io_fs_truncate;
 }
 
-t_paquete *io_fs_write(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo){
+t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
+{
     t_paquete* io_fs_write = crear_paquete(IO_FS_WRITE);
+    uint32_t ui_size = (uint32_t) atoi(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,mmu(obtener_valor_registro(registro_direccion)),obtener_valor_registro(registro_tamanio),obtener_valor_registro(registro_puntero_archivo));
-    serializar_interfaz(_interfaz,buffer);
-    agregar_a_paquete(io_fs_write,buffer->stream,buffer->size);
-    free(_interfaz);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_WRITE, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/ui_size, file_name, obtener_valor_registro(file_pointer));
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_fs_write, buffer->stream, buffer->size);
+
+    free(instruction);
+    free(buffer);
+
     return io_fs_write;
 }
 
-
-t_paquete *io_fs_read(char* interfaz, char* nombre_archivo, char* registro_direccion, char* registro_tamanio, char* registro_puntero_archivo){
+t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
+{
     t_paquete* io_fs_read = crear_paquete(IO_FS_READ);
+    uint32_t ui_size = (uint32_t) atoi(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_interfaz* _interfaz = new_interfaz(interfaz,nombre_archivo,mmu(obtener_valor_registro(registro_direccion)),obtener_valor_registro(registro_tamanio),obtener_valor_registro(registro_puntero_archivo));
-    serializar_interfaz(_interfaz,buffer);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/ui_size, file_name, obtener_valor_registro(file_pointer));
+    serialize_instruction_IO(instruction, buffer);
+    agregar_a_paquete(io_fs_read, buffer->stream, buffer->size);
+    
+    free(instruction);
+    free(buffer);
 
-    agregar_a_paquete(io_fs_read,buffer->stream,buffer->size);
-    free(_interfaz);
     return io_fs_read;
 }
+
+// ----- -----
 
 t_paquete *release(){
     return crear_paquete(RELEASE);

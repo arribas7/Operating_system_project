@@ -9,20 +9,15 @@
 #include <utils/inout.h>
 #include <utils/cpu.h>
 
-// ----- STRUCTURES -----
+// ----- FUNCTIONS -----
 
-// GENERIC IO FUNCTION
+// GENERIC
 
-// Wait time microseconds * unit_work_time 
 int interface_wait(t_instruction* instruction, t_config* config);
 
 // STDIN - STDOUT
 
-// Write a word in console
-char* write_console();
-
-// Write the word in memory using the address
-void write_in_memory(t_instruction* instruction, char* word, int connection);
-
-// Read a word from the memory using the adress
-char* read_from_memory(t_instruction* instruction, int connection);
+char* write_console(t_instruction* instruction);
+void send_write_request(t_instruction* instruction, int connection);
+void send_read_request(t_instruction* instruction, int connection);
+char* receive_word(int connection);
