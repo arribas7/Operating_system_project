@@ -56,8 +56,11 @@ typedef enum {
 
     // IO -> KERNEL
     // KERNEL -> IO
+    // IO -> MEMORY
     IO,
     REPORT,
+    W_REQ,
+    R_REQ,
 } op_code;
 
 typedef struct {

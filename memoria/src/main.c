@@ -1,5 +1,6 @@
 #include <memoria.h>
 #include <files.h>
+#include <utils/inout.h>
 //#include "cpu/connections.h
 
 t_memory memory;
@@ -227,6 +228,13 @@ void handle_client(void *arg) {
                 t_request2* write = recibir_mov_out(cliente_fd);
                 escribir_en_direcc_fisica(write->pid,write->req,write->val);
             break;
+            case W_REQ: // IO_STDIN_READ
+                t_req_to_w* write_req = receive_req_to_w(cliente_fd);
+                handle_paging(write_req->text, write_req->text_size, write_req->pid);
+                break;
+            case R_REQ:
+                t_req_to_r* read_req = receive_req_to_r(cliente_fd);
+                break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 retardo_en_peticiones();
                 t_request* tlb_request = recibir_pagina(cliente_fd);

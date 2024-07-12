@@ -32,7 +32,7 @@ void create_file_metadata(const char *path_base, const char *filename, int start
     config_destroy(metadata);
 }
 
-void io_fs_create(const char *path_base, const char *filename, int pid) {
+void fs_create(const char *path_base, const char *filename, int pid) {
     log_info(logger, "PID: %d - Crear Archivo: %s", pid, filename);
 
     char bitmap_path[256];
@@ -70,7 +70,7 @@ void io_fs_create(const char *path_base, const char *filename, int pid) {
     fclose(bitmap_file);
 }
 
-void io_fs_delete(const char *path_base, const char *filename, int pid) {
+void fs_delete(const char *path_base, const char *filename, int pid) {
     log_info(logger, "PID: %d - Eliminar Archivo: %s", pid, filename);
 
     char metadata_path[256];
@@ -112,7 +112,7 @@ void io_fs_delete(const char *path_base, const char *filename, int pid) {
     remove(metadata_path);
 }
 
-void io_fs_truncate(const char *path_base, const char *filename, int new_size, int pid) {
+void fs_truncate(const char *path_base, const char *filename, int new_size, int pid) {
     log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, filename, new_size);
 
     char metadata_path[256];
@@ -150,7 +150,7 @@ void io_fs_truncate(const char *path_base, const char *filename, int new_size, i
                 bitarray_destroy(bitmap);
                 free(bitmap_data);
                 compact_dialfs(path_base, pid);
-                io_fs_truncate(path_base, filename, new_size, pid);
+                fs_truncate(path_base, filename, new_size, pid);
                 return;
             }
         }
@@ -178,7 +178,7 @@ void io_fs_truncate(const char *path_base, const char *filename, int new_size, i
     config_destroy(metadata);
 }
 
-void io_fs_write(const char *path_base, int phys_addr, const char *data, size_t size, int pid) {
+void fs_write(const char *path_base, int phys_addr, const char *data, size_t size, int pid) {
     log_info(logger, "PID: %d - Escribir Archivo - Tamaño a Escribir: %zu - Puntero Archivo: %d", pid, size, phys_addr);
 
     char blocks_path[256];
@@ -192,7 +192,7 @@ void io_fs_write(const char *path_base, int phys_addr, const char *data, size_t 
     fclose(blocks);
 }
 
-void io_fs_read(const char *path_base, int phys_addr, char *buffer, size_t size, int pid) {
+void fs_read(const char *path_base, int phys_addr, char *buffer, size_t size, int pid) {
     log_info(logger, "PID: %d - Leer Archivo - Tamaño a Leer: %zu - Puntero Archivo: %d", pid, size, phys_addr);
 
     char blocks_path[256];
@@ -254,7 +254,6 @@ char** list_files(const char* path_base) {
     closedir(dir);
     return filenames;
 }
-
 
 void compact_dialfs(const char *path_base, int pid) {
     log_info(logger, "PID: %d - Inicio Compactación.", pid);

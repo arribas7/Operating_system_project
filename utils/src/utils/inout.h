@@ -17,8 +17,7 @@
 #include <utils/cpu.h>
 #include "client.h"
 
-
-// ----- STRUCTURES -----
+// ---------- STRUCTURES ----------
 
 typedef struct 
 {
@@ -26,7 +25,7 @@ typedef struct
     char* name;
     uint32_t length_type;
     char* type;
-} t_info;
+} t_info; // Informara a Kernel la conexion de una nueva interfaz
 
 typedef struct 
 {
@@ -34,142 +33,124 @@ typedef struct
     char* name;
     int connection;
     bool status;
-} t_interface;
+} t_interface; // La interfaz como tal, con la conexion y un byte de estado
 
 typedef struct 
 {
     uint32_t pid;
     bool result;
-} t_report;
+} t_report; // Informara el logro / error de las instrucciones
+
+typedef struct 
+{
+    uint32_t pid;
+    uint32_t text_size;
+    char* text;
+    uint32_t physical_address;
+} t_req_to_w; // Peticion de escritura a memoria
+
+typedef struct 
+{
+    uint32_t pid;
+    uint32_t text_size;
+    uint32_t physical_address;
+} t_req_to_r; // Peticion de lectura a memoria
 
 typedef struct
 {
     t_list* list;
     pthread_mutex_t mutex;
-} t_interface_list;
+} t_interface_list; // Guardara las interfaces que se vayan sumando al kernel
 
 typedef struct 
 {
     t_queue* queue;
     pthread_mutex_t mutex;
-}t_instruction_queue;
+}t_instruction_queue; // Cola de instrucciones para la interfaz
 
-// ----- FUNCTIONS -----
+// ---------- FUNCTIONS ----------
 
-// -- INTERFACE --
-// CREATE / DELETE INFO
+// ----- INTERFACE -----
+// Create / Delete info
 
-// Create a pointer to a struct t_info
 t_info* create_info(char* name, char* type);
-
-// Free the space of the struct t_info
 void delete_info(t_info* info);
 
+// Create / Delete report
 
-// CREATE / DELETE RESULT REPORT
-
-// Create a report
 t_report* create_report(uint32_t pid, bool result);
-
-// Delete a report
 void delete_report(t_report* report);
-
-// Create a report from a list
 t_report* list_to_report(t_list* list);
 
+// Create / Delete memory requeriment
 
-// PACKAGE
+t_req_to_w* req_to_write(uint32_t pid, char* text, uint32_t physical_address);
+t_req_to_r* req_to_read(uint32_t pid, uint32_t size, uint32_t physical_address);
+void delete_req_to_w(t_req_to_w* mem_req);
+void delete_req_to_r(t_req_to_r* mem_req);
+t_req_to_w* list_to_req_to_w(t_list* list);
+t_req_to_r* list_to_req_to_r(t_list* list);
 
-// Create a package to send the interface information 
+// Paquete
+
 t_paquete* info_to_package(t_info* info);
-
-// Create a package to send a report
 t_paquete* report_to_package(t_report* report);
+t_paquete* req_to_w_package(t_req_to_w* mem_req);
+t_paquete* req_to_r_package(t_req_to_r* mem_req);
 
+// Communication
 
-// COMMUNICATION
-
-// Send a confirmation to the connection
 void send_confirmation(int connection, uint32_t status);
-
-// Receive a confirmation from the connection
 void receive_confirmation(int connection, uint32_t status);
-
-// Send a report to the connection
+void send_info(t_info* info, int connection);
 void send_report(t_instruction* instruction, bool result, int connection);
+void send_req_to_w(t_req_to_w* mem_req, int connection);
+void send_req_to_r(t_req_to_r* mem_req, int connection);
+t_req_to_w* receive_req_to_w(int connection);
+t_req_to_r* receive_req_to_r(int connection);
 
+// Getters
 
-// GETTERS
-
-// Get the interface type from the struct t_config
 char* type_from_config(t_config* config);
-
-// Get type from operation code
 char* type_from_code(op_code instruction_code);
+char* path_from_config(t_config* config);
 
-
-// CONVERTION
+// Convertion
 
 char* int_to_string(int value);
 
+// Validation
 
-// VALIDATION
-
-// Validate the received instruction from the Kernel 
 bool is_valid_instruction(op_code instruction, t_config* config);
 
+// Instruction Queue
 
-// MANAGER INSTRUCTION QUEUE
-
-// Create a Instruction queue
 t_instruction_queue* create_instruction_queue();
-
-// Add instruction to the queue
 void add_instruction_to_queue(t_instruction_queue* queue, t_instruction* instruction);
-
-//  Obtain the next instruction from the queue
 t_instruction* get_next_instruction(t_instruction_queue* queue);
 
+// Log
 
+void generate_log_from_instruction(t_instruction* instruction);
 
+// ----- KERNEL -----
+// Create / Delete interface
 
-// -- KERNEL --
-// CREATE / DELETE INTERFACE
-
-// Create a pointer to a struct t_interface
 t_interface* create_interface(char* name, int connection);
-
-// Free the space of the struct t_interface
 void delete_interface(t_interface* interface);
-
-// Extract the information from a list and create a pointer to a struct t_interface 
 t_interface* list_to_interface(t_list* list, int connection);
 
-void delete_interface_from_list(t_interface_list* interface_list, char* name);
+// Getters
 
-// GETTERS
-
-// Get the interface name from the struct t_interface 
 char* get_interface_name(t_interface* interface);
-
-// Get the interface type from list
 char* type_from_list(t_list* list);
-
-// Get the interface connection number to send instructions
 int get_interface_connection(t_interface* interface);
 
+// List
 
-// LIST 
-
-// Create the list to save interfaces
 t_interface_list* create_interface_list();
-
-// Add the interface to the list
 void add_interface_to_list(t_interface_list* list, t_interface* interface);
-
-// Find the interface by the name
+t_interface* delete_interface_from_list(t_interface_list* list, char* name);
 t_interface* find_interface_by_name(char* name);
-
-//void iterator(char* value);
 
 #endif

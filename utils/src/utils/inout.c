@@ -7,10 +7,10 @@
 
 t_interface_list* interface_list;
 
-// ----- DEFINITIONS -----
+// ---------- DEFINITIONS ----------
 
-// -- INTERFACE --
-// CREATE / DELETE INFO
+// ----- INTERFACE -----
+// Create / Delete info
 
 t_info* create_info(char* name, char* type)
 {
@@ -32,7 +32,7 @@ void delete_info(t_info* info)
     free(info);
 }
 
-// CREATE / DELETE RESULT REPORT
+// Create / Delete report
 
 t_report* create_report(uint32_t pid, bool result) 
 {
@@ -51,11 +51,59 @@ t_report* list_to_report(t_list* list)
 {
     uint32_t pid = *((uint32_t *) list_get(list, 0));
     bool result = *((bool *) list_get(list, 1));
-
     return create_report(pid, result);
 }
 
-// PACKAGE
+// Create / Delete memory requirement
+
+t_req_to_w* req_to_write(uint32_t pid, char* text, uint32_t physical_address) 
+{
+    t_req_to_w* mem_req = malloc(sizeof(t_req_to_w));
+    mem_req->pid = pid;
+    mem_req->text_size = strlen(text) + 1;
+    mem_req->text = malloc(mem_req->text_size);
+    strcpy(mem_req->text, text);
+    mem_req->physical_address = physical_address;
+    return mem_req;
+}
+
+t_req_to_r* req_to_read(uint32_t pid, uint32_t size, uint32_t physical_address) 
+{
+    t_req_to_r* mem_req = malloc(sizeof(t_req_to_r));
+    mem_req->pid = pid;
+    mem_req->text_size = size;
+    mem_req->physical_address = physical_address;
+    return mem_req;
+}
+
+void delete_req_to_w(t_req_to_w* mem_req) 
+{
+    free(mem_req->text);
+    free(mem_req);
+}
+
+void delete_req_to_r(t_req_to_r* mem_req) 
+{
+    free(mem_req);
+}
+
+t_req_to_w* list_to_req_to_w(t_list* list) 
+{
+    uint32_t pid = *((uint32_t *) list_get(list, 0));
+    char* text = list_get(list, 2);
+    uint32_t physical_address = *((uint32_t *) list_get(list, 3));
+    return req_to_write(pid, text, physical_address);
+}
+
+t_req_to_r* list_to_req_to_r(t_list* list) 
+{
+    uint32_t pid = *((uint32_t *) list_get(list, 0));
+    uint32_t size = *((uint32_t *) list_get(list, 1));
+    uint32_t physical_address = *((uint32_t *) list_get(list, 3));
+    return req_to_read(pid, size, physical_address);
+}
+
+// Paquete
 
 t_paquete* info_to_package(t_info* info) 
 {
@@ -77,14 +125,42 @@ t_paquete* report_to_package(t_report* report)
     return package;
 }
 
-// GETTERS
+t_paquete* req_to_w_package(t_req_to_w* mem_req) 
+{
+    t_paquete* package = crear_paquete(W_REQ);
+
+    agregar_a_paquete(package, &(mem_req->pid), sizeof(uint32_t));
+    agregar_a_paquete(package, &(mem_req->text_size), sizeof(uint32_t));
+    agregar_a_paquete(package, mem_req->text, mem_req->text_size);
+    agregar_a_paquete(package, &(mem_req->physical_address), sizeof(uint32_t));
+
+    return package;
+}
+
+t_paquete* req_to_r_package(t_req_to_r* mem_req) 
+{
+    t_paquete* package = crear_paquete(R_REQ);
+
+    agregar_a_paquete(package, &(mem_req->pid), sizeof(uint32_t));
+    agregar_a_paquete(package, &(mem_req->text_size), sizeof(uint32_t));
+    agregar_a_paquete(package, &(mem_req->physical_address), sizeof(uint32_t));
+
+    return package;
+}
+
+// Getters
 
 char* type_from_config(t_config* config) 
 {
     return config_get_string_value(config, "TIPO_INTERFAZ");
 }
 
-// CONVERTION
+char* path_from_config(t_config* config) 
+{
+    return config_get_string_value(config, "PATH_BASE_DIALFS");
+}
+
+// Convertion
 
 char* int_to_string(int value) 
 {
@@ -94,7 +170,7 @@ char* int_to_string(int value)
     return str;
 }
 
-// VALIDATION
+// Validation
 
 bool is_valid_instruction(op_code code, t_config* config) 
 {
@@ -167,7 +243,7 @@ char* type_from_code(op_code instruction_code)
     return code;
 }
 
-// COMMUNICATION
+// Communication
 
 void send_confirmation(int connection, uint32_t status) 
 {
@@ -177,6 +253,14 @@ void send_confirmation(int connection, uint32_t status)
 void receive_confirmation(int connection, uint32_t status) 
 {
     recv(connection, &(status), sizeof(uint32_t), MSG_WAITALL);
+}
+
+void send_info(t_info* info, int connection) 
+{
+    t_paquete* package = info_to_package(info);
+    enviar_paquete(package, connection);
+    eliminar_paquete(package);
+    delete_info(info);
 }
 
 void send_report(t_instruction* instruction, bool result, int connection) 
@@ -189,7 +273,37 @@ void send_report(t_instruction* instruction, bool result, int connection)
     delete_instruction_IO(instruction);
 }
 
-// MANAGER INSTRUCTION QUEUE
+void send_req_to_w(t_req_to_w* mem_req, int connection) 
+{
+    t_paquete* package = req_to_w_package(mem_req);
+    enviar_paquete(package, connection);
+    eliminar_paquete(package);
+    delete_req_to_w(mem_req);
+}
+
+void send_req_to_r(t_req_to_r* mem_req, int connection) 
+{
+    t_paquete* package = req_to_r_package(mem_req);
+    enviar_paquete(package, connection);
+    eliminar_paquete(package);
+    delete_req_to_r(mem_req);
+}
+
+t_req_to_w* receive_req_to_w(int connection) 
+{
+    t_list* list = recibir_paquete(connection);
+    t_req_to_w* mem_req = list_to_req_to_w(list);
+    return mem_req;
+}
+
+t_req_to_r* receive_req_to_r(int connection) 
+{
+    t_list* list = recibir_paquete(connection);
+    t_req_to_r* mem_req = list_to_req_to_r(list);
+    return mem_req;
+}
+
+// Instruction Queue
 
 t_instruction_queue* create_instruction_queue() 
 {
@@ -218,10 +332,40 @@ t_instruction* get_next_instruction(t_instruction_queue* i_queue)
     return instruction;
 }
 
+// Log
 
+void generate_log_from_instruction(t_instruction* instruction) 
+{
+    char* code = type_from_code(instruction->code);
+    uint32_t pid = instruction->pid;
+    
+    switch(instruction->code) 
+    {
+        case IO_GEN_SLEEP:
+        case IO_STDIN_READ:
+        case IO_STDOUT_WRITE:
+            log_info(logger, "PID: %d - Operación a realizar: %s", pid, code);
+            break;
+        case IO_FS_CREATE:
+            log_info(logger, "PID: %d - Nombre de Archivo: -", pid);
+            break;
+        case IO_FS_DELETE:
+            log_info(logger, "PID: %d - Eliminar Archivo: -", pid);
+            break;
+        case IO_FS_TRUNCATE:
+            log_info(logger, "PID: %d - Truncar Archivo: -", pid);
+            break;
+        case IO_FS_READ:
+            log_info(logger, "PID: %d - Leer Archivo: -", pid);
+            break;
+        case IO_FS_WRITE:
+            log_info(logger, "PID: %d - Escribir Archivo: -", pid);
+            break;
+    }
+}
 
-// -- KERNEL --
-// CREATE / DELETE INTERFACE
+// ----- KERNEL -----
+// Create / Delete interface
 
 t_interface* create_interface(char* name, int conn) 
 {
@@ -249,7 +393,7 @@ t_interface* list_to_interface(t_list* list, int conn)
     return create_interface(name, connection);
 }
 
-// GETTERS
+// Getters
 
 char* get_interface_name(t_interface* interface) 
 {
@@ -267,7 +411,7 @@ int get_interface_connection(t_interface* interface)
     return interface->connection;
 }
 
-// LIST
+// List
 
 t_interface_list* create_interface_list() 
 {
@@ -285,7 +429,7 @@ void add_interface_to_list(t_interface_list* interface_list, t_interface* interf
     pthread_mutex_unlock(&(interface_list->mutex));
 }
 
-void delete_interface_from_list(t_interface_list* interface_list, char* name) 
+t_interface* delete_interface_from_list(t_interface_list* interface_list, char* name) 
 {
     bool _is_interface_searched(void *interface) 
     {
@@ -293,13 +437,9 @@ void delete_interface_from_list(t_interface_list* interface_list, char* name)
     }
 
     pthread_mutex_lock(&(interface_list->mutex));
-    t_interface* interface = list_remove_by_condition(interface_list->list, (void*) _is_interface_searched);
+    t_interface* ret_interface = list_remove_by_condition(interface_list->list, (void*) _is_interface_searched);
     pthread_mutex_unlock(&(interface_list->mutex));
-
-    if (interface != NULL) 
-    {
-        delete_interface(interface);
-    }
+    return ret_interface;
 }
 
 t_interface* find_interface_by_name(char* name) 
@@ -314,10 +454,3 @@ t_interface* find_interface_by_name(char* name)
     pthread_mutex_unlock(&(interface_list->mutex));
     return ret_interface;
 }
-
-/*
-void iterator(char* value) 
-{
-    log_info(logger, "%s", value);
-}
-*/

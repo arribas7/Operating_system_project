@@ -107,21 +107,21 @@ void handle_client(void *arg) {
 
                 // INSTRUCTION - 1 - TODO: Remove, only for tests.
 
-                t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, "myPath");
+                t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, 0, 0, "myPath", 0);
                 send_instruction_IO(instruction_1, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_1);
 
                 // INSTRUCTION - 2
 
-                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 300, "myOtherPath");
+                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 300, 0, 0, "myOtherPath", 0);
                 send_instruction_IO(instruction_2, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_2);
 
                 // INSTRUCTION - 3
 
-                t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, "myOtherPath");
+                t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, 0, 0, "myOtherPath", 0);
                 send_instruction_IO(instruction_3, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_3);
