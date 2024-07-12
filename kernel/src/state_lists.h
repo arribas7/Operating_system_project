@@ -51,6 +51,10 @@ void state_list_destroy(t_list * list);
 //Returns NULL if the list is empty
 void *list_get_first(t_list *list);
 
+//Removes the last item from a list and returns it
+//Returns NULL if the list is empty
+void *list_pop_last(t_list *list);
+
 void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_list* destination_list, pthread_mutex_t* mutex);
 
 void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pthread_mutex_t* from_mutex, t_state to_status, t_list* to_list, pthread_mutex_t* to_mutex);
