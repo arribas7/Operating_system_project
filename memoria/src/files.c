@@ -126,12 +126,12 @@ void handle_create_process(const char *file_path, uint32_t pid, t_config* config
     int pc = 0;
     if (file != NULL) {
         printf("File to intructions succesfully opened.\n");
-        InstructionDictionary dictionary;
-        instruction_dictionary_init(&dictionary, 10);  
-        load_instructions_from_file(&dictionary, file); 
+        InstructionDictionary *dictionary = malloc(sizeof(InstructionDictionary));
+        instruction_dictionary_init(dictionary, 10);  
+        load_instructions_from_file(dictionary, file); 
         fclose(file); 
-        add_pid_instruction_dict(pid, &dictionary); //Nueva funcion
-        for (pc = 0; pc < dictionary.size; pc++) {
+        add_pid_instruction_dict(pid, dictionary); //Nueva funcion
+        for (pc = 0; pc < dictionary->size; pc++) {
             const char *complete_instruction = get_complete_instruction(pid, pc);
             printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
         }

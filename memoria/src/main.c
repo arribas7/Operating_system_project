@@ -173,6 +173,7 @@ void handle_client(void *arg) {
         t_pcb *pcb;
         switch (cod_op) {
             case CREATE_PROCESS:
+                log_debug(logger, "Creating process...");
                 pcb = recibir_pcb(cliente_fd);
                 log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
@@ -184,6 +185,7 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
+                log_debug(logger, "Processing next PC...");
                 pcb = recibir_pcb(cliente_fd);
                 log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
@@ -335,7 +337,7 @@ int main(int argc, char *argv[]) {
     memory.ip = config_get_string_value(config,"IP");
     memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
     
-    logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_INFO);
+    logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
         return -1;
     }
@@ -345,7 +347,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    testing_paging();
+    //testing_paging();
 
     /*-------------------Test diccionary----------------------------*/
     /*

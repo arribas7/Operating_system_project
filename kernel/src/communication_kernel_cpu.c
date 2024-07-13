@@ -21,6 +21,7 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
         case WAIT:
         case SIGNAL:
             resp_ws = deserializar_wait_o_signal(buffer);
+            buffer = list_get(list_package, 1);
             break;
         case IO_GEN_SLEEP:
         case IO_STDIN_READ:
@@ -31,10 +32,10 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
         case IO_FS_WRITE:
         case IO_FS_READ:
             instruction_IO = deserialize_instruction_IO(buffer);
+            buffer = list_get(list_package, 1);
             break;
     }
-    void *pcb_updated_buffer = list_get(list_package, 1);
-    t_pcb *pcb_updated = deserialize_pcb(pcb_updated_buffer, 0);
+    t_pcb *pcb_updated = deserialize_pcb(buffer, 0);
 
     ret->pcb_updated = pcb_updated;
     ret->resp_code = resp_code;

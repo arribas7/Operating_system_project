@@ -185,9 +185,6 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
         case IO_FS_WRITE:
         case IO_FS_READ:
             io_block(ret_data->pcb_updated, ret_data->instruction_IO);
-            // TODO: handle instructions call to IO + updated pcb 
-            //log_info(logger, "KERNEL DETECTED A IO INTERRUPTION");
-            move_pcb(ret_data->pcb_updated, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         default:
             log_warning(logger, "Unknown operation for pid %d",ret_data->pcb_updated->pid);
@@ -302,8 +299,12 @@ void st_sched_ready_running(void* arg) {
             sem_post(&sem_st_scheduler);
             
             // TODO: free other rets
-            delete_instruction_IO(ret->instruction_IO);
-            destroy_ws(ret->resp_ws);
+            if(ret->instruction_IO != NULL){
+                delete_instruction_IO(ret->instruction_IO);
+            }
+            if(ret->resp_ws != NULL){
+                destroy_ws(ret->resp_ws);
+            }
             free(ret);
         }
 
