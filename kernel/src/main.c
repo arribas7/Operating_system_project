@@ -19,7 +19,7 @@
 #include <communication_kernel_cpu.h>
 #include <resources_manager.h>
 
-extern t_interface_list* interface_list;
+t_interface_list* interface_list;
 
 extern t_list *list_NEW;
 pthread_mutex_t mutex_new;
@@ -89,7 +89,7 @@ void handle_client(void *arg) {
                 t_interface* interface = list_to_interface(lista, cliente_fd);                
                 interface_name = get_interface_name(interface);
 
-                if(find_interface_by_name(interface_name) != NULL) {
+                if(find_interface_by_name(interface_list, interface_name) != NULL) {
                     log_error(logger, "La interfaz %s ya existe", interface_name);
                     delete_interface(interface);
                     status = 0;
@@ -97,7 +97,6 @@ void handle_client(void *arg) {
                     char* type = type_from_list(lista);
                     log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", interface_name, type);
                     add_interface_to_list(interface_list, interface);
-                    free(interface_name); 
                     free(type);
                     status = 1;
                 }
@@ -105,7 +104,7 @@ void handle_client(void *arg) {
                 log_info(logger, "%d", status);
                 send_confirmation(cliente_fd, status);
 
-                // INSTRUCTION - 1 - TODO: Remove, only for tests.
+                /* INSTRUCTION - 1 - TODO: Remove, only for tests.
 
                 t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, 0, 0, "myPath", 0);
                 send_instruction_IO(instruction_1, cliente_fd);
@@ -124,7 +123,7 @@ void handle_client(void *arg) {
                 t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, 0, 0, "myOtherPath", 0);
                 send_instruction_IO(instruction_3, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_3);
+                delete_instruction_IO(instruction_3);*/
 
                 break;
             case REPORT:

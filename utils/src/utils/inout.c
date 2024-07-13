@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include "client.h"
 #include "server.h"
-
-t_interface_list* interface_list;
-
 // ---------- DEFINITIONS ----------
 
 // ----- INTERFACE -----
@@ -442,10 +439,12 @@ t_interface* delete_interface_from_list(t_interface_list* interface_list, char* 
     return ret_interface;
 }
 
-t_interface* find_interface_by_name(char* name) 
+t_interface* find_interface_by_name(t_interface_list* interface_list, char* name) 
 {
     bool _is_interface_searched(void *interface) 
     {
+        log_debug(logger, name);
+        log_debug(logger, ((t_interface *)interface)->name);
         return (strcmp(((t_interface *)interface)->name, name) == 0);
     }
 
