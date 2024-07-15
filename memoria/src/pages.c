@@ -184,7 +184,7 @@ void mostrarContenidoMemoria(int tamano_proceso) {
     printf("Contenido de la memoria:\n");
   
     for (int i = -tamano_proceso; i < 0 + 1; ++i) {
-        printf("0x%p: %c\n", (void*)(espacio_usuario + i), *(char*)(espacio_usuario + i));
+        printf("%p: %c\n", (void*)(espacio_usuario + i), *(char*)(espacio_usuario + i));
     }
     pthread_mutex_unlock(&memory.mutex_espacio_usuario);
 }
