@@ -140,33 +140,42 @@ void escribirEnEspacioUsuarioIndex(const char* buffer, int tamano_proceso) {
 }  
 */ 
 // Función para crear la tabla de páginas de un proceso (y asignar marcos a cada página)
-TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
-    TablaPaginas tabla;
-    int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
-    log_info(logger, "PID: %d - Tamaño del Proceso: %d - Número de marcos necesarios: %d marcos",pid,tamano_proceso, num_marcos);
-    tabla.pid_tabla = pid;
-    tabla.num_paginas = num_marcos;
-    tabla.paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
-    pthread_mutex_init(&tabla.mutex_tabla,NULL); //puede no ser necesario semaforo porque cada tabla con su pid.
 
-    if (tabla.paginas == NULL) {
-        perror("Failed to allocate memory for page table");
+TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
+    TablaPaginas* tabla = (TablaPaginas*)malloc(sizeof(TablaPaginas));  // Cambiar a puntero y usar malloc
+    if (tabla == NULL) {
+        perror("Failed to allocate memory for page table structure");
         exit(EXIT_FAILURE);
     }
-       for (int i = 0; i < num_marcos; ++i) {
+
+    int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
+    log_info(logger, "PID: %d - Tamaño del Proceso: %d - Número de marcos necesarios: %d marcos", pid, tamano_proceso, num_marcos);
+    tabla->pid_tabla = pid;
+    tabla->num_paginas = num_marcos;
+    tabla->paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
+    pthread_mutex_init(&tabla->mutex_tabla, NULL); 
+
+    if (tabla->paginas == NULL) {
+        perror("Failed to allocate memory for page table");
+        free(tabla);  // Liberar memoria asignada a tabla antes de salir
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < num_marcos; ++i) {
         int marco = asignarMarcoLibre();
         if (marco == -1) {
             perror("No free frames available");
-            free(tabla.paginas);
-            pthread_mutex_destroy(&tabla.mutex_tabla);
+            free(tabla->paginas);
+            pthread_mutex_destroy(&tabla->mutex_tabla);
+            free(tabla);  // Liberar memoria asignada a tabla antes de salir
             exit(EXIT_FAILURE);
         }
-        tabla.paginas[i].pagina_id = i;
-        tabla.paginas[i].numero_marco = marco;
+        tabla->paginas[i].pagina_id = i;
+        tabla->paginas[i].numero_marco = marco;
     }
- 
-    //agrego la tabla al diccionario de tablas de paginas
-    dictionary_put(listaTablasDePaginas,string_itoa(tabla.pid_tabla),&tabla);
+
+    // Agregar la tabla al diccionario de tablas de páginas
+    dictionary_put(listaTablasDePaginas, string_itoa(tabla->pid_tabla), tabla);
     log_info(logger, "****Se registra la creación de la tabla de páginas***");
     log_info(logger, "PID: %d - Tabla de páginas creada - Tamaño: %d páginas", pid, num_marcos);
     log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
@@ -197,7 +206,9 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
         perror("No hay suficiente espacio en la memoria");
         exit(EXIT_FAILURE);
     }
-     TablaPaginas tabla = crearTablaPaginas(pid, tamano_proceso, memory.page_size);
+     TablaPaginas* tabla = crearTablaPaginas(pid, tamano_proceso, memory.page_size);
+
+    // TablaPaginas tabla = crearTablaPaginas(pid, tamano_proceso, memory.page_size);
      log_info(logger, "PID: %d - Acción: ESCRIBIR - Direccion física: %p - Tamaño: %d", pid, (void*)espacio_usuario, tamano_proceso);
 
     escribirEnEspacioUsuario(buffer, tamano_proceso);
@@ -206,7 +217,7 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     mostrarContenidoMemoria(tamano_proceso);
     char* nueva_direccion = (char*)espacio_usuario;
     log_info(logger, "Nueva posición de la dirección física: %p", (void*)nueva_direccion);
-    liberarTablaPaginas(tabla);
+    //liberarTablaPaginas(tabla);
 }
 
 /********************************Sending Frame*************************************/
@@ -237,8 +248,32 @@ void enviar_marco(int pagina, int pid, int cliente_fd){
 
 /********************************COPY STRING**************************************/
  //Dado un pid se encuentra la tabla de paginas asociada
+ /*
 TablaPaginas* tablaDePaginasAsociada (int pid){
    return dictionary_get(listaTablasDePaginas,string_itoa(pid));
+}
+*/
+TablaPaginas* tablaDePaginasAsociada(int pid) {
+    char* pid_str = string_itoa(pid);
+    if (pid_str == NULL) {
+        log_error(logger, "Error al convertir el PID %d a cadena", pid);
+        return NULL;
+    }
+
+    TablaPaginas* tabla = dictionary_get(listaTablasDePaginas, pid_str);
+    if (tabla == NULL) {
+        log_error(logger, "No se encontró la tabla de páginas para el PID %d (string PID: %s)", pid, pid_str);
+    } else {
+        log_info(logger, "Tabla de páginas encontrada para PID %d (string PID: %s)", pid, pid_str);
+        log_info(logger, "Contenido de la tabla de páginas para PID %d: num_paginas: %d", pid, tabla->num_paginas);
+        for (int i = 0; i < tabla->num_paginas; ++i) {
+        log_info(logger, "Página %d -> Marco %d", tabla->paginas[i].pagina_id, tabla->paginas[i].numero_marco);
+        }
+    }
+     
+    free(pid_str); // Liberar la memoria asignada por string_itoa
+
+    return tabla;
 }
 
 
@@ -316,15 +351,24 @@ void free_TablaDePaginas(int pid) {
  }
 
 void finish_process(int pid) {
+    log_info(logger, "Inicio de finish_process para PID: %d", pid);
+    
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    log_info(logger, "Tabla de páginas no encontrada para PID: %d", pid);
     if (!tabla) {
         perror("Tabla de páginas not found for PID ");
         return;
     }
-
+    int num_marcos = tabla->num_paginas;
+    log_info(logger, "Destrucción de Tabla de Páginas - PID: %d - Cantidad de Páginas: %d (Tamaño de la Tabla)", pid, num_marcos);
     free_frame(tabla);
+    log_info(logger, "Liberando tabla para PID: %d - Cantidad de Páginas: %d (Tamaño de la Tabla)", pid, num_marcos);
     free_TablaDePaginas(pid);
+    log_info(logger, "Finalización de finish_process para PID: %d - Cantidad de Páginas: %d (Tamaño de la Tabla)", pid, num_marcos);
+    
 }
+    
+
 
  //Estaria para ponerlo en algun lado:
     //for (int i = 0; i < tabla.num_paginas; ++i) {
