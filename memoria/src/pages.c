@@ -1,8 +1,9 @@
 #include <pages.h>
-#include <memoria.h>
+
 
 char* espacio_usuario;
 t_dictionary* listaTablasDePaginas;
+
 
 /********************************init Paging*************************************/
 
@@ -128,17 +129,8 @@ void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
     // Actualizar el bitmap con los marcos necesarios    
     int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
     actualizarBitmap(marcos_necesarios);
-}   
-/*
-void escribirEnEspacioUsuarioIndex(const char* buffer, int tamano_proceso) {
-    pthread_mutex_lock(&memory.mutex_espacio_usuario);
-    memcpy(espacio_usuario, buffer, strlen(buffer) + 1); // +1 para incluir el carácter nulo de terminación
-    espacio_usuario = (char*)espacio_usuario + tamano_proceso;  //ESTO DEBERIA SER CIRCULAR, EL ESPACIO DE USUARIO ES LIMITADO, POSIBLE SOLUCION: % memory.memory_size
-    pthread_mutex_unlock(&memory.mutex_espacio_usuario);     
-     int marcos_necesarios = calcularMarcosNecesarios(tamano_proceso, memory.page_size);
-    actualizarBitmap(marcos_necesarios);
 }  
-*/ 
+
 // Función para crear la tabla de páginas de un proceso (y asignar marcos a cada página)
 TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     TablaPaginas tabla;
@@ -167,9 +159,10 @@ TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
  
     //agrego la tabla al diccionario de tablas de paginas
     dictionary_put(listaTablasDePaginas,string_itoa(tabla.pid_tabla),&tabla);
-    log_info(logger, "****Se registra la creación de la tabla de páginas***");
+    //sem_post(&sem_lista_tabla_paginas);
+    //log_info(logger, "****Se registra la creación de la tabla de páginas***");
     log_info(logger, "PID: %d - Tabla de páginas creada - Tamaño: %d páginas", pid, num_marcos);
-    log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
+    //log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
 
     return tabla;
 }
@@ -348,4 +341,145 @@ void escribir_en_direcc_fisica(int pid,int df,int val){
 char* obtener_valor(int pid,int df){
     TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
     return obtenerDireccionFisicafull(df, tablaAsociada);
+}
+
+int resize_process(int pid, int nuevo_tamano) {
+    // Obtener la tabla de páginas asociada al PID
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    if (!tabla) {
+        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
+        return 0;
+    }
+
+    pthread_mutex_lock(&tabla->mutex_tabla);
+
+    int tamano_actual = tabla->num_paginas * memory.page_size;
+    int marcos_necesarios_nuevos = calcularMarcosNecesarios(nuevo_tamano, memory.page_size);
+    int marcos_actuales = tabla->num_paginas;
+
+    if (nuevo_tamano > tamano_actual) {
+        // Ampliación del proceso
+        int marcos_a_asignar = marcos_necesarios_nuevos - marcos_actuales;
+
+        if (!hayEspacioEnBitmap(marcos_a_asignar)) {
+            log_error(logger, "Out Of Memory - No hay suficiente espacio en la memoria para ampliar el proceso PID %d", pid);
+            pthread_mutex_unlock(&tabla->mutex_tabla);
+            return 0;
+        }
+
+        tabla->paginas = realloc(tabla->paginas, marcos_necesarios_nuevos * sizeof(PaginaMemoria));
+        if (tabla->paginas == NULL) {
+            log_error(logger, "Falló la reubicación de memoria para la tabla de páginas del proceso PID %d", pid);
+            pthread_mutex_unlock(&tabla->mutex_tabla);
+            return;
+        }
+
+        for (int i = marcos_actuales; i < marcos_necesarios_nuevos; ++i) {
+            int marco = asignarMarcoLibre();
+            if (marco == -1) {
+                log_error(logger, "No free frames available al ampliar el proceso PID %d", pid);
+                pthread_mutex_unlock(&tabla->mutex_tabla);
+                return 0;
+            }
+            tabla->paginas[i].pagina_id = i;
+            tabla->paginas[i].numero_marco = marco;
+        }
+
+        tabla->num_paginas = marcos_necesarios_nuevos;
+        log_info(logger, "Proceso PID %d ampliado a %d bytes (%d páginas)", pid, nuevo_tamano, marcos_necesarios_nuevos);
+
+    } else if (nuevo_tamano < tamano_actual) {
+        // Reducción del proceso
+        //int marcos_a_liberar = marcos_actuales - marcos_necesarios_nuevos;
+
+        for (int i = marcos_actuales - 1; i >= marcos_necesarios_nuevos; --i) {
+            int marco = tabla->paginas[i].numero_marco;
+            liberarMarcoFisico(marco);
+        }
+
+        tabla->paginas = realloc(tabla->paginas, marcos_necesarios_nuevos * sizeof(PaginaMemoria));
+        if (tabla->paginas == NULL && marcos_necesarios_nuevos > 0) {
+            log_error(logger, "Falló la reubicación de memoria para la tabla de páginas del proceso PID %d", pid);
+            pthread_mutex_unlock(&tabla->mutex_tabla);
+            return;
+        }
+
+        tabla->num_paginas = marcos_necesarios_nuevos;
+        log_info(logger, "Proceso PID %d reducido a %d bytes (%d páginas)", pid, nuevo_tamano, marcos_necesarios_nuevos);
+    }
+
+    pthread_mutex_unlock(&tabla->mutex_tabla);
+
+    return 1;
+}
+
+void liberarMarcoFisico(int marco) {
+    // Marcar el marco como libre en el bitmap
+    memory.frames_ocupados[marco] = false;
+
+    // Opcional: Limpiar el contenido del marco en la memoria física (espacio_usuario)
+    memset(espacio_usuario + (marco * memory.page_size), 0, memory.page_size);
+}
+
+char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid) {
+    // Obtener la tabla de páginas del proceso
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    if (!tabla) {
+        perror("Tabla de páginas no encontrada para el PID proporcionado");
+        return NULL;
+    }
+
+    char* buffer = malloc(tamano + 1);  // +1 para el carácter nulo al final
+    if (!buffer) {
+        perror("Failed to allocate buffer for reading");
+        return NULL;
+    }
+
+    int bytesLeidos = 0;
+    while (bytesLeidos < tamano) {
+        int numPagina = calcularNumeroPagina(direccion_fisica);
+        int desplazamiento = calcularDesplazamiento(direccion_fisica);
+
+        char* dirFisica = obtenerDireccionFisica(tabla->paginas[numPagina].numero_marco, desplazamiento);
+        int bytesRestantesEnPagina = memory.page_size - desplazamiento;
+        int bytesALeer = tamano - bytesLeidos < bytesRestantesEnPagina ? tamano - bytesLeidos : bytesRestantesEnPagina;
+
+        memcpy(buffer + bytesLeidos, dirFisica, bytesALeer);
+
+        bytesLeidos += bytesALeer;
+        direccion_fisica += bytesALeer;
+    }
+
+    buffer[tamano] = '\0';  // Agregar el carácter nulo al final del buffer
+
+    return buffer;
+}
+
+
+void escribirEnEspacioUsuario2(int direccion_fisica, char* datos, int tamano, int pid) {
+    // Obtener la tabla de páginas del proceso
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    if (!tabla) {
+        perror("Tabla de páginas no encontrada para el PID proporcionado");
+        return;
+    }
+
+    int bytesEscritos = 0;
+    while (bytesEscritos < tamano) {
+        int numPagina = calcularNumeroPagina(direccion_fisica);
+        int desplazamiento = calcularDesplazamiento(direccion_fisica);
+
+        char* dirFisica = obtenerDireccionFisica(tabla->paginas[numPagina].numero_marco, desplazamiento);
+        int bytesRestantesEnPagina = memory.page_size - desplazamiento;
+        int bytesAEscribir = tamano - bytesEscritos < bytesRestantesEnPagina ? tamano - bytesEscritos : bytesRestantesEnPagina;
+
+        pthread_mutex_lock(&memory.mutex_espacio_usuario);
+        memcpy(dirFisica, datos + bytesEscritos, bytesAEscribir);
+        pthread_mutex_unlock(&memory.mutex_espacio_usuario);
+
+        bytesEscritos += bytesAEscribir;
+        direccion_fisica += bytesAEscribir;
+    }
+
+    log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección física: %p - Tamaño: %d", pid, (void*)direccion_fisica, tamano);
 }

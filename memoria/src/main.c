@@ -1,13 +1,16 @@
-#include <memoria.h>
+//#include <memoria.h>
 #include <files.h>
 #include <utils/inout.h>
 //#include "cpu/connections.h
+#include "pages.h"
 
 t_memory memory;
 t_config *config;
 t_log* logger;
 
 extern t_dictionary* listaTablasDePaginas;
+int tam_pag;
+
 
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
@@ -122,43 +125,50 @@ t_request2* recibir_mov_out(int socket_cpu){
 
     return req;
 }
-
-int tamanio_proceso(int pid){
-    
+/*
+int tamanio_proceso(int pid, int tam_pag){
+    TablaPaginas* tablaAsoc = tablaDePaginasAsociada(pid);
+    int tamanio_proceso = tablaAsoc->num_paginas;
+    return tamanio_proceso;
 } 
 
 bool memoria_llena (int tam_actual,int nuevo_tam){
     return !hayEspacioEnBitmap(tam_actual - nuevo_tam);
 }
 
-void modificar_tamanio_proceso (int pid, int nuevo_tamanio,t_config* config){
+void modificar_tamanio_proceso (int pid, int nuevo_tamanio,t_config* config, int tam_pag){
     TablaPaginas* tablaAsoc = tablaDePaginasAsociada(pid);
-    TablaPaginas tablaAux;
-    tablaAux = *tablaAsoc;
+    TablaPaginas* tablaAux = NULL;
+    tablaAux = tablaAsoc;
 
     dictionary_remove(listaTablasDePaginas,string_itoa(pid));
     liberarTablaPaginas(*tablaAsoc);
 
-    crearTablaPaginas(pid,nuevo_tamanio,config_get_int_value(config,"TAM_PAGINA"));
+    crearTablaPaginas(pid,nuevo_tamanio,tam_pag);
 
-    TablaPaginas* tablaNew = dictionary_get(listaTablasDePaginas,string_itoa(pid));
-    *tablaNew = tablaAux;
+    TablaPaginas* tablaNew = NULL;
+    tablaNew = dictionary_get(listaTablasDePaginas,string_itoa(pid));
+    tablaNew = tablaAux;
 }
+void nuevo_tamanio_proceso(t_resize* resize){
 
-void nuevo_tamanio_proceso(t_resize* resize, int socket_cpu, t_config* config){
-    int tam_actual_proceso = tamanio_proceso(resize->pid);
+    resize_process(resize->pid,resize->tamanio)
+    int tam_actual_proceso = tamanio_proceso(resize->pid,tam_pag);
     int nuevo_tamanio;
 
     if(tam_actual_proceso > resize->tamanio){ //reduccion de tamanio de proceso
         nuevo_tamanio = resize->tamanio;
-        modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
+        modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config,tam_pag);
     }
     else{
         nuevo_tamanio = tam_actual_proceso + (resize->tamanio - tam_actual_proceso);
-        if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) enviar_mensaje("Out of memory",socket_cpu); else modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config);
+        if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) 
+            enviar_mensaje("Out of memory",socket_cpu);
+        else 
+            modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config,tam_pag);
     } 
 }
-
+*/
 
 
 void handle_client(void *arg) {
@@ -220,15 +230,19 @@ void handle_client(void *arg) {
             case RESIZE:
                 retardo_en_peticiones();
                 t_resize* resize = recibir_resize(cliente_fd);
-                nuevo_tamanio_proceso(resize,cliente_fd,config);
+                if(resize_process(resize->pid,resize->tamanio))
+                    enviar_mensaje("Resize OK",cliente_fd);
+                else
+                    enviar_mensaje("Out of memory",cliente_fd);
             break;
             case TAM_PAG:
-                enviar_mensaje(config_get_string_value(config,"TAM_PAGINA"),cliente_fd);
+                enviar_mensaje(tam_pag,cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
-                escribir_en_direcc_fisica(write->pid,write->req,write->val);
+                //escribir_en_direcc_fisica(write->pid,write->req,write->val);
+                escribirEnEspacioUsuario2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* write_req = receive_req_to_w(cliente_fd);
@@ -324,18 +338,25 @@ void testing_paging(void) {
 
 int main(int argc, char *argv[]) {
     /* ---------------- Setup inicial  ---------------- */
-    config = config_create(argv[1]);
+
+    
+    //config = config_create(argv[1]);
+    config = config_create("memoria.config");
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);
     }
-           
-	
+
+    tam_pag = config_get_int_value(config,"TAM_PAGINA");
+
+
     memory.memory_size = config_get_int_value(config,"TAM_MEMORIA");
     memory.page_size = config_get_int_value(config,"TAM_PAGINA");
     memory.port = config_get_string_value(config,"PUERTO");
     memory.ip = config_get_string_value(config,"IP");
     memory.respond_time = config_get_int_value(config,"RETARDO_RESPUESTA");
+
+    //iniciar_semaforos();
     
     logger = log_create("memoria.log", "memoria", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
@@ -378,3 +399,4 @@ int main(int argc, char *argv[]) {
          
     return 0;
 }
+
