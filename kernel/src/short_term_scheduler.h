@@ -27,4 +27,9 @@ extern sem_t sem_quantum;
 
 void st_sched_ready_running(void* arg);
 
+struct quantum_thread_args {
+    int *quantum_time;
+    bool *interrupted;
+};
+
 #endif

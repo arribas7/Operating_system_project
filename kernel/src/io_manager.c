@@ -2,8 +2,10 @@
 #include <utils/cpu.h>
 #include <long_term_scheduler.h>
 
+extern t_interface_list* interface_list;
+
 void io_block(t_pcb* pcb, t_instruction *instruction) {
-    t_interface* io_interface = find_interface_by_name(instruction->name);
+    t_interface* io_interface = find_interface_by_name(interface_list ,instruction->name);
 
     if(io_interface == NULL){
         exit_process(pcb, RUNNING, INVALID_INTERFACE);

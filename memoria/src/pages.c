@@ -175,9 +175,11 @@ TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
 }
 
 void liberarTablaPaginas(TablaPaginas tabla) {
+//void liberarTablaPaginas(TablaPaginas tabla) {
     pthread_mutex_destroy(&tabla.mutex_tabla);
     free(tabla.paginas);
 }
+
 //ESTA FUNCION ES SOLO PARA LAS PRUEBAS:
 void mostrarContenidoMemoria(int tamano_proceso) {
     pthread_mutex_lock(&memory.mutex_espacio_usuario);
@@ -206,7 +208,7 @@ void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid) {
     mostrarContenidoMemoria(tamano_proceso);
     char* nueva_direccion = (char*)espacio_usuario;
     log_info(logger, "Nueva posición de la dirección física: %p", (void*)nueva_direccion);
-    liberarTablaPaginas(tabla);
+    //liberarTablaPaginas(tabla);
 }
 
 /********************************Sending Frame*************************************/
@@ -325,7 +327,7 @@ void finish_process(int pid) {
     free_frame(tabla);
     free_TablaDePaginas(pid);
 }
-
+/**********************************************************************/
  //Estaria para ponerlo en algun lado:
     //for (int i = 0; i < tabla.num_paginas; ++i) {
     //    printf("Página %d -> Marco %d\n", tabla.paginas[i].pagina_id, tabla.paginas[i].numero_marco);

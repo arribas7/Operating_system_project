@@ -9,6 +9,9 @@
 #include <utils/inout.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <libgen.h>
+#include <string.h>
+#include <dialfs.h>
 #include "generic_st.h"
 #include "dialfs.h"
 
@@ -19,7 +22,7 @@ sem_t sem_instruction;
 sem_t use_time;
 t_log* logger;
 t_config* config;
-char* name;
+char* io_name;
 char* type;
 
 // FUNCTIONS
@@ -91,10 +94,13 @@ void execute_instruction(void* arg)
                 fs_delete(d_path, instruction->f_name, instruction->pid);
                 break;
             case IO_FS_READ:
+                fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
+                fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), "", 0, instruction->pid);
                 break;
             case IO_FS_WRITE:
+                fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
@@ -105,15 +111,46 @@ void execute_instruction(void* arg)
     }
 }
 
+// Function to extract the name from the config file path
+char* extract_name_from_path(const char* path) {
+    char* path_dup = strdup(path);
+    char* base = basename(path_dup);
+
+    char* dot = strrchr(base, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+
+    char* name = strdup(base);
+    free(path_dup);
+    return name;
+}
+
 int main(int argc, char* argv[]) {
     
     // INITIALIZE VARIABLES
-    
-    logger = log_create("in_out.log", "IN_OUT", true, LOG_LEVEL_INFO);
     config = config_create(argv[1]);
-    name = argv[2];
+    io_name = extract_name_from_path(argv[1]);
+
+    // Create the log file name
+    size_t log_name_length = strlen(io_name) + strlen(".log") + 1;
+    char* log_name = malloc(log_name_length);
+    snprintf(log_name, log_name_length, "%s.log", io_name);
+
+    // Create the logger
+    logger = log_create(log_name, io_name, true, LOG_LEVEL_INFO);
     type = type_from_config(config);
-    t_info* info = create_info(name, type);
+    t_info* info = create_info(io_name, type);
+
+    free(log_name);
+
+    // Initialize DialFS if needed
+    if (strcmp(type, "dialfs") == 0) {
+        int block_size = config_get_int_value(config, "BLOCK_SIZE");
+        int block_count = config_get_int_value(config, "BLOCK_COUNT");
+        const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
+        initialize_dialfs(path_base_dialfs, block_size, block_count);
+    }
     
     // CREATE KERNEL CONNECTION
     
@@ -161,6 +198,7 @@ int main(int argc, char* argv[]) {
     pthread_join(connection_thread, NULL);
     pthread_join(instruction_manager_thread, NULL);
     free(str_conn);
+    free(io_name);
     liberar_conexion(kernel_socket);
 
     return 0;
