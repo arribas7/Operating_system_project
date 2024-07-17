@@ -92,7 +92,7 @@ void execute_instruction(void* arg)
                 fs_delete(instruction->f_name, instruction->pid);
                 break;
             case IO_FS_READ:
-                fs_read(instruction->physical_address, instruction->size, instruction->physical_address->f_pointer, instruction->pid);
+                fs_read(instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
                 fs_truncate(instruction->f_name, instruction->size, instruction->pid);
@@ -124,6 +124,29 @@ char* extract_name_from_path(const char* path) {
     return name;
 }
 
+void test_dialfs() {
+    // Test file creation
+    fs_create("f1.txt", 1);
+    fs_create("f2.txt", 2);
+    fs_truncate("f1.txt", 32, 1);
+    fs_truncate("f2.txt", 32, 2);
+
+    // Test file writing
+    fs_write(100, 16, 0, 1);  // Write 16 bytes starting at block 0 for file with PID 1
+    //fs_write(116, 16, 32, 2); // Write 16 bytes starting at block 16 for file with PID 2
+
+    // Test file reading
+    fs_read(100, 16, 0, 1);
+    //fs_read(116, 16, 16, 2);
+
+    // Test file deletion
+    //fs_delete("f1.txt", 1);
+    //fs_delete("f2.txt", 2);
+
+    // Test compactation
+    //compact_dialfs(1);
+}
+
 int main(int argc, char* argv[]) {
     
     // INITIALIZE VARIABLES
@@ -136,18 +159,21 @@ int main(int argc, char* argv[]) {
     snprintf(log_name, log_name_length, "%s.log", io_name);
 
     // Create the logger
-    logger = log_create(log_name, io_name, true, LOG_LEVEL_INFO);
+    logger = log_create(log_name, io_name, true, LOG_LEVEL_DEBUG);
     type = type_from_config(config);
     t_info* info = create_info(io_name, type);
 
     free(log_name);
 
     // Initialize DialFS if needed
-    if (strcmp(type, "dialfs") == 0) {
+    if (strcmp(type, "DIALFS") == 0) {
         int block_size = config_get_int_value(config, "BLOCK_SIZE");
         int block_count = config_get_int_value(config, "BLOCK_COUNT");
         const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
         initialize_dialfs(path_base_dialfs, block_size, block_count);
+
+        // TODO: remove test
+        test_dialfs();
     }
     
     // CREATE KERNEL CONNECTION
