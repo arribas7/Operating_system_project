@@ -86,21 +86,19 @@ void execute_instruction(void* arg)
                 log_info(logger, "Palabra: %s - Leida en dirección fisica: %d", word, instruction->physical_address);
                 break;
             case IO_FS_CREATE:
-                char* c_path = path_from_config(config);
-                fs_create(c_path, instruction->f_name, instruction->pid);
+                fs_create(instruction->f_name, instruction->pid);
                 break;
             case IO_FS_DELETE:
-                char* d_path = path_from_config(config);
-                fs_delete(d_path, instruction->f_name, instruction->pid);
+                fs_delete(instruction->f_name, instruction->pid);
                 break;
             case IO_FS_READ:
-                fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
+                fs_read(instruction->physical_address, instruction->size, instruction->physical_address->f_pointer, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
-                fs_truncate(config_get_string_value(config, "PATH_BASE_DIALFS"), "", 0, instruction->pid);
+                fs_truncate(instruction->f_name, instruction->size, instruction->pid);
                 break;
             case IO_FS_WRITE:
-                fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), "phys_addr", NULL, 0, instruction->pid);
+                fs_write(instruction->physical_address, NULL, 0, instruction->pid);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");

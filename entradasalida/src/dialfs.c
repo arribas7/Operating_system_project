@@ -8,10 +8,38 @@
 
 int block_size;
 int block_count;
+const char *path_base;
 extern t_log* logger;
 extern t_config* config;
 
-void create_file_metadata(const char *path_base, const char *filename, int start_block, int size) {
+void initialize_dialfs(const char *path_base_param, int block_size_param, int block_count_param) {
+    char blocks_path[256];
+    snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
+
+    block_size = block_size_param;
+    block_count = block_count_param;
+    path_base = path_base_param;
+    FILE *blocks_file = fopen(blocks_path, "wb");
+    if (blocks_file) {
+        fseek(blocks_file, block_size * block_count - 1, SEEK_SET);
+        fputc('\0', blocks_file);
+        fclose(blocks_file);
+    }
+
+    char bitmap_path[256];
+    snprintf(bitmap_path, sizeof(bitmap_path), "%s/bitmap.dat", path_base);
+
+    FILE *bitmap_file = fopen(bitmap_path, "wb");
+    if (bitmap_file) {
+        size_t bitmap_size = (block_count + 7) / 8;
+        char *bitmap_data = calloc(1, bitmap_size);
+        fwrite(bitmap_data, 1, bitmap_size, bitmap_file);
+        free(bitmap_data);
+        fclose(bitmap_file);
+    }
+}
+
+void create_file_metadata(const char *filename, int start_block, int size) {
    char metadata_path[256];
     snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
 
@@ -32,7 +60,7 @@ void create_file_metadata(const char *path_base, const char *filename, int start
     config_destroy(metadata);
 }
 
-void fs_create(const char *path_base, const char *filename, int pid) {
+void fs_create(const char *filename, uint32_t pid) {
     log_info(logger, "PID: %d - Crear Archivo: %s", pid, filename);
 
     char bitmap_path[256];
@@ -62,7 +90,7 @@ void fs_create(const char *path_base, const char *filename, int pid) {
     if (start_block != -1) {
         fseek(bitmap_file, 0, SEEK_SET);
         fwrite(bitmap->bitarray, 1, bitmap_size, bitmap_file);
-        create_file_metadata(path_base, filename, start_block, 0);
+        create_file_metadata(filename, start_block, 0);
     }
 
     bitarray_destroy(bitmap);
@@ -70,7 +98,7 @@ void fs_create(const char *path_base, const char *filename, int pid) {
     fclose(bitmap_file);
 }
 
-void fs_delete(const char *path_base, const char *filename, int pid) {
+void fs_delete(const char *filename, uint32_t pid) {
     log_info(logger, "PID: %d - Eliminar Archivo: %s", pid, filename);
 
     char metadata_path[256];
@@ -112,7 +140,7 @@ void fs_delete(const char *path_base, const char *filename, int pid) {
     remove(metadata_path);
 }
 
-void fs_truncate(const char *path_base, const char *filename, int new_size, int pid) {
+void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
     log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, filename, new_size);
 
     char metadata_path[256];
@@ -178,8 +206,12 @@ void fs_truncate(const char *path_base, const char *filename, int new_size, int 
     config_destroy(metadata);
 }
 
-void fs_write(const char *path_base, int phys_addr, const char *data, size_t size, int pid) {
-    log_info(logger, "PID: %d - Escribir Archivo - Tamaño a Escribir: %zu - Puntero Archivo: %d", pid, size, phys_addr);
+void fs_write(uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+    log_debug(logger, "Phys_addr to read from memory: %d", phys_addr);
+    log_info(logger, "PID: %d - Escribir Archivo - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, size, f_pointer);
+
+    char *data= malloc(size);
+    // TODO: Call memory to retrieve data with phys_address and size.
 
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
@@ -187,52 +219,35 @@ void fs_write(const char *path_base, int phys_addr, const char *data, size_t siz
     FILE *blocks = fopen(blocks_path, "rb+");
     if (!blocks) return;
 
-    fseek(blocks, phys_addr, SEEK_SET);
+    fseek(blocks, f_pointer, SEEK_SET);
     fwrite(data, sizeof(char), size, blocks);
     fclose(blocks);
 }
 
-void fs_read(const char *path_base, int phys_addr, char *buffer, size_t size, int pid) {
-    log_info(logger, "PID: %d - Leer Archivo - Tamaño a Leer: %zu - Puntero Archivo: %d", pid, size, phys_addr);
-
+void fs_read(uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+    log_info(logger, "PID: %d - Leer Archivo - Tamaño a Leer: %d - Puntero Archivo: %d", pid, size, f_pointer);
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
     FILE *blocks = fopen(blocks_path, "rb");
-    if (!blocks) return;
+    if (!blocks) {
+        log_error(logger, "error opening blocks path: %s", blocks_path);
+        return;
+    }
 
-    fseek(blocks, phys_addr, SEEK_SET);
+    char *buffer = malloc(size);
+    fseek(blocks, f_pointer, SEEK_SET);
     fread(buffer, sizeof(char), size, blocks);
     fclose(blocks);
+
+    log_debug(logger, "Buffer read: %s", buffer);
+    log_debug(logger, "Phys_addr to write on memory: %d", phys_addr);
+    // TODO: call memory to write buffer
+    // Example: write_to_memory(phys_addr, buffer, size);
+    free(buffer);
 }
 
-void initialize_dialfs(const char *path_base, int block_size_param, int block_count_param) {
-    char blocks_path[256];
-    snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
-
-    block_size = block_size_param;
-    block_count = block_count_param;
-    FILE *blocks_file = fopen(blocks_path, "wb");
-    if (blocks_file) {
-        fseek(blocks_file, block_size * block_count - 1, SEEK_SET);
-        fputc('\0', blocks_file);
-        fclose(blocks_file);
-    }
-
-    char bitmap_path[256];
-    snprintf(bitmap_path, sizeof(bitmap_path), "%s/bitmap.dat", path_base);
-
-    FILE *bitmap_file = fopen(bitmap_path, "wb");
-    if (bitmap_file) {
-        size_t bitmap_size = (block_count + 7) / 8;
-        char *bitmap_data = calloc(1, bitmap_size);
-        fwrite(bitmap_data, 1, bitmap_size, bitmap_file);
-        free(bitmap_data);
-        fclose(bitmap_file);
-    }
-}
-
-char** list_files(const char* path_base) {
+char** list_files() {
     struct dirent* entry;
     DIR* dir = opendir(path_base);
 
@@ -255,7 +270,7 @@ char** list_files(const char* path_base) {
     return filenames;
 }
 
-void compact_dialfs(const char *path_base, int pid) {
+void compact_dialfs(uint32_t pid) {
     log_info(logger, "PID: %d - Inicio Compactación.", pid);
 
     char blocks_path[256];
