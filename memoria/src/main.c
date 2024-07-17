@@ -10,7 +10,7 @@ t_log* logger;
 
 extern t_dictionary* listaTablasDePaginas;
 int tam_pag;
-
+int server_fd;
 
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
@@ -23,11 +23,13 @@ t_resize* deserializar_resize(void* stream){
     t_resize* resize = malloc(sizeof(t_resize));
     int offset = 0;
 
-    memcpy(&(resize->pid), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
+    offset += sizeof(int);
 
-    memcpy(&(resize->tamanio), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
+    memcpy(&(resize->pid), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(resize->tamanio), stream + offset, sizeof(int));
+    offset += sizeof(int);
 
     return resize;
 }
@@ -230,13 +232,14 @@ void handle_client(void *arg) {
             case RESIZE:
                 retardo_en_peticiones();
                 t_resize* resize = recibir_resize(cliente_fd);
-                if(resize_process(resize->pid,resize->tamanio))
-                    enviar_mensaje("Resize OK",cliente_fd);
+                
+                if (!resize_process(resize->pid,resize->tamanio))
+                    enviar_mensaje("Out_of_memory",cliente_fd);
                 else
-                    enviar_mensaje("Out of memory",cliente_fd);
+                    enviar_mensaje("OK",cliente_fd);
             break;
             case TAM_PAG:
-                enviar_mensaje(tam_pag,cliente_fd);
+                enviar_mensaje(string_itoa(tam_pag),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
                 retardo_en_peticiones();
@@ -289,17 +292,20 @@ void handle_client(void *arg) {
         }
     }
 
+    close(cliente_fd);
+
     return NULL;
 }
 
 int correr_servidor(void *arg) {
     char *puerto = (char *) arg;
+    int cliente_fd = 0;
 
-    int server_fd = iniciar_servidor(puerto);
+    server_fd = iniciar_servidor(puerto);
     log_info(logger, "Servidor listo para recibir clientes");
 
     while (1) {
-        int cliente_fd = esperar_cliente(server_fd);
+        cliente_fd = esperar_cliente(server_fd);
         if (cliente_fd < 0) {
             log_error(logger, "Error al aceptar el cliente");
             continue;
@@ -316,12 +322,15 @@ int correr_servidor(void *arg) {
         pthread_detach(&client_thread);
     }
 
+    close(cliente_fd);
+
     return EXIT_SUCCESS;
 }
 
-void clean(t_config *config) {
+void clean(t_config* config){
     log_destroy(logger);
     config_destroy(config);
+    close(server_fd);
 }
 
 void testing_paging(void) {

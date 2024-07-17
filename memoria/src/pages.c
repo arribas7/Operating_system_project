@@ -346,6 +346,7 @@ char* obtener_valor(int pid,int df){
 int resize_process(int pid, int nuevo_tamano) {
     // Obtener la tabla de páginas asociada al PID
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+    
     if (!tabla) {
         log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
         return 0;
@@ -371,7 +372,7 @@ int resize_process(int pid, int nuevo_tamano) {
         if (tabla->paginas == NULL) {
             log_error(logger, "Falló la reubicación de memoria para la tabla de páginas del proceso PID %d", pid);
             pthread_mutex_unlock(&tabla->mutex_tabla);
-            return;
+            return 0;
         }
 
         for (int i = marcos_actuales; i < marcos_necesarios_nuevos; ++i) {
