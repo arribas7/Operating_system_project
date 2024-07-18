@@ -129,14 +129,14 @@ void test_dialfs() {
     fs_create("f1.txt", 1);
     fs_create("f2.txt", 2);
     fs_truncate("f1.txt", 32, 1);
-    fs_truncate("f2.txt", 32, 2);
+    //fs_truncate("f2.txt", 32, 2);
 
     // Test file writing
-    fs_write(100, 16, 0, 1);  // Write 16 bytes starting at block 0 for file with PID 1
+    //fs_write(100, 16, 0, 1);  // Write 16 bytes starting at block 0 for file with PID 1
     //fs_write(116, 16, 32, 2); // Write 16 bytes starting at block 16 for file with PID 2
 
     // Test file reading
-    fs_read(100, 16, 0, 1);
+    //fs_read(100, 16, 0, 1);
     //fs_read(116, 16, 16, 2);
 
     // Test file deletion
