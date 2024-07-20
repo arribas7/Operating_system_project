@@ -98,28 +98,41 @@ t_pcb* get_next_pcb(char *selection_algorithm) {
 void *run_quantum_counter(void *arg) {
     struct quantum_thread_args *args = (struct quantum_thread_args *)arg;
     int quantum_time = *(args->quantum_time);
-
+    log_debug(logger, "Quantum thread initialized with %s", args->selection_algorithm);
+    //log_debug(logger, "Quantum time %d", quantum_time);
     while (1) {
         //Wait for initialization
         sem_wait(&sem_quantum);
 
         //Create and start timer
         t_temporal *timer = temporal_create();
-        log_info(logger, "Quantum Iniciado");
+        log_info(logger, "Quantum Iniciado con %d ms restantes", *(args->remaining_quantum));
         temporal_resume(timer);
 
+        //Reset interrupt flag
         *(args->interrupted) = false;
 
-        //Check for the completion of the timer
-        while (temporal_gettime(timer) < quantum_time && *(args->interrupted) == false) {
+        //If executing in Round Robin, we don't take into consideration the remaining quantum so we make it the default quantum time
+        if (strcmp(args->selection_algorithm, "RR") == 0){
+            *(args->remaining_quantum) = quantum_time;
+        }
+
+        //Check for the completion of the timer or interruption of the process
+        while (temporal_gettime(timer) < *(args->remaining_quantum) && *(args->interrupted) == false) {
             usleep(1000); // sleep 1 ms to wait busy-waiting
         }
+
+        //Pause the timer once it's not needed
+        temporal_stop(timer);
 
         if (*(args->interrupted) == false) {
             //Quantum is finished
             log_info(logger, "Quantum Cumplido");
 
-            //Wait until no one is interacting with RUNNING
+            //Reset the remaining quantum time to default
+            *(args->remaining_quantum) = quantum_time;
+
+            //Wait until no one is interacting with RUNNING and INTERRUPT_TIMEOUT
             pthread_mutex_lock(&mutex_running);
             if (pcb_RUNNING != NULL) {
                 cpu_interrupt(config, INTERRUPT_TIMEOUT);
@@ -127,7 +140,13 @@ void *run_quantum_counter(void *arg) {
             }
             pthread_mutex_unlock(&mutex_running);
         } else {
+            //Quantum got interrupted before completion
             log_info(logger, "Quantum Interrumpido");
+
+            //Update the remaining time
+            int remaining_time = *(args->remaining_quantum) - temporal_gettime(timer);
+            
+            *(args->remaining_quantum) = remaining_time;
         }
         //Destroy timer
         temporal_destroy(timer);
@@ -267,8 +286,10 @@ void st_sched_ready_running(void* arg) {
 
             // If using RR or VRR, signal the quantum semaphore
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
-                sem_post(&sem_quantum);
+                //Update the remaining quantum
+                //log_info(logger, "The quantum of the next pcb is %d", next_pcb->quantum)
                 *(quantum_args->remaining_quantum) = next_pcb->quantum;
+                sem_post(&sem_quantum);
             }
 
             // Dispatch the PCB to the CPU and get the result
@@ -293,6 +314,8 @@ void st_sched_ready_running(void* arg) {
                 *(quantum_args->interrupted) = true;
                 // Sleep 1 ms to sync up with the independent quantum thread
                 usleep(1000);
+                //Update the remaining quantum from the new pcb
+                ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
              }
             handle_dispatch_return_action(ret);
             free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
