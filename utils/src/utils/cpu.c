@@ -361,6 +361,6 @@ t_ws* recibir_wait_o_signal(int socket_cliente) {
 }
 
 void destroy_ws(t_ws* ws) {
-    //TODO: see memory leak. free(ws->recurso);
+    free(ws->recurso);
     free(ws);
 }
