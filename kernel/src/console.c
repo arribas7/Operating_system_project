@@ -21,7 +21,9 @@ console_command get_command_type(const char *input) {
     if (strncmp(input, "EXIT", 4) == 0) return CMD_EXIT;
     if (strncmp(input, "DESBLOQUEAR PROCESO", 19) == 0) return CMD_TEST_UNBLOCK;
     if (strncmp(input, "LOG", 3) == 0) return CMD_TEST_LOG;
+    if (strncmp(input, "SALIDA", 6) == 0) return CMD_TEST_EXIT_LOG;
     if (strncmp(input, "TIMEOUT", 7) == 0) return CMD_TEST_TIMEOUT;
+    if (strncmp(input, "Q", 1) == 0) return CMD_TEST_PLANI;
     return CMD_UNKNOWN;
 }
 
@@ -197,13 +199,18 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
         case CMD_PROCESO_ESTADO:
             handle_process_state();
             break;
+        case CMD_TEST_EXIT_LOG:
+            log_list_contents(logger, list_EXIT, mutex_exit);;
+            break;
         case CMD_TEST_LOG:
              if(pcb_RUNNING != NULL) {
                 log_info(logger, "Running Process PID: %d", pcb_RUNNING->pid);
             } else {
                 log_info(logger, "No process running.");
             }
+            log_info(logger, "||||||||||||||||||||BLOCKED LIST||||||||||||||||||||");
             log_list_contents(logger, list_BLOCKED, mutex_blocked);
+            log_info(logger, "||||||||||||||||||||READY LIST||||||||||||||||||||");
             log_list_contents(logger, list_READY, mutex_ready);
         break;
         case CMD_TEST_TIMEOUT:
@@ -216,6 +223,9 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
         case CMD_EXIT:
             log_info(logger, "Exiting console.");
             return 1;
+        case CMD_TEST_PLANI:
+            execute_command(CMD_FINALIZAR_PROCESO, "4", config);
+            break;
         default:
             log_error(logger, "Unknown command or invalid syntax: %s", cmd_args);
             break;

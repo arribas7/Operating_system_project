@@ -28,7 +28,9 @@ typedef enum {
     CMD_UNKNOWN,
     CMD_TEST_UNBLOCK,
     CMD_TEST_LOG,
-    CMD_TEST_TIMEOUT
+    CMD_TEST_TIMEOUT,
+    CMD_TEST_PLANI,
+    CMD_TEST_EXIT_LOG
 } console_command;
 
 void *interactive_console(void *arg);

@@ -49,7 +49,7 @@ typedef struct {
 
 int initPaging(void);
 void handle_paging(const char* buffer, uint32_t tamano_proceso, int pid);
-TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco);
+TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco);
 TablaPaginas* tablaDePaginasAsociada (int pid);
 void enviar_marco(int pagina, int pid, int cliente_fd);
 void liberarTablaPaginas(TablaPaginas tabla);
