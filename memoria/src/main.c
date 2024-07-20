@@ -253,11 +253,11 @@ void handle_client(void *arg) {
             break;
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
-                write_in_address(to_write->text_size, to_write->text, to_write->physical_address);
+                escribirEnEspacioUsuario2(to_write->physical_address, to_write->text,to_write->text_size,to_write->pid);
                 break;
             case R_REQ: // IO_STDOUT_WRITE
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
-                char* to_send = get_word_to_send(to_read->text_size, to_read->physical_address);
+                char* to_send = leerDesdeEspacioUsuario(to_read->physical_address,to_read->text_size,to_read->pid);
                 enviar_mensaje(to_send, cliente_fd);
                 free(to_send);
                 break;
@@ -284,7 +284,7 @@ void handle_client(void *arg) {
                 int direc_fis_2;
                 copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
             break;
-            case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica
+            case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
