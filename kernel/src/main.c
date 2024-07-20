@@ -106,7 +106,7 @@ void handle_client(void *arg) {
                 log_info(logger, "STATUS %s: %s", interface_name, mssg);
                 send_confirmation(cliente_fd, status);
 
-                /*INSTRUCTION - 1 - TODO: Remove, only for tests.*/
+                /*INSTRUCTION - 1 - TODO: Remove, only for tests.
 
                 t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "GENERICA", 200, 0, 0, "myPath", 0);
                 send_instruction_IO(instruction_1, cliente_fd);
@@ -125,7 +125,7 @@ void handle_client(void *arg) {
                 t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, 0, 0, "myOtherPath", 0);
                 send_instruction_IO(instruction_3, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_3);
+                delete_instruction_IO(instruction_3);*/
 
                 break;
             case REPORT:
