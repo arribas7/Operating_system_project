@@ -19,8 +19,8 @@ extern t_pcb* pcb_en_ejecucion;
 
 extern int conexion_mem;
 
-#define cant_entradas_tlb() config_get_int_value("cpu.config","CANTIDAD_ENTRADAS_TLB")
-#define algoritmo_tlb() config_get_string_value("cpu.config","ALGORITMO_TLB")
+#define cant_entradas_tlb() config_get_int_value(config,"CANTIDAD_ENTRADAS_TLB")
+#define algoritmo_tlb() config_get_string_value(config,"ALGORITMO_TLB")
 
 typedef struct tlb{
     int pid;

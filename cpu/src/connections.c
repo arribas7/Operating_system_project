@@ -3,12 +3,10 @@
 int recibir_req(int socket_cliente)
 {
     int size;
-    char* req;
-    req = recibir_buffer(&size, socket_cliente);
+    char* req = recibir_buffer(&size, socket_cliente);
     log_info(logger, "REQ received... %s", req);
     return atoi(req);
 }
-
 
 void serializar_request(t_request* request, t_buffer* buffer){
     buffer->offset = 0;
@@ -27,6 +25,8 @@ void serializar_request(t_request* request, t_buffer* buffer){
 t_request* deserializar_request(void* stream){
     t_request* request = malloc(sizeof(t_request));
     int offset = 0;
+
+    offset += sizeof(int);
 
     memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
@@ -74,10 +74,9 @@ void putRegValueToMem(int fisicalAddress, int valor){
 
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serializar_request2(request, buffer);
-
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
- 
     enviar_paquete(peticion, conexion_mem);
+
     eliminar_paquete(peticion);
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "WRITE", fisicalAddress, valor);
 }
@@ -123,6 +122,8 @@ t_request2* deserializar_request2(void* stream){
     t_request2* request = malloc(sizeof(t_request2));
     int offset = 0;
 
+    offset += sizeof(int);
+
     memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
@@ -136,14 +137,14 @@ t_request2* deserializar_request2(void* stream){
     return request;
 }
 
-t_request2* new_request2(u_int32_t pid, int logAdd, int valor){
+t_request2* new_request2(u_int32_t pid, int fisAdd, int valor){
     t_request2* new_req = malloc(sizeof(t_request2));
     if (new_req == NULL) {
         return NULL; 
     }
 
     new_req->pid = pid;
-    new_req->req = logAdd;
+    new_req->req = fisAdd;
     new_req->val = valor;
 
     return new_req;

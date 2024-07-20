@@ -133,7 +133,7 @@ void handle_create_process(const char *file_path, uint32_t pid, t_config* config
         add_pid_instruction_dict(pid, dictionary); //Nueva funcion
         for (pc = 0; pc < dictionary->size; pc++) {
             const char *complete_instruction = get_complete_instruction(pid, pc);
-            printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
+            //printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
         }
         //instruction_dictionary_free(&dictionary);
         // free_pid_instruction_table();

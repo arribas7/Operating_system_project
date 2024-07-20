@@ -30,6 +30,7 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB(pcb_en_ejecucion->pid,numero_pagina,marco);
+                direccion_fisica = marco + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
@@ -43,6 +44,7 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB_LRU(pcb_en_ejecucion->pid,numero_pagina,marco);
+                direccion_fisica = marco + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);

@@ -115,7 +115,7 @@ int buscar_proximo_frame_libre (bool* frames){
 //actualiza el bitmap y devuelve un array con los numeros de marcos asignados
 int* actualizarBitmap(int marcos_necesarios) {
     pthread_mutex_lock(&memory.mutex_frames_ocupados);
-    int marcos_asignados[marcos_necesarios];
+    int* marcos_asignados = malloc(sizeof(int) * marcos_necesarios);
     for (int i = 0; i < marcos_necesarios; ++i) {
         marcos_asignados[i] = asignarMarcoLibre();
         if (marcos_asignados[i] == -1) {
@@ -146,10 +146,13 @@ void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
 
 TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     TablaPaginas* tabla = (TablaPaginas*)malloc(sizeof(TablaPaginas));  // Cambiar a puntero y usar malloc
+    tabla->paginas = NULL;
+    /*
     if (tabla == NULL) {
         perror("Failed to allocate memory for page table structure");
         exit(EXIT_FAILURE);
     }
+    */
 
     int num_marcos = calcularMarcosNecesarios(tamano_proceso, tamano_marco);
     log_info(logger, "PID: %d - Tamaño del Proceso: %d - Número de marcos necesarios: %d marcos",pid,tamano_proceso, num_marcos);
@@ -159,12 +162,15 @@ TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     //tabla.paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
     pthread_mutex_init(&tabla->mutex_tabla,NULL); //puede no ser necesario semaforo porque cada tabla con su pid.
 
+    /*
     if (tabla->paginas == NULL) {
         perror("Failed to allocate memory for page table");
         free(tabla);  // Liberar memoria asignada a tabla antes de salir
         exit(EXIT_FAILURE);
     }
+    */
 
+    //aca no entra nunca:
     for (int i = 0; i < num_marcos; ++i) {
         int marco = asignarMarcoLibre();
         if (marco == -1) {
@@ -398,7 +404,6 @@ char* obtener_valor(int pid,int df){
     return obtenerDireccionFisicafull(df, tablaAsociada);
 }
 
-
 int ampliar_tamanio_proceso(TablaPaginas* tabla, int pid, int marcos_actuales, int marcos_necesarios_nuevos) {
     int marcos_a_asignar = marcos_necesarios_nuevos - marcos_actuales;
 
@@ -413,9 +418,9 @@ int ampliar_tamanio_proceso(TablaPaginas* tabla, int pid, int marcos_actuales, i
         return 0;
     }
 
-    int* marcos_nuevos = malloc(sizeof(int) * marcos_a_asignar); 
-    marcos_nuevos = actualizarBitmap(marcos_a_asignar);
+    int* marcos_nuevos = actualizarBitmap(marcos_a_asignar);
     int j = 0;
+
 
     for (int i = marcos_actuales, j=0; i < marcos_necesarios_nuevos; ++i , j++) {
         /*
