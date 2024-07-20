@@ -148,11 +148,11 @@ void lt_sched_new_ready() {
             list_push(list_READY, pcb);
             log_info(logger, "“PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <READY>”", pcb->pid);
 
-            log_debug(logger, "Logging list_new: ");
-            log_list_contents(logger, list_NEW, mutex_new);
+            //log_debug(logger, "Logging list_new: ");
+            //log_list_contents(logger, list_NEW, mutex_new);
 
-            log_info(logger, "Cola Ready <%d>:", pcb->pid);
-            log_list_contents(logger, list_READY, mutex_ready);
+            //log_info(logger, "Cola Ready <%d>:", pcb->pid);
+            //log_list_contents(logger, list_READY, mutex_ready);
         }
         // Check if planning is paused
         if (scheduler_paused) {
