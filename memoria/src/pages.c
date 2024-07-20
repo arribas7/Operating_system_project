@@ -398,6 +398,7 @@ char* obtener_valor(int pid,int df){
     return obtenerDireccionFisicafull(df, tablaAsociada);
 }
 
+
 int ampliar_tamanio_proceso(TablaPaginas* tabla, int pid, int marcos_actuales, int marcos_necesarios_nuevos) {
     int marcos_a_asignar = marcos_necesarios_nuevos - marcos_actuales;
 

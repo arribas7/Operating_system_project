@@ -14,10 +14,10 @@
 
 // Generic IO
 
-int interface_wait(t_instruction* instruction, t_config* config) 
+int wait_time_units(uint32_t time, t_config* config) 
 {
-    int work_unit_time = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
-    int time_to_wait = work_unit_time * instruction->time;
+    int unit_time = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+    int time_to_wait = unit_time * time;
 
     return sleep(time_to_wait);
 }
@@ -26,15 +26,31 @@ int interface_wait(t_instruction* instruction, t_config* config)
 
 char* write_console(t_instruction* instruction) 
 {
-    char* word_to_send = malloc((instruction->size) + 1);
-	while(1) 
-	{
-            char* word = readline("> ");
-            strncpy(word_to_send, word, instruction->size);
-            free(word);
-            break;
-	}
-    return strcat(word_to_send, "\0");
+    char* to_send = malloc(instruction->size);
+    char* word = readline("--> ");
+    strncpy(to_send, word, instruction->size);
+
+    /*
+        -- Si considera un tamaño establecido previamente --
+
+        char* to_send = malloc(instruction->size);
+        while(1) 
+        {
+            char* word = readline("--> ")
+            if (strlen(word) == instruction->size) 
+            {
+                strncpy(to_send, word, instruction->size);
+                break;
+            } else {
+                free(word);
+            }
+        }
+        free(word);
+        return to_send;
+    */
+
+    free(word);
+    return to_send;
 }
 
 void send_write_request(t_instruction* instruction, int connection) 
@@ -53,9 +69,19 @@ void send_read_request(t_instruction* instruction, int connection)
     delete_req_to_r(mem_req);
 }
 
-char* receive_word(int socket_cliente)
+char* receive_word(int connection)
 {
-    int size;
-    char* word = recibir_buffer(&size, socket_cliente);
+    char* word = "";
+    int op_code = recibir_operacion(connection);
+    switch(op_code) 
+    {
+        case MENSAJE:
+            int size;
+            word = recibir_buffer(&size, connection);
+            break;
+        default:
+            log_error(logger, "ERROR RECEIVING WORD FROM MEMORY");
+            break;
+    }
     return word;
 }

@@ -100,6 +100,16 @@ t_req_to_r* list_to_req_to_r(t_list* list)
     return req_to_read(pid, size, physical_address);
 }
 
+// Log File
+
+char* create_log_file_name(char* name) 
+{
+    size_t log_name_size = strlen(name) + strlen(".log") + 1;
+    char* log_file_name = malloc(log_name_size);
+    strcpy(log_file_name, (strcat(name, ".log\0")));
+    return log_file_name;
+}
+
 // Paquete
 
 t_paquete* info_to_package(t_info* info) 
@@ -250,6 +260,18 @@ void send_confirmation(int connection, uint32_t status)
 void receive_confirmation(int connection, uint32_t status) 
 {
     recv(connection, &(status), sizeof(uint32_t), MSG_WAITALL);
+}
+
+char* mssg_log(uint32_t code) 
+{
+    char* txt = "";
+    if(code == 0) 
+    {
+        txt = "ERROR HAS OCURRED";
+    } else {
+        txt = "READY";
+    }
+    return txt;
 }
 
 void send_info(t_info* info, int connection) 

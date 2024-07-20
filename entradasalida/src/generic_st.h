@@ -13,7 +13,7 @@
 
 // GENERIC
 
-int interface_wait(t_instruction* instruction, t_config* config);
+int wait_time_units(uint32_t time, t_config* config);
 
 // STDIN - STDOUT
 
