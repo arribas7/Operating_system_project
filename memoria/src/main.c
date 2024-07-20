@@ -231,11 +231,14 @@ void handle_client(void *arg) {
                 escribir_en_direcc_fisica(write->pid,write->req,write->val);
             break;
             case W_REQ: // IO_STDIN_READ
-                t_req_to_w* write_req = receive_req_to_w(cliente_fd);
-                handle_paging(write_req->text, write_req->text_size, write_req->pid);
+                t_req_to_w* to_write = receive_req_to_w(cliente_fd);
+                write_in_address(to_write->text_size, to_write->text, to_write->physical_address);
                 break;
-            case R_REQ:
-                t_req_to_r* read_req = receive_req_to_r(cliente_fd);
+            case R_REQ: // IO_STDOUT_WRITE
+                t_req_to_r* to_read = receive_req_to_r(cliente_fd);
+                char* to_send = get_word_to_send(to_read->text_size, to_read->physical_address);
+                enviar_mensaje(to_send, cliente_fd);
+                free(to_send);
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 retardo_en_peticiones();
@@ -284,7 +287,7 @@ int correr_servidor(void *arg) {
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Servidor listo para recibir clientes");
 
-    while (1) {
+    while(1) {
         int cliente_fd = esperar_cliente(server_fd);
         if (cliente_fd < 0) {
             log_error(logger, "Error al aceptar el cliente");
@@ -295,11 +298,11 @@ int correr_servidor(void *arg) {
         int *new_sock = malloc(sizeof(int));
         *new_sock = cliente_fd;
 
-        if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
+        if(pthread_create(&(client_thread), NULL, (void*) handle_client, (void*) new_sock) != 0) {
             log_error(logger, "Error al crear el hilo para el cliente");
             free(new_sock);
         }
-        pthread_detach(&client_thread);
+        pthread_detach(client_thread);
     }
 
     return EXIT_SUCCESS;

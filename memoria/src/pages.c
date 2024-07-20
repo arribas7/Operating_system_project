@@ -393,3 +393,32 @@ char* obtener_valor(int pid,int df){
     TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
     return obtenerDireccionFisicafull(df, tablaAsociada);
 }
+
+// To IO
+
+void write_in_address(uint32_t size, char* txt, uint32_t address) 
+{
+    // Doy por sabido que la reserva de memoria ya se dio de antemano
+
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+    char* ptr_to_write = &(espacio_usuario[address]);
+    for (int i = 0; i < size; i++) 
+    {
+        * (ptr_to_write + i) = txt[i];
+    }
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+}
+
+char* get_word_to_send(uint32_t size, uint32_t address) 
+{
+    char* to_send = malloc(size);
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+    char* ptr_to_read = &(espacio_usuario[address]); // Take the address position
+    for (int i = 0; i < size; i++) // I read size bytes
+    {
+        printf("0x%p: %c\n", (void*) (ptr_to_read + i), * (ptr_to_read + i));
+        strcat(to_send, (ptr_to_read + i));
+    }
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+    return to_send;
+}

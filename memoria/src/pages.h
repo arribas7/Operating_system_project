@@ -60,4 +60,10 @@ int calcularDesplazamiento(int direccion_fisica);
 char* obtenerDireccionFisica(int marco, int desplazamiento);
 void escribir_en_direcc_fisica(int pid,int df,int val);
 char* obtener_valor(int pid,int df);
+
+// -- To IO --
+
+void write_in_address(uint32_t size, char* txt, uint32_t address);
+char* get_word_to_send(uint32_t size, uint32_t address);
+
 #endif // PAGES_H
