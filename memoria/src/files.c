@@ -140,7 +140,8 @@ void handle_create_process(const char *file_path, uint32_t pid, t_config* config
     } else
         perror("Error opening File to intructions");
 
-    int tamanio_proceso = pc; //9-7 aca supongo que el tamanio son la cantidad de instrucciones, preguntar
+    int tamanio_proceso = 0;
+    //int tamanio_proceso = pc; //9-7 aca supongo que el tamanio son la cantidad de instrucciones, preguntar
     int tamanio_marco = config_get_int_value(config,"TAM_PAGINA");
     crearTablaPaginas(pid,tamanio_proceso,tamanio_marco);       
 }

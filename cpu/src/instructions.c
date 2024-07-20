@@ -81,7 +81,7 @@ void recibir_instruccion(int socket_cliente)
 {
     int size;
     instruccion_actual = recibir_buffer(&size, socket_cliente);
-    log_info(logger, "Before fetching instruction.. %s", instruccion_actual);
+    //log_info(logger, "Before fetching instruction.. %s", instruccion_actual);
 }
 
 
@@ -110,7 +110,7 @@ void decode(t_pcb *pcb)
     instr_decode = string_n_split(instruccion_actual, 4, " ");
     cant_parametros = string_array_size(instr_decode) - 1;
     instruccion_decodificada = buscar(instr_decode[0], listaComandos);
-    log_info(logger, "Decode instruction fetched.. %s", listaComandos[instruccion_decodificada]);
+    //log_info(logger, "Decode instruction fetched.. %s", listaComandos[instruccion_decodificada]);
     /*
     instr_decode = strtok(instruccion_actual, " ");
     instruccion_decodificada = buscar(instr_decode,listaComandos);
@@ -124,16 +124,16 @@ t_paquete *execute(t_pcb *pcb)
     pcb_en_ejecucion = pcb;
     switch(cant_parametros){
         case 0:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> ", pcb->pid, listaComandos[instruccion_decodificada]);
+            log_info(logger, "PID: <%d> - <EXECUTE>: <%s> ", pcb->pid, listaComandos[instruccion_decodificada]);
         break;
         case 1:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1]);
+            log_info(logger, "PID: <%d> - <EXECUTE>: <%s> - <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1]);
         break;
         case 2:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2]);
+            log_info(logger, "PID: <%d> - <EXECUTE>: <%s> - <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2]);
         break;
         case 3:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>, <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2], instr_decode[3]);
+            log_info(logger, "PID: <%d> - <EXECUTE>: <%s> - <%s>, <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2], instr_decode[3]);
         break;
     } 
 
@@ -232,7 +232,7 @@ void set(char* registro, char* valor){
     if (strcmp(registro, "DI") == 0)
         reg_proceso_actual->DI = atoi(valor);
 
-    log_info(logger, "%s in actual process: %d", registro, reg_proceso_actual->AX); //funciona
+    log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
 void mov_in(char* registro, char* logicalAddress){
@@ -266,7 +266,7 @@ void mov_out(char* reg1, char* reg2){
     valor = obtener_valor_reg(reg2);
     int direccion_logica = obtener_valor_reg(reg1);
 
-    int fisicalAddress = mmu(direccion_logica);
+    int fisicalAddress = mmu(string_itoa(direccion_logica));
 
     putRegValueToMem(fisicalAddress,valor);
 }
@@ -568,6 +568,9 @@ t_resize* new_resize(u_int32_t tamanio){
     resize->pid = pcb_en_ejecucion->pid;
     resize->tamanio = tamanio;
 
+    //printf("r p..%d",resize->pid);
+    //printf("r t..%d",resize->tamanio);
+
     return resize;
 } 
 
@@ -579,15 +582,19 @@ t_paquete *resize(char* tamanio){
     t_buffer* buffer = malloc(sizeof(t_buffer));
     t_resize* resize = new_resize(atoi(tamanio));
 
+    //printf("...........%d",resize->tamanio);
+
     serializar_resize(resize,buffer);
     agregar_a_paquete(resizep,buffer->stream,buffer->size);
     enviar_paquete(resizep,conexion_mem);
 
     //if out of memory como respuesta
-    char* ack = strdup(recibir_ack_resize(conexion_mem));
-    eliminar_paquete(resize);
+    eliminar_paquete(resizep);
 
-    if(!strcmp(ack,"Out of memory")){
+    recibir_operacion(conexion_mem);
+    recibir_ack_resize(conexion_mem);
+
+    if(!strcmp(ack,"Out_of_memory")){
         //devolver contexto ej a kernel informando esto.
         return crear_paquete(OUT_OF_MEMORY);
     } else {
@@ -599,38 +606,36 @@ t_paquete *resize(char* tamanio){
 
 void serializar_resize(t_resize* resize, t_buffer* buffer){
     buffer->offset = 0;
-    size_t size = sizeof(u_int32_t) * 2;
+    size_t size = sizeof(int) * 2;
 
     buffer->size = size;
     buffer->stream = malloc(size);
 
     //serializo:
-    memcpy(buffer->stream + buffer->offset, &(resize->pid), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
+    memcpy(buffer->stream + buffer->offset, &(resize->pid), sizeof(int));
+    buffer->offset += sizeof(int);
 
-    memcpy(buffer->stream + buffer->offset, &(resize->tamanio), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
+    memcpy(buffer->stream + buffer->offset, &(resize->tamanio), sizeof(int));
+    buffer->offset += sizeof(int);
 }
 
 t_resize* deserializar_resize(void* stream){
     t_resize* resize = malloc(sizeof(t_resize));
     int offset = 0;
 
-    memcpy(&(resize->pid), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
+    memcpy(&(resize->pid), stream + offset, sizeof(int));
+    offset += sizeof(int);
 
-    memcpy(&(resize->tamanio), stream + offset, sizeof(u_int32_t));
-    offset += sizeof(u_int32_t);
+    memcpy(&(resize->tamanio), stream + offset, sizeof(int));
+    offset += sizeof(int);
 
     return resize;
 }
 
-char* recibir_ack_resize(int conexion_mem){
+void recibir_ack_resize(int conexion_mem){
     int size;
-    char* ack;
     ack = recibir_buffer(&size, conexion_mem);
-    log_info(logger, "ACK RESIZE received... %s", ack);
-    return ack;
+    printf("---%s",ack);
 }
 
 t_paquete *wait(char* recurso){

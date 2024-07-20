@@ -60,8 +60,8 @@ typedef struct{
 */
 
 typedef struct{
-    u_int32_t pid;
-    u_int32_t tamanio;
+    int pid;
+    int tamanio;
 } t_resize;
 
 typedef struct{
