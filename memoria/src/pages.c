@@ -127,6 +127,7 @@ int* actualizarBitmap(int marcos_necesarios) {
         memory.frames_ocupados[libre] = true; 
     }
     pthread_mutex_unlock(&memory.mutex_frames_ocupados);
+    return marcos_asignados;
 }
 
 void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
@@ -148,14 +149,15 @@ TablaPaginas crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     log_info(logger, "PID: %d - Tamaño del Proceso: %d - Número de marcos necesarios: %d marcos",pid,tamano_proceso, num_marcos);
     tabla.pid_tabla = pid;
     tabla.num_paginas = num_marcos;
-    tabla.paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
+    tabla.paginas = NULL;
+    //tabla.paginas = (PaginaMemoria*)malloc(num_marcos * sizeof(PaginaMemoria));
     pthread_mutex_init(&tabla.mutex_tabla,NULL); //puede no ser necesario semaforo porque cada tabla con su pid.
 
     if (tabla.paginas == NULL) {
         perror("Failed to allocate memory for page table");
         exit(EXIT_FAILURE);
     }
-       for (int i = 0; i < num_marcos; ++i) {
+    for (int i = 0; i < num_marcos; ++i) {
         int marco = asignarMarcoLibre();
         if (marco == -1) {
             perror("No free frames available");
