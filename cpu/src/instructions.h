@@ -24,6 +24,7 @@ extern int instruccion_decodificada;
 extern char **instr_decode;
 extern int cant_parametros; //de la instruccion que llega desde memoria
 extern op_code interrupted_reason;
+extern char* ack;
 
 typedef enum
 {
@@ -77,7 +78,7 @@ t_resize* new_resize(u_int32_t tamanio);
 t_paquete *resize(char* tamanio);
 void serializar_resize(t_resize* resize, t_buffer* buffer);
 t_resize* deserializar_resize(void* stream);
-char* recibir_ack_resize(int conexion_mem);
+void recibir_ack_resize(int conexion_mem);
 
 t_copy_string* new_copy_string(int tamanio);
 void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer);

@@ -4,8 +4,8 @@
 #include <utils/client.h>
 #include <stdbool.h>
 //#include <commons/bitarray.h>
-
-
+ #include "semaphore.h"
+#include <memoria.h>
 /*
 
 Páginas: Se refieren a las divisiones lógicas de un proceso en la memoria virtual. 
@@ -61,9 +61,8 @@ char* obtenerDireccionFisica(int marco, int desplazamiento);
 void escribir_en_direcc_fisica(int pid,int df,int val);
 char* obtener_valor(int pid,int df);
 
-// -- To IO --
-
-void write_in_address(uint32_t size, char* txt, uint32_t address);
-char* get_word_to_send(uint32_t size, uint32_t address);
+void escribirEnEspacioUsuario2(int direccion_fisica, char* datos, int tamano, int pid);
+int resize_process(int pid, int nuevo_tamano);
+void liberarMarcoFisico(int marco);
 
 #endif // PAGES_H

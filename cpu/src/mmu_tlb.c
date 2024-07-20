@@ -14,15 +14,16 @@ uint32_t mmu(char* logicalAddress){
     int tam_pag = solicitar_tam_pag_a_mem();
     int marco;
 
-    double numero_pagina = floor(direccion_logica / tam_pag);
-    int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
+    int numero_pagina = floor(direccion_logica / tam_pag);
+    //int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
+    int desplazamiento = direccion_logica % tam_pag;
 
     log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
     log_debug(logger, "desplazamiento: %d", desplazamiento);
 
     if(cant_entradas_tlb() != 0){
-        if (algoritmo_tlb() == "FIFO") {
+        if (!strcmp(algoritmo_tlb(),"FIFO")) {
             tlbEntry = buscar_en_TLB(pcb_en_ejecucion->pid,numero_pagina);
 
             if (tlbEntry == NULL){ //actualizo la TLB   

@@ -6,7 +6,8 @@
 #include <utils/client.h>
 #include <commons/config.h>
 
-t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
+t_return_dispatch *handle_dispatch_deserialization(int cpu_connection, t_config *config){
+    u_int32_t max_quantum = config_get_int_value(config, "QUANTUM");
     t_return_dispatch *ret = malloc(sizeof(t_return_dispatch));
 
     op_code resp_code = (op_code) recibir_operacion(cpu_connection);
@@ -42,6 +43,7 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection){
     ret->resp_ws = resp_ws;
     ret->instruction_IO = instruction_IO;
     log_debug(logger, "PCB PC updated: %d",pcb_updated->pc);
+    log_debug(logger, "NEW QUANTUM VALUE: %d",pcb_updated->quantum);
 
     return ret;
 }
@@ -60,7 +62,7 @@ t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     free(buffer->stream);
     free(buffer);
 
-    t_return_dispatch *ret = handle_dispatch_deserialization(cpu_connection);
+    t_return_dispatch *ret = handle_dispatch_deserialization(cpu_connection, config);
 
     liberar_conexion(cpu_connection);
     log_debug(logger, "CPU dispatch connection released");
