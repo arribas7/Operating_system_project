@@ -131,6 +131,7 @@ int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
 
+    recibir_operacion(conexion_mem);
     int tam_pag = recibir_tam_pag(conexion_mem); //mensaje desde memoria
     return tam_pag;
 }
