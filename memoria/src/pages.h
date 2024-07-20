@@ -62,5 +62,6 @@ void escribir_en_direcc_fisica(int pid,int df,int val);
 char* obtener_valor(int pid,int df);
 void escribirEnEspacioUsuario2(int direccion_fisica, char* datos, int tamano, int pid);
 int resize_process(int pid, int nuevo_tamano);
+void liberarMarcoFisico(int marco);
 
 #endif // PAGES_H

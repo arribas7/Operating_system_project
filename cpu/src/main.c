@@ -22,6 +22,7 @@ char *instruccion_actual;
 int instruccion_decodificada;
 char **instr_decode;
 int cant_parametros;
+char* ack;
 
 t_reg_cpu* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;

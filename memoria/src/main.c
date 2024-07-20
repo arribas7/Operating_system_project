@@ -69,6 +69,8 @@ t_request* deserializar_request(void* stream){
     t_request* request = malloc(sizeof(t_request));
     int offset = 0;
 
+    offset += sizeof(int);
+
     memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
@@ -81,6 +83,8 @@ t_request* deserializar_request(void* stream){
 t_request2* deserializar_request2(void* stream){
     t_request2* request = malloc(sizeof(t_request2));
     int offset = 0;
+
+    offset += sizeof(int);
 
     memcpy(&(request->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
@@ -232,7 +236,7 @@ void handle_client(void *arg) {
             case RESIZE:
                 retardo_en_peticiones();
                 t_resize* resize = recibir_resize(cliente_fd);
-                
+                //20-7 modifique ampliar tam proceso y actualizar bitmap
                 if (!resize_process(resize->pid,resize->tamanio))
                     enviar_mensaje("Out_of_memory",cliente_fd);
                 else
