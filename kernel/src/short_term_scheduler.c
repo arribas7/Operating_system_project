@@ -32,6 +32,15 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) {
     // Priority: RUNNING > BLOCKED > NEW
     if (a->prev_state == RUNNING && b->prev_state != RUNNING) return true;
     if (a->prev_state == BLOCKED && b->prev_state == NEW) return true;
+    if (a->prev_state == b->prev_state) {
+        int a_index = list_pid_element_index(list_READY, a->pid);
+        int b_index = list_pid_element_index(list_READY, b->pid);
+        if(a_index < b_index) {
+            return false;
+        }else{
+            return true;
+        }
+    }
     return false;
 }
 
@@ -43,7 +52,7 @@ bool vrr_pcb_priority(void* pcb1, void* pcb2) {
     // If PCB1 has been interrupted by IO and PCB2 hasn't
     if (a->prev_state == BLOCKED && b->prev_state != BLOCKED) return true;
     // If PCB1 came into READY from RUNNING and PCB2 was just created
-    if (a->prev_state == RUNNING && b->prev_state == NEW) return true;
+    //if (a->prev_state == RUNNING && b->prev_state == NEW) return true;
     return false;
 }
 
@@ -57,7 +66,7 @@ t_pcb* fifo(){
 
 t_pcb* round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    list_sort(list_READY, rr_pcb_priority);
+    //list_sort(list_READY, rr_pcb_priority);
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
@@ -65,10 +74,7 @@ t_pcb* round_robin(){
     return next_pcb;
 }
 
-t_pcb* virtual_round_robin(){ // TODO: Implement
-    // order by RR priority
-    // take a consideration an extra blocked list.
-    // Matias: There's no need for an extra blocked list since PCBS that completed their quantum go back to READY
+t_pcb* virtual_round_robin(){
     pthread_mutex_lock(&mutex_ready);
     list_sort(list_READY, vrr_pcb_priority);
 
@@ -102,7 +108,7 @@ void *run_quantum_counter(void *arg) {
         log_info(logger, "Quantum Iniciado");
         temporal_resume(timer);
 
-        *(args->interrupted) == false;
+        *(args->interrupted) = false;
 
         //Check for the completion of the timer
         while (temporal_gettime(timer) < quantum_time && *(args->interrupted) == false) {
@@ -170,6 +176,7 @@ void handle_dispatch_return_action(t_return_dispatch *ret_data){
             exit_process(ret_data->pcb_updated, RUNNING, INTERRUPTED_BY_USER);
             break;
         case INTERRUPT_TIMEOUT:
+            log_warning(logger, "TIMEOUT INTERRUPTION");
             move_pcb(ret_data->pcb_updated, RUNNING, READY, list_READY, &mutex_ready);
             break;
         case WAIT:
@@ -208,15 +215,17 @@ void st_sched_ready_running(void* arg) {
     if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
         pthread_t quantum_counter_thread;
 
-        
-
         quantum_args->quantum_time = malloc(sizeof(int));
         quantum_args->interrupted = malloc(sizeof(bool));
+        quantum_args->remaining_quantum = malloc(sizeof(int));
+        quantum_args->selection_algorithm = malloc(strlen(selection_algorithm) + 1);
 
-        if (quantum_args->quantum_time == NULL || quantum_args->interrupted == NULL) {
+        if (quantum_args->quantum_time == NULL || quantum_args->interrupted == NULL || quantum_args->remaining_quantum == NULL) {
             log_error(logger, "Failed to allocate memory for quantum args fields");
             free(quantum_args->quantum_time);
             free(quantum_args->interrupted);
+            free(quantum_args->remaining_quantum);
+            free(quantum_args->selection_algorithm);
             free(quantum_args);
             return;
         }
@@ -224,7 +233,7 @@ void st_sched_ready_running(void* arg) {
         int quantum_value = config_get_int_value(config, "QUANTUM");
         *(quantum_args->quantum_time) = quantum_value;
         *(quantum_args->interrupted) = false;
-        //log_info(logger, "VALOR QUATUM %d", *(quantum_args->quantum_time));
+        strcpy(quantum_args->selection_algorithm, selection_algorithm);
 
         // Create a thread to handle the quantum counter
         if (pthread_create(&quantum_counter_thread, NULL, run_quantum_counter, quantum_args) != 0) {
@@ -256,20 +265,16 @@ void st_sched_ready_running(void* arg) {
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
 
-            if (pcb_RUNNING == NULL) {
-                log_error(logger, "PCB RUNNING IS NULL");
-            }
-            if (next_pcb == NULL) {
-                log_error(logger, "NEXT PCB IS NULL");
-            }
-
             // If using RR or VRR, signal the quantum semaphore
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
                 sem_post(&sem_quantum);
+                *(quantum_args->remaining_quantum) = next_pcb->quantum;
             }
-           
+
             // Dispatch the PCB to the CPU and get the result
             t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
+            log_info(logger, "||||||||||||||||||||READY LIST||||||||||||||||||||");
+            log_list_contents(logger, list_READY, mutex_ready);
             log_info(logger, "Dispatched a PCB %s", next_pcb->path);
 
             // Handle errors from the CPU dispatch
@@ -279,7 +284,7 @@ void st_sched_ready_running(void* arg) {
             }
 
             // Log the CPU dispatch response
-            log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
+            //log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
 
             // Lock the mutex to safely handle the PCB return
             pthread_mutex_lock(&mutex_running);
@@ -306,6 +311,7 @@ void st_sched_ready_running(void* arg) {
                 destroy_ws(ret->resp_ws);
             }
             free(ret);
+            log_info(logger, "||||||||||||||||||||PROCESO FINALIZADO||||||||||||||||||||");
         }
 
         // Check if the scheduler is paused
