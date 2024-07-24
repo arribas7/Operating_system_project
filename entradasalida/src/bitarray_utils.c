@@ -79,8 +79,54 @@ int hole_size(const char *bitmap_string, size_t start_pos) {
     return size;
 }
 
-int find_file_postion(char* filename){
+int find_file_start_block(char* filename) {
+    // Check para saber si es bitmap.dat o bloques.dat y abortar la función
+    if (strcmp(filename, "bitmap.dat") == 0 || strcmp(filename, "bloques.dat") == 0) {
+        return -1;
+    }
 
+    // Se construye la ruta a la metadata
+    char metadata_path[256];
+    snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename); // path_base es variable global de este archivo
+
+    // Bloque inicial
+    t_config *metadata = config_create(metadata_path);
+    if (metadata == NULL) {
+        return -1; // Error al crear la configuración
+    }
+
+    int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
+
+    // Liberar la memoria de la configuración
+    config_destroy(metadata);
+
+    return start_block;
+}
+
+bool position_list_priority(char* filename_a, char* filename_b) {
+    if (strcmp(filename_a, "bitmap.dat") == 0 || strcmp(filename_a, "bloques.dat") == 0) {
+        return false;
+    }
+
+    if (strcmp(filename_b, "bitmap.dat") == 0 || strcmp(filename_b, "bloques.dat") == 0) {
+        return false;
+    }
+
+    int a_pos = find_file_start_block(filename_a);
+    int b_pos = find_file_start_block(filename_b);
+
+    if (a_pos < 0 || b_pos < 0) {
+        log_error(logger, "INVALID POSITION");
+        log_error(logger, "FILE %s POSITION %d", filename_a, a_pos);
+        log_error(logger, "FILE %s POSITION %d", filename_b, b_pos);
+        return false;
+    }
+    
+    return a_pos > b_pos;
+}
+
+void sort_filenames_by_position(t_list* list_files){
+    list_sort(list_files, position_list_priority);
 }
 
 //Función para compactar cada archivo individualmente

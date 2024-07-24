@@ -310,8 +310,7 @@ void compact_dialfs() {
     //Variable para rastrear el bloque actual durante compactación
     int current_block = 0;
 
-    
-
+    sort_filenames_by_position(filenames);
     list_iterate(filenames, (void*)compact_file);
 
     list_destroy_and_destroy_elements(filenames, free);

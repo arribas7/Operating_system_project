@@ -27,4 +27,9 @@ int hole_size(const char *bitmap_string, size_t start_pos);
 */
 void compact_file(char* filename);
 
+/*
+    Ordena una lista de filenames para que aparezcan según su posición en el bitmap
+*/
+void sort_filenames_by_position(t_list* list_files);
+
 #endif //BITARRAY_UTILS_H
