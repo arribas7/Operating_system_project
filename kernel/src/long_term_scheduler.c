@@ -1,5 +1,6 @@
 #include "long_term_scheduler.h"
 #include <communication_kernel_cpu.h>
+#include <resources_manager.h>
 
 // Array of strings corresponding to the enum values
 const char *exit_reason_strings[] = {
@@ -78,6 +79,7 @@ void sem_post_multiprogramming(){
 void exit_process(t_pcb *pcb, t_state prev_status, exit_reason reason){
     log_info(logger, "Finaliza el proceso <%d> - Motivo: %s", pcb->pid, get_exit_reason_str(reason));
     move_pcb(pcb, prev_status, EXIT, list_EXIT, &mutex_exit);
+    release_all_resources(pcb);
     exit_process_memory(pcb);
     sem_post_multiprogramming();
     return;
@@ -99,8 +101,8 @@ void exit_process_from_pid(int pid, exit_reason reason) {
     pcb = list_pid_element(list_READY, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_READY, pid);
-        exit_process(pcb, READY, reason);
         pthread_mutex_unlock(&mutex_ready);
+        exit_process(pcb, READY, reason);
         return;
     } else {
         pthread_mutex_unlock(&mutex_ready);
@@ -110,8 +112,8 @@ void exit_process_from_pid(int pid, exit_reason reason) {
     pcb = list_pid_element(list_BLOCKED, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_BLOCKED, pid);
-        exit_process(pcb, BLOCKED, reason);
         pthread_mutex_unlock(&mutex_blocked);
+        exit_process(pcb, BLOCKED, reason);
         return;
     } else {
         pthread_mutex_unlock(&mutex_blocked);
@@ -121,8 +123,8 @@ void exit_process_from_pid(int pid, exit_reason reason) {
     pcb = list_pid_element(list_NEW, pid);
     if (pcb != NULL){
         list_remove_by_pid(list_NEW, pid);
-        exit_process(pcb, NEW, reason);
         pthread_mutex_unlock(&mutex_new);
+        exit_process(pcb, NEW, reason);
         return;
     } else {
         pthread_mutex_unlock(&mutex_new);
