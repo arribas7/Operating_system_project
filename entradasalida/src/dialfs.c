@@ -11,6 +11,7 @@
 #include <commons/collections/list.h>
 #include <dirent.h>
 #include "dialfs.h"
+#include "bitarray_utils.h"
 
 int block_size;
 int block_count;
@@ -19,6 +20,7 @@ extern t_log* logger;
 extern t_config* config;
 t_bitarray *bitmap;
 size_t bitmap_size;
+FILE *blocks_file = NULL;
 
 // TODO: add mutex
 // TODO: Wait a time unit in each operation
@@ -45,22 +47,35 @@ void debug_print_bitmap() {
 }
 
 void debug_print_blocks(FILE *blocks_file) {
+    //Chequear si es null
+    if (!blocks_file) {
+        log_error(logger, "Error: blocks_file es NULL.");
+        return;
+    }
     long original_pointer = ftell(blocks_file);
-
     fseek(blocks_file, 0, SEEK_END);
     long file_size = ftell(blocks_file);
     fseek(blocks_file, 0, SEEK_SET);
 
     char *buffer = malloc(file_size + 1);  // +1 para el terminador nulo
+    if (buffer == NULL) {
+        log_error(logger, "NO SE PUDO ASIGNAR MEMORIA PARA BUFFER");
+    }
+
+    fseek(blocks_file, 0, SEEK_SET);
     fread(buffer, sizeof(char), file_size, blocks_file);
-    buffer[file_size] = '\0';  // Asegurar que el buffer esté terminado en nulo
+
+    //buffer[file_size] = '\0';
 
     char *log_string = malloc(file_size + 50);
+    
     strcpy(log_string, "[DEBUG] Blocks file content:\n");
     strcat(log_string, buffer);
     strcat(log_string, "\n");
 
     log_debug(logger, "%s", log_string);
+    //log_debug(logger, "The buffer is (string) %s", buffer);
+    //log_debug(logger, "The buffer is (decimal) %d", buffer);
 
     free(log_string);
     free(buffer);
@@ -97,7 +112,8 @@ void initialize_dialfs(const char *path_base_param, int block_size_param, int bl
 
     block_size = block_size_param;
     block_count = block_count_param;
-    FILE *blocks_file = fopen(blocks_path, "wb");
+    //FILE *blocks_file = fopen(blocks_path, "wb");
+    blocks_file = fopen(blocks_path, "wb");
     if (blocks_file) {
         fseek(blocks_file, (block_size * block_count) - 1, SEEK_SET);
         fputc('\0', blocks_file);
@@ -158,18 +174,28 @@ void fs_create(const char *filename, uint32_t pid) {
     log_info(logger, "PID: %d - Crear Archivo: %s", pid, filename);
 
     int start_block = -1;
+
+    //Se recorre el bitmap buscando un bloque libre
     for (int i = 0; i < bitarray_get_max_bit(bitmap); i++) {
         if (!bitarray_test_bit(bitmap, i)) {
             start_block = i;
+
+            //Se encuentra el primer bloque libre y se marca ocupado en el bitmap
             bitarray_set_bit(bitmap, i);
             break;
         }
     }
 
+    //Se fija si se pudo encontrar un bloque libre
     if (start_block != -1) {
+
+        //Se sincroniza el bitmap con el FS asegurandose de que se pueda escribir en el disco
         msync(bitmap->bitarray, bitmap_size, MS_SYNC);
+
+        //Se crea el archivo de metadata con un bloque inicial y un tamaño inicial de 0
         create_file_metadata(filename, start_block, 0);
     }
+    //debug_print_bitmap();
 }
 
 void fs_delete(const char *filename, uint32_t pid) {
@@ -260,63 +286,31 @@ t_list* list_files() {
     return filenames;
 }
 
-void compact_dialfs(uint32_t pid) {
-    log_info(logger, "PID: %d - Inicio Compactación.", pid);
+void compact_dialfs() {
+    log_info(logger, "Inicio Compactación.");
 
+    //Se construye la ruta al archivo de bloques
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
-    FILE *blocks_file = fopen(blocks_path, "rb+");
+    //Se abre el archivo de bloques en modo de lectura y escritura
+    //FILE *blocks_file = fopen(blocks_path, "rb+");
+    blocks_file = fopen(blocks_path, "rb+");
     if (!blocks_file) {
         return;
     }
 
+    //Se obtiene una lista de nombre de archivos
     t_list* filenames = list_files();
     if (filenames == NULL) {
         fclose(blocks_file);
         return;
     }
+
+    //Variable para rastrear el bloque actual durante compactación
     int current_block = 0;
 
-    void compact_file(char* filename) {
-        if (strcmp(filename, "bitmap.dat") == 0 || strcmp(filename, "bloques.dat") == 0) {
-            return;
-        }
-
-        char metadata_path[256];
-        snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
-
-        t_config *metadata = config_create(metadata_path);
-        int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
-        int size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
-        int blocks_needed = get_blocks_needed(size, block_size);
-
-        if (start_block != current_block) {
-            char *buffer = malloc(blocks_needed * block_size);
-            fseek(blocks_file, start_block * block_size, SEEK_SET);
-            fread(buffer, block_size, blocks_needed, blocks_file);
-            fseek(blocks_file, current_block * block_size, SEEK_SET);
-            fwrite(buffer, block_size, blocks_needed, blocks_file);
-            free(buffer);
-        }
-
-        for (int i = 0; i < blocks_needed; i++) {
-            bitarray_clean_bit(bitmap, start_block + i);
-            bitarray_set_bit(bitmap, current_block + i);
-        }
-
-        // TODO: remove it
-        debug_print_bitmap();
-        debug_print_blocks(blocks_file);
-
-        char current_block_str[12];
-        sprintf(current_block_str, "%d", current_block);
-        config_set_value(metadata, "BLOQUE_INICIAL", current_block_str);
-        config_save(metadata);
-        config_destroy(metadata);
-        
-        current_block += blocks_needed;
-    }
+    
 
     list_iterate(filenames, (void*)compact_file);
 
@@ -326,7 +320,7 @@ void compact_dialfs(uint32_t pid) {
     fclose(blocks_file);
     
     usleep(config_get_int_value(config, "RETRASO_COMPACTACION"));
-    log_info(logger, "PID: %d - Fin Compactación.", pid);
+    log_info(logger, "Fin Compactación.");
 }
 
 int find_first_free_block(int blocks_needed) {
@@ -356,7 +350,8 @@ int move_file_to_free_space(const char *filename, int start_block, int actual_si
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
-    FILE *blocks_file = fopen(blocks_path, "rb+");
+    //FILE *blocks_file = fopen(blocks_path, "rb+");
+    blocks_file = fopen(blocks_path, "rb+");
     if (!blocks_file) {
         free(buffer);
         return -1;
@@ -394,48 +389,66 @@ int move_file_to_free_space(const char *filename, int start_block, int actual_si
 void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
     log_info(logger, "PID: %d - Truncar Archivo: %s - Tamaño: %d", pid, filename, new_size);
 
+    //Construye la ruta al archivo de metadata
     char metadata_path[256];
     snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
 
+    //Carga la ruta al archivo de metadata
     t_config *metadata = config_create(metadata_path);
     if (!metadata) return;
 
+    //Se obtiene el bloque inicial y el tamaño del archivo desde la metadata
     int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
     int actual_size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
     config_destroy(metadata);
 
+    //Calcula el tamaño en bloques de memoria que se necesita para el nuevo tamaño y el viejo
     int new_blocks_needed = get_blocks_needed(new_size, block_size);
     int old_blocks_needed = get_blocks_needed(actual_size, block_size);
 
-    log_debug(logger, "bitmap before:");
-    debug_print_bitmap();
+    //log_debug(logger, "bitmap before:");
+    //debug_print_bitmap();
 
+    //Si se necesita más espacio
     if (new_blocks_needed > old_blocks_needed) {
+
+        //For Loop que recorre la cantidad de espacio nueva requerida
         for (int i = old_blocks_needed; i < new_blocks_needed; i++) {
+
+            //Si el bloque está siendo utilizado
             if (bitarray_test_bit(bitmap, start_block + i)) {
+
+                //Se compacta el sistema de archivos
                 compact_dialfs(pid);
+
+                //Se intenta mover el archivo a un espacio libre después de la compactación
                 int new_start_block = move_file_to_free_space(filename, start_block, actual_size, old_blocks_needed, new_blocks_needed, pid);
                 if (new_start_block == -1) {
                     return;
                 }
-                start_block = new_start_block;  // Actualizamos el start_block con la nueva posición.
+                //Se actualiza el start_block con la nueva posición
+                start_block = new_start_block;  
                 break;
             }
         }
-
+        //Se marcan los nuevos bloques del archivo como utilizados en el bitmap
         for (int i = old_blocks_needed; i < new_blocks_needed; i++) {
             bitarray_set_bit(bitmap, start_block + i);
         }
     } else if (new_blocks_needed < old_blocks_needed) {
+        //Si se necesitan menos bloques que antes, transcurrir el espacio descartado
         for (int i = new_blocks_needed; i < old_blocks_needed; i++) {
+            //Liberar los bloques
             bitarray_clean_bit(bitmap, start_block + i);
         }
     }
 
+    //Sincronizar Bitmap con FS
     msync(bitmap->bitarray, bitmap_size, MS_SYNC);
-    log_debug(logger, "bitmap after:");
-    debug_print_bitmap();
+    //log_debug(logger, "bitmap after:");
+    //debug_print_bitmap();
 
+    //Actualizar Metadata
     metadata = config_create(metadata_path);
     char new_size_str[12];
     sprintf(new_size_str, "%d", new_size);
