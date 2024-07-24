@@ -32,4 +32,6 @@ void compact_file(char* filename);
 */
 void sort_filenames_by_position(t_list* list_files);
 
+void log_filenames(t_list* list_files);
+
 #endif //BITARRAY_UTILS_H

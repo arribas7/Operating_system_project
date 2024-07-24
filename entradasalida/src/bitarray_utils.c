@@ -122,11 +122,21 @@ bool position_list_priority(char* filename_a, char* filename_b) {
         return false;
     }
     
-    return a_pos > b_pos;
+    return a_pos < b_pos;
 }
 
 void sort_filenames_by_position(t_list* list_files){
     list_sort(list_files, position_list_priority);
+}
+
+void log_filename(char* filename){
+    log_info(logger, "FILE %s", filename);
+}
+
+void log_filenames_list(t_list* list_files){
+    log_info(logger, "--------------------------");
+    list_iterate(list_files, log_filename);
+    log_info(logger, "--------------------------");
 }
 
 //Función para compactar cada archivo individualmente

@@ -310,8 +310,11 @@ void compact_dialfs() {
     //Variable para rastrear el bloque actual durante compactación
     int current_block = 0;
 
+    log_filenames_list(filenames);
     sort_filenames_by_position(filenames);
+    log_filenames_list(filenames);
     list_iterate(filenames, (void*)compact_file);
+    log_filenames_list(filenames);
 
     list_destroy_and_destroy_elements(filenames, free);
 
@@ -418,7 +421,7 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
             if (bitarray_test_bit(bitmap, start_block + i)) {
 
                 //Se compacta el sistema de archivos
-                compact_dialfs(pid);
+                compact_dialfs();
 
                 //Se intenta mover el archivo a un espacio libre después de la compactación
                 int new_start_block = move_file_to_free_space(filename, start_block, actual_size, old_blocks_needed, new_blocks_needed, pid);
