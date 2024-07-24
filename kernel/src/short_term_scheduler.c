@@ -154,32 +154,23 @@ void *run_quantum_counter(void *arg) {
 }
 
 void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
-    t_resource_op_return op_ret;
+    t_result result;
     switch (code) {
         case WAIT:
-            op_ret = resource_wait(pcb, resp_ws->recurso);
+            result = resource_wait(pcb, resp_ws->recurso);
             break;
         case SIGNAL:
-            op_ret = resource_signal(resp_ws->recurso);
+            result = resource_signal(pcb, resp_ws->recurso);
             break;
     }
             
-    switch (op_ret.result) {
+    switch (result) {
         case RESOURCE_NOT_FOUND:
             exit_process(pcb, RUNNING, INVALID_RESOURCE);
             break;
         case RESOURCE_BLOCKED:
-            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
-            break;
         case RESOURCE_RELEASED:
-            pthread_mutex_lock(&mutex_blocked);
-            t_pcb *pcb_released = list_remove_by_pid(list_BLOCKED, op_ret.pcb_released->pid);
-            if (pcb_released != NULL){
-                move_pcb(pcb_released, BLOCKED, READY, list_READY, &mutex_ready);
-            } else {
-                log_warning(logger, "PCB released from resource not found on blocked list");
-            }
-            pthread_mutex_unlock(&mutex_blocked);
+            break;
         default: // success and resource_released
             move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
@@ -272,7 +263,6 @@ void st_sched_ready_running(void* arg) {
         sem_wait(&sem_all_scheduler); 
         // Immediately release the semaphore for the next iteration
         sem_post(&sem_all_scheduler); 
-
         if (!list_is_empty(list_READY)) { 
             sem_wait(&sem_st_scheduler);
 
