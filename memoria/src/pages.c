@@ -123,8 +123,10 @@ int* actualizarBitmap(int marcos_necesarios) {
             pthread_mutex_unlock(&memory.mutex_frames_ocupados);
             exit(EXIT_FAILURE);
         }
+        /*
         int libre = buscar_proximo_frame_libre(memory.frames_ocupados);
         memory.frames_ocupados[libre] = true; 
+        */
     }
     pthread_mutex_unlock(&memory.mutex_frames_ocupados);
     return marcos_asignados;

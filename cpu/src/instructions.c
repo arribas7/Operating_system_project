@@ -210,7 +210,7 @@ op_code check_interrupt(void){
     }
     return 0;
 }
-
+//FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
 
     if (strcmp(registro, "AX") == 0)
