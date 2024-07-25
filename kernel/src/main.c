@@ -74,12 +74,13 @@ void destroy_all() {
 }
 
 void handle_client(void *arg) {
-    int cliente_fd = *(int*)arg;
+    int cliente_fd = *(int*) arg;
     free(arg);
     log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 
     t_list *lista;
-    char* interface_name;
+    char* name;
+    char* mssg;
 
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
@@ -88,55 +89,54 @@ void handle_client(void *arg) {
             case IO:
                 uint32_t status;
                 t_interface* interface = list_to_interface(lista, cliente_fd);                
-                interface_name = get_interface_name(interface);
+                name = get_interface_name(interface);
 
-                if(find_interface_by_name(interface_list, interface_name) != NULL) {
-                    log_error(logger, "THE INTERFACE %s ALREADY EXISTS", interface_name);
+                if(find_interface_by_name(interface_list, name) != NULL) {
+                    log_error(logger, "THE INTERFACE %s ALREADY EXISTS", name);
                     delete_interface(interface);
-                    status = 0;
+                    status = -1;
                 } else {
                     char* type = type_from_list(lista);
-                    log_info(logger, "NEW IO CONNECTED: NAME: %s, TYPE: %s", interface_name, type);
+                    log_info(logger, "NEW IO CONNECTED: NAME: %s, TYPE: %s", name, type);
                     add_interface_to_list(interface_list, interface);
                     free(type);
-                    status = 1;
+                    status = 0;
                 }
 
-                char* mssg = mssg_log(status);
-                log_info(logger, "STATUS %s: %s", interface_name, mssg);
-                send_confirmation(cliente_fd, status);
+                // Print Message Log and Notify Interface
+                mssg = mssg_log(status);
+                log_info(logger, "STATUS %s: %s", name, mssg);
+                send_confirmation(cliente_fd, &(status));
+                
+                /*INSTRUCTION - 1 - TODO: Remove, only for tests.*/
 
-                /*INSTRUCTION - 1 - TODO: Remove, only for tests.
+                /* STDIN */
 
-                t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "GENERICA", 200, 0, 0, "myPath", 0);
+                t_instruction* instruction_1 = create_instruction_IO(1, IO_STDIN_READ, "TECLADO", 0, 0, 5, "Path", 0);
                 send_instruction_IO(instruction_1, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_1);
 
-                // INSTRUCTION - 2
 
-                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "GENERICA", 300, 0, 0, "myOtherPath", 0);
+
+                /* STDOUT */
+
+                t_instruction* instruction_2 = create_instruction_IO(2, IO_STDOUT_WRITE, "MONITOR", 0, 0, 5, "myOtherPath", 0);
                 send_instruction_IO(instruction_2, cliente_fd);
                 log_info(logger, "INSTRUCTION_SENDED");
                 delete_instruction_IO(instruction_2);
-
-                // INSTRUCTION - 3
-
-                t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, 0, 0, "myOtherPath", 0);
-                send_instruction_IO(instruction_3, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_3);*/
 
                 break;
             case REPORT:
                 t_report* report = list_to_report(lista);
                 log_info(logger, "PID: %d", report->pid);
-                log_info(logger, "OPERATION_RESULT: %d", report->result); // 0 - ERROR / 1 - OK
+                mssg = mssg_from_report(report);
+                log_info(logger, "OPERATION_RESULT: %s", mssg); // 0 - ERROR / 1 - OK
                 io_unblock(report->pid);
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing client connection...");
-                delete_interface_from_list(interface_list, interface_name);
+                delete_interface_from_list(interface_list, name);
                 liberar_conexion(cliente_fd);
                 return;
             default:
@@ -165,7 +165,7 @@ void run_server(void *arg) {
         }
         pthread_detach(client_thread);
     }
-    return EXIT_SUCCESS;
+    /*return EXIT_SUCCESS;*/
 }
 
 int main(int argc, char *argv[]) {
@@ -182,6 +182,7 @@ int main(int argc, char *argv[]) {
     if (config == NULL) {
         return -1;
     }
+
     initialize_resources();
 
     atomic_init(&pid_count, 0);

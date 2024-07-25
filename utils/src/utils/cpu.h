@@ -40,7 +40,8 @@ typedef struct
 } t_instruction;
 
 /*
-typedef struct{
+typedef struct
+{
     u_int32_t pid;
     int tamanio;
     int fisical_dir;
@@ -48,7 +49,8 @@ typedef struct{
     char* interfaz;    
 } t_io_stdin;
 
-typedef struct{
+typedef struct
+{
     u_int32_t interfaz_length;
     char* interfaz;
     u_int32_t nombre_archivo_length;

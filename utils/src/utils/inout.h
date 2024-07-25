@@ -1,5 +1,4 @@
 
-
 #ifndef UTILS_INOUT_H_
 #define UTILS_INOUT_H_
 
@@ -104,11 +103,12 @@ t_paquete* req_to_r_package(t_req_to_r* mem_req);
 
 // Communication
 
-void send_confirmation(int connection, uint32_t status);
-void receive_confirmation(int connection, uint32_t status);
+void send_confirmation(int connection, uint32_t* status);
+void receive_confirmation(int connection, uint32_t* status);
 char* mssg_log(uint32_t code);
 void send_info(t_info* info, int connection);
 void send_report(t_instruction* instruction, bool result, int connection);
+char* mssg_from_report(t_report* report);
 void send_req_to_w(t_req_to_w* mem_req, int connection);
 void send_req_to_r(t_req_to_r* mem_req, int connection);
 t_req_to_w* receive_req_to_w(int connection);

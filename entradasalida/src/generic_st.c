@@ -26,29 +26,27 @@ int wait_time_units(uint32_t time, t_config* config)
 
 char* write_console(t_instruction* instruction) 
 {
+    /*
     char* to_send = malloc(instruction->size);
     char* word = readline("--> ");
     strncpy(to_send, word, instruction->size);
-
-    /*
-        -- Si considera un tamaño establecido previamente --
-
-        char* to_send = malloc(instruction->size);
-        while(1) 
-        {
-            char* word = readline("--> ")
-            if (strlen(word) == instruction->size) 
-            {
-                strncpy(to_send, word, instruction->size);
-                break;
-            } else {
-                free(word);
-            }
-        }
-        free(word);
-        return to_send;
     */
-
+   
+    char* to_send = malloc(instruction->size);
+    char* word;
+    log_info(logger, "Ingrese una palabra de %d bytes", instruction->size);
+    while(1) 
+    {
+        word = readline("--> ");
+        if (strlen(word) == instruction->size) 
+        {
+            strncpy(to_send, word, instruction->size);
+            break;
+        } else {
+            log_warning(logger, "Longitud incorrecta");
+            free(word);
+        }
+    }
     free(word);
     return to_send;
 }
@@ -58,7 +56,6 @@ void send_write_request(t_instruction* instruction, int connection)
     char* word_to_write = write_console(instruction);
     t_req_to_w* mem_req = req_to_write(instruction->pid, word_to_write, instruction->physical_address);
     send_req_to_w(mem_req, connection);
-    delete_req_to_w(mem_req);
     free(word_to_write);
 }
 
