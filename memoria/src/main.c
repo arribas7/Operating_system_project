@@ -243,6 +243,8 @@ void handle_client(void *arg) {
                     enviar_mensaje("OK",cliente_fd);
             break;
             case TAM_PAG:
+                retardo_en_peticiones();
+                recibir_paquete(cliente_fd);
                 enviar_mensaje(string_itoa(tam_pag),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)

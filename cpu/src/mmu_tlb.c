@@ -12,7 +12,7 @@ uint32_t mmu(char* logicalAddress){
     TLBEntry* tlbEntry;
 
     int tam_pag = solicitar_tam_pag_a_mem();
-    int marco;
+    int marco = 0;
 
     int numero_pagina = floor(direccion_logica / tam_pag);
     //int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
@@ -124,16 +124,18 @@ int find_LRU_index() {
 int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
-
-    return recibir_tam_pag(conexion_mem); //mensaje desde memoria
+    
+    int op = recibir_operacion(conexion_mem);
+    int tam_pag = recibir_tam_pag(conexion_mem); //mensaje desde memoria
+    return tam_pag;
 }
 
 
 int recibir_tam_pag(int socket_cliente)
 {
     int size;
-    int* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_debug(logger, "Tam pag received.. %d", *tam_pag);
+    char* tam_pag = recibir_buffer(&size, socket_cliente);
+    log_debug(logger, "Tam pag received.. %s", tam_pag);
 
-    return *tam_pag;
+    return atoi(tam_pag);
 }
