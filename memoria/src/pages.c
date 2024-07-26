@@ -123,8 +123,10 @@ int* actualizarBitmap(int marcos_necesarios) {
             pthread_mutex_unlock(&memory.mutex_frames_ocupados);
             exit(EXIT_FAILURE);
         }
+        /*
         int libre = buscar_proximo_frame_libre(memory.frames_ocupados);
         memory.frames_ocupados[libre] = true; 
+        */
     }
     pthread_mutex_unlock(&memory.mutex_frames_ocupados);
     return marcos_asignados;
@@ -512,7 +514,7 @@ char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid) {
 
     int bytesLeidos = 0;
     while (bytesLeidos < tamano) {
-        int numPagina = calcularNumeroPagina(direccion_fisica);
+        int numPagina = calcularNumeroPagina(direccion_fisica); //TO DO 
         int desplazamiento = calcularDesplazamiento(direccion_fisica);
 
         char* dirFisica = obtenerDireccionFisica(tabla->paginas[numPagina].numero_marco, desplazamiento);

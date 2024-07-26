@@ -15,8 +15,8 @@ uint32_t mmu(char* logicalAddress){
     int marco = 0;
 
     int numero_pagina = floor(direccion_logica / tam_pag);
-    //int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
-    int desplazamiento = direccion_logica % tam_pag;
+    //int desplazamiento = direccion_logica % tam_pag;
+    int desplazamiento = direccion_logica - numero_pagina * tam_pag;
 
     log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
