@@ -48,6 +48,16 @@ t_resize* recibir_resize(int socket_cpu){
     return resize;
 }
 
+void recibir_tam_pag(int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    free(buffer);
+}
+
 /* HABILITAR CUANDO INCLUYA CONNECTIONS.H
 t_request* recibir_pagina(int socket_cpu){
     int size;
@@ -244,7 +254,7 @@ void handle_client(void *arg) {
             break;
             case TAM_PAG:
                 retardo_en_peticiones();
-                recibir_paquete(cliente_fd);
+                recibir_tam_pag(cliente_fd);
                 enviar_mensaje(string_itoa(tam_pag),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
@@ -336,6 +346,7 @@ int correr_servidor(void *arg) {
         cliente_fd = esperar_cliente(server_fd);
         if (cliente_fd < 0) {
             log_error(logger, "Error al aceptar el cliente");
+            close(cliente_fd);
             continue;
         }
 

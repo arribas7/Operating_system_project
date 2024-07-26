@@ -420,10 +420,10 @@ t_paquete *io_gen_sleep(char* name, char* time)
 t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size) 
 {
     t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
-    uint32_t ui_size = (uint32_t) atoi(size);
+    uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDIN_READ, name, 0, mmu(logicalAdress), ui_size, "", 0);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDIN_READ, name, 0, mmu(logicalAdress), reg_size, "", 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_read_paq, buffer->stream, buffer->size);
 
@@ -436,10 +436,10 @@ t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size)
 t_paquete *io_stdin_write(char* name, char* logicalAdress, char* size) 
 {
     t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
-    uint32_t ui_size = (uint32_t) atoi(size);
+    uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDOUT_WRITE, name, 0, mmu(logicalAdress), ui_size, "", 0);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDOUT_WRITE, name, 0, mmu(logicalAdress), reg_size, "", 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_write_paq, buffer->stream, buffer->size);
 
@@ -482,10 +482,10 @@ t_paquete *io_fs_delete(char* name, char* file_name)
 t_paquete *io_fs_truncate(char* name, char* file_name, char* size) 
 {
     t_paquete* io_fs_truncate = crear_paquete(IO_FS_TRUNCATE);
-    uint32_t ui_size = (uint32_t) atoi(size);
+    uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_TRUNCATE, name, 0, 0, ui_size, file_name, 0);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_TRUNCATE, name, 0, 0, reg_size, file_name, 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_truncate, buffer->stream, buffer->size);
 
@@ -498,10 +498,10 @@ t_paquete *io_fs_truncate(char* name, char* file_name, char* size)
 t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
 {
     t_paquete* io_fs_write = crear_paquete(IO_FS_WRITE);
-    uint32_t ui_size = (uint32_t) atoi(size);
+    uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_WRITE, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/ui_size, file_name, obtener_valor_registro(file_pointer));
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_WRITE, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/reg_size, file_name, obtener_valor_registro(file_pointer));
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_write, buffer->stream, buffer->size);
 
@@ -514,10 +514,10 @@ t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddress, char* 
 t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
 {
     t_paquete* io_fs_read = crear_paquete(IO_FS_READ);
-    uint32_t ui_size = (uint32_t) atoi(size);
+    uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/ui_size, file_name, obtener_valor_registro(file_pointer));
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/reg_size, file_name, obtener_valor_registro(file_pointer));
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_read, buffer->stream, buffer->size);
     
