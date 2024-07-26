@@ -251,7 +251,8 @@ void handle_client(void *arg) {
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
-                escribirEnEspacioUsuario2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+                //escribirEnEspacioUsuario2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+                escribirEnDireccionFisica2(write->req,string_itoa(write->val),strlen(string_itoa(write->val)),write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
