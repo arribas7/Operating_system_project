@@ -18,6 +18,7 @@
 #include <long_term_scheduler.h>
 #include <communication_kernel_cpu.h>
 #include <resources_manager.h>
+#include <io_manager.h>
 
 t_interface_list* interface_list;
 
@@ -73,12 +74,18 @@ void destroy_all() {
 }
 
 void handle_client(void *arg) {
-    int cliente_fd = *(int*)arg;
+    int cliente_fd = *(int*) arg;
     free(arg);
+
+    if(cliente_fd < 0){
+        log_error(logger, "invalid client... closing connection");
+        liberar_conexion(cliente_fd);
+    }
     log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 
     t_list *lista;
-    char* interface_name;
+    char* name;
+    char* mssg;
 
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
@@ -87,54 +94,55 @@ void handle_client(void *arg) {
             case IO:
                 uint32_t status;
                 t_interface* interface = list_to_interface(lista, cliente_fd);                
-                interface_name = get_interface_name(interface);
+                name = get_interface_name(interface);
 
-                if(find_interface_by_name(interface_list, interface_name) != NULL) {
-                    log_error(logger, "La interfaz %s ya existe", interface_name);
+                if(find_interface_by_name(interface_list, name) != NULL) {
+                    log_error(logger, "THE INTERFACE %s ALREADY EXISTS", name);
                     delete_interface(interface);
-                    status = 0;
+                    status = -1;
                 } else {
                     char* type = type_from_list(lista);
-                    log_info(logger, "NEW IO CONNECTED: Name: %s, Type: %s", interface_name, type);
+                    log_info(logger, "NEW IO CONNECTED: NAME: %s, TYPE: %s", name, type);
                     add_interface_to_list(interface_list, interface);
                     free(type);
-                    status = 1;
+                    status = 0;
                 }
 
-                log_info(logger, "%d", status);
-                send_confirmation(cliente_fd, status);
+                // Print Message Log and Notify Interface
+                mssg = mssg_log(status);
+                log_info(logger, "STATUS %s: %s", name, mssg);
+                send_confirmation(cliente_fd, &(status));
+                
+                /* INSTRUCTIONS */
 
-                /* INSTRUCTION - 1 - TODO: Remove, only for tests.
+                /*
+                if(strcmp(name,"TECLADO") == 0) {
+                    t_instruction* instruction_1 = create_instruction_IO(1, IO_STDIN_READ, "TECLADO", 0, 0, 5, "Path", 0);
+                    send_instruction_IO(instruction_1, cliente_fd);
+                    log_info(logger, "INSTRUCTION_SENDED");
+                    delete_instruction_IO(instruction_1);
+                }
 
-                t_instruction* instruction_1 = create_instruction_IO(1, IO_GEN_SLEEP, "prueba", 200, 0, 0, "myPath", 0);
-                send_instruction_IO(instruction_1, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_1);
 
-                // INSTRUCTION - 2
-
-                t_instruction* instruction_2 = create_instruction_IO(2, IO_GEN_SLEEP, "prueba", 300, 0, 0, "myOtherPath", 0);
-                send_instruction_IO(instruction_2, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_2);
-
-                // INSTRUCTION - 3
-
-                t_instruction* instruction_3 = create_instruction_IO(3, IO_STDIN_READ, "prueba", 500, 0, 0, "myOtherPath", 0);
-                send_instruction_IO(instruction_3, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_3);*/
+                /* STDOUT 
+                if(strcmp(name,"MONITOR") == 0) {
+                    t_instruction* instruction_2 = create_instruction_IO(1, IO_STDOUT_WRITE, "MONITOR", 0, 0, 5, "Path", 0);
+                    send_instruction_IO(instruction_2, cliente_fd);
+                    log_info(logger, "INSTRUCTION_SENDED");
+                    delete_instruction_IO(instruction_2);
+                }*/
 
                 break;
             case REPORT:
                 t_report* report = list_to_report(lista);
                 log_info(logger, "PID: %d", report->pid);
-                log_info(logger, "OPERATION_RESULT: %d", report->result); // 0 - ERROR / 1 - OK
+                mssg = mssg_from_report(report);
+                log_info(logger, "OPERATION_RESULT: %s", mssg); // 0 - ERROR / 1 - OK
                 io_unblock(report->pid);
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing client connection...");
-                delete_interface_from_list(interface_list, interface_name);
+                delete_interface_from_list(interface_list, name);
                 liberar_conexion(cliente_fd);
                 return;
             default:
@@ -150,20 +158,20 @@ void run_server(void *arg) {
     int server_fd = iniciar_servidor(puerto);
     log_info(logger, "Server ready to receive clients...");
 
-    while (1) {
+    while(1) {
         int cliente_fd = esperar_cliente(server_fd);
 
         pthread_t client_thread;
         int *new_sock = malloc(sizeof(int));
         *new_sock = cliente_fd;
 
-        if (pthread_create(&client_thread, NULL, (void*)handle_client, (void*)new_sock) != 0) {
+        if(pthread_create(&(client_thread), NULL, (void*) handle_client, (void*) new_sock) != 0) {
             log_error(logger, "Error creating thread for the client.");
             free(new_sock);
         }
-        pthread_detach(&client_thread);
+        pthread_detach(client_thread);
     }
-    return EXIT_SUCCESS;
+    /*return EXIT_SUCCESS;*/
 }
 
 int main(int argc, char *argv[]) {
@@ -180,6 +188,7 @@ int main(int argc, char *argv[]) {
     if (config == NULL) {
         return -1;
     }
+
     initialize_resources();
 
     atomic_init(&pid_count, 0);
@@ -199,26 +208,25 @@ int main(int argc, char *argv[]) {
 
     initialize_resources(config);
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-
     pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
-
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
-    if (pthread_create(&server_thread, NULL, run_server, puerto) != 0) {
+
+    if (pthread_create(&(server_thread), NULL, (void *) run_server, (void *) puerto) != 0) {
         log_error(logger, "Error creating server thread");
         return -1;
     }
 
-    if (pthread_create(&lt_sched_new_ready_thread, NULL, lt_sched_new_ready, NULL) != 0) {
+    if (pthread_create(&(lt_sched_new_ready_thread), NULL, (void *) lt_sched_new_ready, NULL) != 0) {
         log_error(logger, "Error creating long term scheduler thread");
         return -1;
     }
 
-    if (pthread_create(&st_sched_ready_running_thread, NULL, st_sched_ready_running, scheduler_algorithm) != 0) {
+    if (pthread_create(&(st_sched_ready_running_thread), NULL, (void *) st_sched_ready_running, (void *) scheduler_algorithm) != 0) {
         log_error(logger, "Error creating short term scheduler thread");
         return -1;
     }
 
-    if (pthread_create(&console_thread, NULL, interactive_console, config) != 0) {
+    if (pthread_create(&(console_thread), NULL, interactive_console, (void *) config) != 0) {
         log_error(logger, "Error creating console thread");
         return -1;
     }

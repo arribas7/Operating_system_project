@@ -12,23 +12,25 @@ uint32_t mmu(char* logicalAddress){
     TLBEntry* tlbEntry;
 
     int tam_pag = solicitar_tam_pag_a_mem();
-    int marco;
+    int marco = 0;
 
-    double numero_pagina = floor(direccion_logica / tam_pag);
-    int desplazamiento = direccion_logica - (numero_pagina * tam_pag);
+    int numero_pagina = floor(direccion_logica / tam_pag);
+    //int desplazamiento = direccion_logica % tam_pag;
+    int desplazamiento = direccion_logica - numero_pagina * tam_pag;
 
     log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
     log_debug(logger, "desplazamiento: %d", desplazamiento);
 
     if(cant_entradas_tlb() != 0){
-        if (algoritmo_tlb() == "FIFO") {
+        if (!strcmp(algoritmo_tlb(),"FIFO")) {
             tlbEntry = buscar_en_TLB(pcb_en_ejecucion->pid,numero_pagina);
 
             if (tlbEntry == NULL){ //actualizo la TLB   
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB(pcb_en_ejecucion->pid,numero_pagina,marco);
+                direccion_fisica = marco + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
@@ -42,6 +44,7 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB_LRU(pcb_en_ejecucion->pid,numero_pagina,marco);
+                direccion_fisica = marco + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
@@ -120,17 +123,21 @@ int find_LRU_index() {
 
 int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
+    agregar_a_paquete(peticion,"tam_pag",sizeof("tam_pag"));
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
-
-    return recibir_tam_pag(conexion_mem); //mensaje desde memoria
+    
+    int op = recibir_operacion(conexion_mem);
+    int tam_pag = recibir_tam_pag(conexion_mem); //mensaje desde memoria
+    return tam_pag;
 }
 
 
 int recibir_tam_pag(int socket_cliente)
 {
     int size;
-    int* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_debug(logger, "Tam pag received.. %d", *tam_pag);
+    char* tam_pag = recibir_buffer(&size, socket_cliente);
+    log_info(logger, "Tam pag received.. %s", tam_pag);
 
-    return *tam_pag;
+    return atoi(tam_pag);
 }
+

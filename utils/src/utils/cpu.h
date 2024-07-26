@@ -17,6 +17,7 @@ typedef struct {
     uint8_t AX;
     uint8_t BX;
     uint8_t CX;
+    uint8_t DX;
     uint8_t EAX;
     uint8_t EBX;
     uint8_t ECX;
@@ -40,7 +41,8 @@ typedef struct
 } t_instruction;
 
 /*
-typedef struct{
+typedef struct
+{
     u_int32_t pid;
     int tamanio;
     int fisical_dir;
@@ -48,7 +50,8 @@ typedef struct{
     char* interfaz;    
 } t_io_stdin;
 
-typedef struct{
+typedef struct
+{
     u_int32_t interfaz_length;
     char* interfaz;
     u_int32_t nombre_archivo_length;
@@ -60,8 +63,8 @@ typedef struct{
 */
 
 typedef struct{
-    u_int32_t pid;
-    u_int32_t tamanio;
+    int pid;
+    int tamanio;
 } t_resize;
 
 typedef struct{

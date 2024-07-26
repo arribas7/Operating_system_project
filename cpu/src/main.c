@@ -22,6 +22,7 @@ char *instruccion_actual;
 int instruccion_decodificada;
 char **instr_decode;
 int cant_parametros;
+char* ack;
 
 t_reg_cpu* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
@@ -119,6 +120,8 @@ t_paquete *procesar_pcb(t_pcb *pcb){
 
     if(response != NULL){
         t_buffer* buffer = malloc(sizeof(t_buffer));
+
+        log_info(logger, "Enviando response al kernel..."); 
 
         serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
         agregar_a_paquete(response,buffer->stream,buffer->size);

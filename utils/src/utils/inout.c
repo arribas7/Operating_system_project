@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "client.h"
 #include "server.h"
+
 // ---------- DEFINITIONS ----------
 
 // ----- INTERFACE -----
@@ -57,7 +58,7 @@ t_req_to_w* req_to_write(uint32_t pid, char* text, uint32_t physical_address)
 {
     t_req_to_w* mem_req = malloc(sizeof(t_req_to_w));
     mem_req->pid = pid;
-    mem_req->text_size = strlen(text) + 1;
+    mem_req->text_size = strlen(text);
     mem_req->text = malloc(mem_req->text_size);
     strcpy(mem_req->text, text);
     mem_req->physical_address = physical_address;
@@ -96,8 +97,18 @@ t_req_to_r* list_to_req_to_r(t_list* list)
 {
     uint32_t pid = *((uint32_t *) list_get(list, 0));
     uint32_t size = *((uint32_t *) list_get(list, 1));
-    uint32_t physical_address = *((uint32_t *) list_get(list, 3));
+    uint32_t physical_address = *((uint32_t *) list_get(list, 2));
     return req_to_read(pid, size, physical_address);
+}
+
+// Log File
+
+char* create_log_file_name(char* name) 
+{
+    size_t log_name_size = strlen(name) + strlen(".log") + 1;
+    char* log_file_name = malloc(log_name_size);
+    strcpy(log_file_name, name);
+    return strcat(log_file_name, "log\0");
 }
 
 // Paquete
@@ -242,14 +253,26 @@ char* type_from_code(op_code instruction_code)
 
 // Communication
 
-void send_confirmation(int connection, uint32_t status) 
+void send_confirmation(int connection, uint32_t* status) 
 {
-    send(connection, &(status), sizeof(uint32_t), 0); 
+    send(connection, status, sizeof(uint32_t), 0); 
 }
 
-void receive_confirmation(int connection, uint32_t status) 
+void receive_confirmation(int connection, uint32_t* status) 
 {
-    recv(connection, &(status), sizeof(uint32_t), MSG_WAITALL);
+    recv(connection, status, sizeof(uint32_t), MSG_WAITALL);
+}
+
+char* mssg_log(uint32_t code) 
+{
+    char* txt = "";
+    if(code == 0) 
+    {
+        txt = "READY";
+    } else {
+        txt = "ERROR HAS OCURRED";
+    }
+    return txt;
 }
 
 void send_info(t_info* info, int connection) 
@@ -268,6 +291,21 @@ void send_report(t_instruction* instruction, bool result, int connection)
     eliminar_paquete(package);
     delete_report(report);
     delete_instruction_IO(instruction);
+}
+
+char* mssg_from_report(t_report* report) 
+{
+    char* mssg;
+    switch(report->result) 
+    {
+        case 0:
+            mssg = "ERROR";
+        case 1:
+            mssg = "INSTRUCTION SUCCESSFULL";
+        default:
+            mssg = "AN ERROR HAS OCURRED";
+    }
+    return mssg;
 }
 
 void send_req_to_w(t_req_to_w* mem_req, int connection) 
@@ -344,19 +382,19 @@ void generate_log_from_instruction(t_instruction* instruction)
             log_info(logger, "PID: %d - Operación a realizar: %s", pid, code);
             break;
         case IO_FS_CREATE:
-            log_info(logger, "PID: %d - Nombre de Archivo: -", pid);
+            log_info(logger, "PID: %d - Nombre de Archivo: %s", pid, instruction->f_name);
             break;
         case IO_FS_DELETE:
-            log_info(logger, "PID: %d - Eliminar Archivo: -", pid);
+            log_info(logger, "PID: %d - Eliminar Archivo: %s", pid, instruction->f_name);
             break;
         case IO_FS_TRUNCATE:
-            log_info(logger, "PID: %d - Truncar Archivo: -", pid);
+            log_info(logger, "PID: %d - Truncar Archivo: %s", pid, instruction->f_name);
             break;
         case IO_FS_READ:
-            log_info(logger, "PID: %d - Leer Archivo: -", pid);
+            log_info(logger, "PID: %d - Leer Archivo: %s", pid, instruction->f_name);
             break;
         case IO_FS_WRITE:
-            log_info(logger, "PID: %d - Escribir Archivo: -", pid);
+            log_info(logger, "PID: %d - Escribir Archivo: %s", pid, instruction->f_name);
             break;
     }
 }

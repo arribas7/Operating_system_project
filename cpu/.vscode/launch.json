@@ -8,7 +8,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["cpu.config"],
+      "args": ["config/cpu_io.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

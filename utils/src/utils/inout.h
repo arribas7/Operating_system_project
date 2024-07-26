@@ -1,5 +1,4 @@
 
-
 #ifndef UTILS_INOUT_H_
 #define UTILS_INOUT_H_
 
@@ -25,7 +24,7 @@ typedef struct
     char* name;
     uint32_t length_type;
     char* type;
-} t_info; // Informara a Kernel la conexion de una nueva interfaz
+} t_info; // To inform new interfaces
 
 typedef struct 
 {
@@ -33,13 +32,13 @@ typedef struct
     char* name;
     int connection;
     bool status;
-} t_interface; // La interfaz como tal, con la conexion y un byte de estado
+} t_interface; // The interface in Kernel
 
 typedef struct 
 {
     uint32_t pid;
     bool result;
-} t_report; // Informara el logro / error de las instrucciones
+} t_report; // Inform instruction status
 
 typedef struct 
 {
@@ -47,26 +46,26 @@ typedef struct
     uint32_t text_size;
     char* text;
     uint32_t physical_address;
-} t_req_to_w; // Peticion de escritura a memoria
+} t_req_to_w; // Write request to memory
 
 typedef struct 
 {
     uint32_t pid;
     uint32_t text_size;
     uint32_t physical_address;
-} t_req_to_r; // Peticion de lectura a memoria
+} t_req_to_r; // Read request to memory
 
 typedef struct
 {
     t_list* list;
     pthread_mutex_t mutex;
-} t_interface_list; // Guardara las interfaces que se vayan sumando al kernel
+} t_interface_list; // Interface list
 
 typedef struct 
 {
     t_queue* queue;
     pthread_mutex_t mutex;
-}t_instruction_queue; // Cola de instrucciones para la interfaz
+}t_instruction_queue; // Queue to interface list
 
 // ---------- FUNCTIONS ----------
 
@@ -91,6 +90,10 @@ void delete_req_to_r(t_req_to_r* mem_req);
 t_req_to_w* list_to_req_to_w(t_list* list);
 t_req_to_r* list_to_req_to_r(t_list* list);
 
+// Log File
+
+char* create_log_file_name(char* name);
+
 // Paquete
 
 t_paquete* info_to_package(t_info* info);
@@ -100,10 +103,12 @@ t_paquete* req_to_r_package(t_req_to_r* mem_req);
 
 // Communication
 
-void send_confirmation(int connection, uint32_t status);
-void receive_confirmation(int connection, uint32_t status);
+void send_confirmation(int connection, uint32_t* status);
+void receive_confirmation(int connection, uint32_t* status);
+char* mssg_log(uint32_t code);
 void send_info(t_info* info, int connection);
 void send_report(t_instruction* instruction, bool result, int connection);
+char* mssg_from_report(t_report* report);
 void send_req_to_w(t_req_to_w* mem_req, int connection);
 void send_req_to_r(t_req_to_r* mem_req, int connection);
 t_req_to_w* receive_req_to_w(int connection);

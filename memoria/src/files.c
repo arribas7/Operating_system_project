@@ -133,14 +133,15 @@ void handle_create_process(const char *file_path, uint32_t pid, t_config* config
         add_pid_instruction_dict(pid, dictionary); //Nueva funcion
         for (pc = 0; pc < dictionary->size; pc++) {
             const char *complete_instruction = get_complete_instruction(pid, pc);
-            printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
+            //printf("PID: %u, PC: %d, Complete Instruction: %s\n", pid, pc, complete_instruction);
         }
         //instruction_dictionary_free(&dictionary);
         // free_pid_instruction_table();
     } else
         perror("Error opening File to intructions");
 
-    int tamanio_proceso = pc; //9-7 aca supongo que el tamanio son la cantidad de instrucciones, preguntar
+    int tamanio_proceso = 0;
+    //int tamanio_proceso = pc; //9-7 aca supongo que el tamanio son la cantidad de instrucciones, preguntar
     int tamanio_marco = config_get_int_value(config,"TAM_PAGINA");
     crearTablaPaginas(pid,tamanio_proceso,tamanio_marco);       
 }

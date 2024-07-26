@@ -24,6 +24,7 @@ t_log* logger;
 t_config* config;
 char* io_name;
 char* type;
+int k_socket;
 
 // FUNCTIONS
 
@@ -34,33 +35,29 @@ int create_connection(t_config* config, char* c_ip, char* c_puerto)
     return crear_conexion(ip, port); 
 }
 
-void respond_to_requests(void* arg) 
+void respond_to_requests() 
 {
-    int connection = atoi((char *) arg);
     while(1) 
     {
-        int cod_op = recibir_operacion(connection);
-        t_instruction* instruction = receive_instruction_IO(connection);
+        int cod_op = recibir_operacion(k_socket);
+        t_instruction* instruction = receive_instruction_IO(k_socket);
 
         if(is_valid_instruction(cod_op, config)) 
         {
             add_instruction_to_queue(i_queue, instruction);
             sem_post(&(sem_instruction));
         } else {
-            send_report(instruction, false, connection);
+            send_report(instruction, false, k_socket);
             return;
         }
     }
 }
 
-void execute_instruction(void* arg) 
+void generic_interface_manager() 
 {
-    int connection = atoi((char *) arg);
     while(1) 
     {
-        // Bloquea el hilo para ejecutar una instrucción
         sem_wait(&(use_time));
-        // Toma la siguiente instruccion y resta una
         sem_wait(&(sem_instruction));
         t_instruction* instruction = get_next_instruction(i_queue);
         
@@ -70,20 +67,66 @@ void execute_instruction(void* arg)
         switch(instruction->code) 
         {
             case IO_GEN_SLEEP:
-                int result = interface_wait(instruction, config);
+                int result = wait_time_units(instruction->time, config);
                 response = (result == 0) ? 1 : 0;
                 log_info(logger, "INSTRUCTION_COMPLETE");
-                send_report(instruction, response, connection);
+                send_report(instruction, response, k_socket);
                 break;
+            default:
+                log_error(logger, "INVALID_INSTRUCTION");
+                send_report(instruction, false, k_socket);
+                break;
+        }
+        sem_post(&(use_time));
+    }
+}
+
+void std_fs_manager(void* arg) 
+{
+    int connection = atoi((char *) arg);
+    while(1) 
+    {
+        sem_wait(&(use_time));
+        sem_wait(&(sem_instruction));
+        t_instruction* instruction = get_next_instruction(i_queue);
+        
+        generate_log_from_instruction(instruction);
+        bool response;
+
+        switch(instruction->code) 
+        {
             case IO_STDIN_READ:
-                int in_mem_socket = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
-                send_write_request(instruction, in_mem_socket);
+                uint32_t status = 0;
+                send_write_request(instruction, connection);
+                receive_confirmation(connection, &(status));
+                if(status == 0) 
+                {
+                    log_error(logger, "AN ERROR HAS OCURRED");
+                    send_report(instruction, false, k_socket);
+                } else {
+                    log_info(logger, "INSTRUCTION COMPLETE");
+                    send_report(instruction, true, k_socket);
+                }
                 break;
             case IO_STDOUT_WRITE:
-                int out_mem_socket = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
-                send_read_request(instruction, out_mem_socket);
-                char* word = receive_word(connection);
-                log_info(logger, "Palabra: %s - Leida en dirección fisica: %d", word, instruction->physical_address);
+                if (wait_time_units(1, config) == 0) 
+                {
+                    send_read_request(instruction, connection);
+                    char* word = receive_word(connection);
+                    if(strlen(word) == 0) 
+                    {
+                        log_error(logger, "ERROR READING FROM MEMORY");
+                        response = false;
+                    } else {
+                        txt_write_in_stdout(word);
+                        response = true;
+                    }
+                    send_report(instruction, response, k_socket);
+                    free(word);
+                } else {
+                    log_error(logger, "ERROR HAS OCURRED");
+                    send_report(instruction, response, k_socket);
+                }
                 break;
             case IO_FS_CREATE:
                 fs_create(instruction->f_name, instruction->pid);
@@ -92,13 +135,13 @@ void execute_instruction(void* arg)
                 fs_delete(instruction->f_name, instruction->pid);
                 break;
             case IO_FS_READ:
-                fs_read(instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
+                fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), 0, NULL, 0, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
                 fs_truncate(instruction->f_name, instruction->size, instruction->pid);
                 break;
             case IO_FS_WRITE:
-                fs_write(instruction->physical_address, NULL, 0, instruction->pid);
+                fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), 0, NULL, 0, instruction->pid);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
@@ -109,13 +152,15 @@ void execute_instruction(void* arg)
     }
 }
 
-// Function to extract the name from the config file path
-char* extract_name_from_path(const char* path) {
+// EXTRACT THE NAME FROM THE CONFIG FILE PATH
+char* extract_name_from_path(const char* path) 
+{
     char* path_dup = strdup(path);
     char* base = basename(path_dup);
 
     char* dot = strrchr(base, '.');
-    if (dot != NULL) {
+    if (dot != NULL) 
+    {
         *dot = '\0';
     }
 
@@ -162,20 +207,22 @@ int main(int argc, char* argv[]) {
     config = config_create(argv[1]);
     io_name = extract_name_from_path(argv[1]);
 
-    // Create the log file name
+    // CREATE THE LOG FILE NAME
+
     size_t log_name_length = strlen(io_name) + strlen(".log") + 1;
     char* log_name = malloc(log_name_length);
     snprintf(log_name, log_name_length, "%s.log", io_name);
 
-    // Create the logger
+    // CREATE THE LOGGER
     logger = log_create(log_name, io_name, true, LOG_LEVEL_DEBUG);
     type = type_from_config(config);
     t_info* info = create_info(io_name, type);
 
     free(log_name);
 
-    // Initialize DialFS if needed
-    if (strcmp(type, "DIALFS") == 0) {
+    // INITIALIZE DIALFS IF NEEDED
+    if(strcmp(type, "DIALFS") == 0) 
+    {
         int block_size = config_get_int_value(config, "BLOCK_SIZE");
         int block_count = config_get_int_value(config, "BLOCK_COUNT");
         const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
@@ -187,52 +234,70 @@ int main(int argc, char* argv[]) {
     
     // CREATE KERNEL CONNECTION
     
-    int kernel_socket = create_connection(config, "IP_KERNEL", "PUERTO_KERNEL");
-    log_info(logger, "La conexion es: %d", kernel_socket);
+    k_socket = create_connection(config, "IP_KERNEL", "PUERTO_KERNEL");
+    log_info(logger, "La conexion es: %d", k_socket);
 
     // CONNECTION TO STRING (TO THREADS)
 
-    char* str_conn = int_to_string(kernel_socket);
+    char* s_k_socket = int_to_string(k_socket);
 
     // SEND INFO TO KERNEL FROM CONNECTION
 
-    send_info(info, kernel_socket);
+    send_info(info, k_socket);
 
     uint32_t error_exists = 0;
-    receive_confirmation(kernel_socket, error_exists);
+    receive_confirmation(k_socket, &(error_exists));
 
-    if (!(error_exists)) 
+    if(error_exists == 0) 
     {
-        log_info(logger, "CONNECTION SUCESSFULL");
+        log_info(logger, "CONNECTION SUCESSFULL. I/O INFO - NAME: %s - TYPE: %s", io_name, type);
         i_queue = create_instruction_queue();
         sem_init(&(sem_instruction), 0, 0);
         sem_init(&(use_time), 0, 1);
     } else {
-        log_info(logger, "ERROR. FINISHING ...");
+        log_info(logger, "ERROR. FINISHING I/O INSTANCE...");
         return -1;
     }
     
     // CREATE THREADS
 
-    pthread_t connection_thread, instruction_manager_thread;
+    pthread_t connection_thread, manager_thread;
 
-    if(pthread_create(&(connection_thread), NULL, (void *) respond_to_requests, str_conn) != 0) 
+    if(pthread_create(&(connection_thread), NULL, (void *) respond_to_requests, s_k_socket) != 0) 
     {
         log_info(logger, "Error creating connection thread");
         return -1;
     }
 
-    if(pthread_create(&(instruction_manager_thread), NULL, (void *) execute_instruction, str_conn) != 0) 
+    if(strcmp(type, "GENERICA") == 0) 
     {
-        log_info(logger, "Error creating instruction manager thread");
-        return -1;
+        if(pthread_create(&(manager_thread), NULL, (void *) generic_interface_manager, NULL) != 0) 
+        {
+            log_error(logger, "Error creating generic manager thread");
+            return -1;
+        }    
+    } else {
+        if(strcmp(type, "STDIN") == 0 || strcmp(type, "STDOUT") == 0 || strcmp(type, "DIALFS") == 0) 
+        {
+            int m_socket = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+            char* s_m_socket = int_to_string(m_socket);
+            if(pthread_create(&(manager_thread), NULL, (void *) std_fs_manager, (void *) s_m_socket) != 0) 
+            {
+                log_error(logger, "Error creating STD - FS manager thread");
+                return -1;
+            }
+            /*free(s_m_socket);*/
+        } else {
+            log_error(logger, "Error creating manager thread");
+            return -1;
+        }
     }
 
     pthread_join(connection_thread, NULL);
-    pthread_join(instruction_manager_thread, NULL);
-    free(str_conn);
+    pthread_join(manager_thread, NULL);
+    free(s_k_socket);
     free(io_name);
-    liberar_conexion(kernel_socket);
+    liberar_conexion(k_socket);
 
     return 0;
 }

@@ -9,6 +9,7 @@ typedef struct {
     char* name;
     int instances;
     t_queue* blocked_queue;
+    t_list* assigned_pcbs;
     pthread_mutex_t mutex;
 } t_resource;
 
@@ -19,14 +20,10 @@ typedef enum {
     RESOURCE_RELEASED
 } t_result;
 
-typedef struct {
-    t_pcb* pcb_released;
-    t_result result;
-} t_resource_op_return;
-
 void initialize_resources();
 t_resource* new_resource(char* name, int instances);
-t_resource_op_return resource_wait(t_pcb* pcb, char* name);
-t_resource_op_return resource_signal(char* name);
+t_result resource_wait(t_pcb* pcb, char* name);
+t_result resource_signal(t_pcb *pcb, char* name);
 void destroy_resource(t_resource* resource);
 void destroy_resource_list();
+void release_all_resources(t_pcb *pcb);

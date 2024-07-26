@@ -30,6 +30,8 @@ void st_sched_ready_running(void* arg);
 struct quantum_thread_args {
     int *quantum_time;
     bool *interrupted;
+    u_int32_t *remaining_quantum;
+    char *selection_algorithm;
 };
 
 #endif
