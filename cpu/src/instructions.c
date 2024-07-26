@@ -280,6 +280,8 @@ int obtener_valor_reg(char* reg){
         return reg_proceso_actual->BX;
     if (strcmp(reg, "CX") == 0) 
         return reg_proceso_actual->CX;
+    if (strcmp(reg, "DX") == 0) 
+        return reg_proceso_actual->DX;
     if (strcmp(reg, "EAX") == 0)
         return reg_proceso_actual->EAX;
     if (strcmp(reg, "EBX") == 0)
@@ -598,6 +600,7 @@ t_paquete *resize(char* tamanio){
 
     if(!strcmp(ack,"Out_of_memory")){
         //devolver contexto ej a kernel informando esto.
+        log_info(logger, "OUT OF MEMORY"); 
         return crear_paquete(OUT_OF_MEMORY);
     } else {
         log_info(logger, "PID: <%d> - Accion: <%s> - New Size: <%d>", pcb_en_ejecucion->pid, "RESIZE", atoi(tamanio));   
