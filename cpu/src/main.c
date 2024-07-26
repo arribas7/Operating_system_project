@@ -121,6 +121,8 @@ t_paquete *procesar_pcb(t_pcb *pcb){
     if(response != NULL){
         t_buffer* buffer = malloc(sizeof(t_buffer));
 
+        log_info(logger, "Enviando response al kernel..."); 
+
         serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
         agregar_a_paquete(response,buffer->stream,buffer->size);
         free(buffer);
