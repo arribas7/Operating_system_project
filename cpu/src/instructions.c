@@ -234,7 +234,7 @@ void set(char* registro, char* valor){
     if (strcmp(registro, "DI") == 0)
         reg_proceso_actual->DI = atoi(valor);
 
-    //log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
+    log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
 void mov_in(char* registro, char* logicalAddress){
@@ -251,6 +251,8 @@ void mov_in(char* registro, char* logicalAddress){
         reg_proceso_actual->BX = valor;
     if (strcmp(registro, "CX") == 0) 
         reg_proceso_actual->CX = valor;
+    if (strcmp(registro, "DX") == 0)
+        reg_proceso_actual->EDX = valor;
     if (strcmp(registro, "EAX") == 0)
         reg_proceso_actual->EAX = valor;
     if (strcmp(registro, "EBX") == 0)
@@ -258,6 +260,10 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "ECX") == 0)
         reg_proceso_actual->ECX = valor;
     if (strcmp(registro, "EDX") == 0)
+        reg_proceso_actual->EDX = valor;
+    if (strcmp(registro, "SI") == 0)
+        reg_proceso_actual->EDX = valor;
+    if (strcmp(registro, "DI") == 0)
         reg_proceso_actual->EDX = valor;
 }
 
@@ -290,6 +296,10 @@ int obtener_valor_reg(char* reg){
         return reg_proceso_actual->ECX;
     if (strcmp(reg, "EDX") == 0)
         return reg_proceso_actual->EDX;
+    if (strcmp(reg, "SI") == 0)
+        return reg_proceso_actual->SI;
+    if (strcmp(reg, "DI") == 0)
+        return reg_proceso_actual->DI;
 }
 
 void sum(char* destReg, char* origReg){                 

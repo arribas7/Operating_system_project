@@ -71,4 +71,7 @@ char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid);
 uint32_t escribirEnDireccionFisica(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid);
 char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid);
 
+uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) ;
+int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid);
+
 #endif // PAGES_H

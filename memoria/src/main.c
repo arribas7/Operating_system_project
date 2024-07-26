@@ -251,12 +251,12 @@ void handle_client(void *arg) {
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
-                escribirEnEspacioUsuario2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+                escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
                 log_debug(logger, "PID: %d - Cant. Bytes: %d", to_write->pid, to_write->text_size);
-                escribirEnEspacioUsuario2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                escribirEnDireccionFisica2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
                 //escribirEnDireccionFisica(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
                 /*TODO: send confirmation properly: 
                 if(status == 0) 
@@ -272,7 +272,8 @@ void handle_client(void *arg) {
             case R_REQ: // IO_STDOUT_WRITE
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
-                char* to_send = leerDesdeEspacioUsuario(to_read->physical_address, to_read->text_size, to_read->pid);
+                char* to_send = malloc(sizeof(char) * to_read->text_size + 1);
+                leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
                 if(strlen(to_send) == to_read->text_size) 
                 {
                     enviar_mensaje(to_send, cliente_fd);

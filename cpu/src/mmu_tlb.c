@@ -123,6 +123,7 @@ int find_LRU_index() {
 
 int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
+    agregar_a_paquete(peticion,"tam_pag",sizeof("tam_pag"));
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
     
     int op = recibir_operacion(conexion_mem);
@@ -135,7 +136,8 @@ int recibir_tam_pag(int socket_cliente)
 {
     int size;
     char* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_debug(logger, "Tam pag received.. %s", tam_pag);
+    log_info(logger, "Tam pag received.. %s", tam_pag);
 
     return atoi(tam_pag);
 }
+
