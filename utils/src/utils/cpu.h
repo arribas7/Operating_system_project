@@ -17,6 +17,7 @@ typedef struct {
     uint8_t AX;
     uint8_t BX;
     uint8_t CX;
+    uint8_t DX;
     uint8_t EAX;
     uint8_t EBX;
     uint8_t ECX;

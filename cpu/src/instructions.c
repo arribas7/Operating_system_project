@@ -48,6 +48,7 @@ int init_reg_proceso_actual(void){
     reg_proceso_actual->BX = 0;
     reg_proceso_actual->CX = 0;
     reg_proceso_actual->DI = 0;
+    reg_proceso_actual->DX = 0;
     reg_proceso_actual->EAX = 0;
     reg_proceso_actual->EBX = 0;
     reg_proceso_actual->ECX = 0;
@@ -212,13 +213,14 @@ op_code check_interrupt(void){
 }
 //FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
-
     if (strcmp(registro, "AX") == 0)
         reg_proceso_actual->AX = (uint8_t)atoi(valor);
     if (strcmp(registro, "BX") == 0) 
         reg_proceso_actual->BX = atoi(valor);
     if (strcmp(registro, "CX") == 0) 
         reg_proceso_actual->CX = atoi(valor);
+    if (strcmp(registro, "DX") == 0) 
+        reg_proceso_actual->DX = atoi(valor);        
     if (strcmp(registro, "EAX") == 0)
         reg_proceso_actual->EAX = atoi(valor);
     if (strcmp(registro, "EBX") == 0)

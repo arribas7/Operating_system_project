@@ -4,7 +4,7 @@ int recibir_req(int socket_cliente)
 {
     int size;
     char* req = recibir_buffer(&size, socket_cliente);
-    log_info(logger, "REQ received... %s", req); //esta linea imprime cualquier cosa, pero no afecta al resultado del valor devuelto
+    //log_info(logger, "REQ received... %s", req); //esta linea imprime cualquier cosa, pero no afecta al resultado del valor devuelto
     return atoi(req);
 }
 

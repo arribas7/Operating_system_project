@@ -9,7 +9,6 @@
 #include <utils/cpu.h>
 #include "connections.h"
 
-
 extern t_log *logger;
 extern t_log *loggerError;
 extern t_config *config;

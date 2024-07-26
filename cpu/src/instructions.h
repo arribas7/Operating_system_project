@@ -3,7 +3,7 @@
 
 #include "mmu_tlb.h"
 #include "connections.h"
-#include <utils/cpu.h>
+//#include <utils/cpu.h>
 
 void fetch(t_pcb *pcb);
 void decode(t_pcb *pcb);
