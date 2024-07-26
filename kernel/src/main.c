@@ -76,6 +76,11 @@ void destroy_all() {
 void handle_client(void *arg) {
     int cliente_fd = *(int*) arg;
     free(arg);
+
+    if(cliente_fd < 0){
+        log_error(logger, "invalid client... closing connection");
+        liberar_conexion(cliente_fd);
+    }
     log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 
     t_list *lista;
