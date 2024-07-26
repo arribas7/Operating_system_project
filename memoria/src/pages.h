@@ -66,4 +66,9 @@ int resize_process(int pid, int nuevo_tamano);
 void liberarMarcoFisico(int marco);
 char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid);
 
+// Escritura y lectura contigua
+
+uint32_t escribirEnDireccionFisica(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid);
+char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid);
+
 #endif // PAGES_H

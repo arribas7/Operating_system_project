@@ -561,3 +561,48 @@ void escribirEnEspacioUsuario2(int direccion_fisica, char* datos, int tamanio, i
 
     log_info(logger, "PID: %d - Acción: ESCRIBIR - Dirección física: %p - Tamaño: %d", pid, (void*)direccion_fisica, tamanio);
 }
+
+// Escritura y Lectura contigua
+
+uint32_t escribirEnDireccionFisica(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) 
+{
+    uint32_t operation_status = 0;
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+    char* ptr = &(espacio_usuario[dirFisica]);
+    if((dirFisica + size) < memory.memory_size) 
+    {
+        for(int i = 0; i < size; i++) 
+        {
+            *(ptr + i) = txt[i];
+        }
+        operation_status = 1;
+    } else {
+        log_error(logger, "ERROR WRITING IN MEMORY");
+    }
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+
+    return operation_status;
+}
+
+char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid) 
+{
+    char* palabraLeida = malloc(size);
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+    if((dirFisica + size) < memory.memory_size) {
+        for(int i = 0; i < size; i++) 
+        {
+            *(palabraLeida + i) = espacio_usuario[i];
+        }
+    } else {
+        log_error(logger, "ERROR WRITING IN MEMORY");
+    }
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+
+    if(strlen(palabraLeida) != size) 
+    {
+        free(palabraLeida);
+        return "";
+    } else {
+        return palabraLeida;
+    }
+}

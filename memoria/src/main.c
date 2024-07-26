@@ -255,13 +255,32 @@ void handle_client(void *arg) {
             break;
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
-                escribirEnEspacioUsuario2(to_write->physical_address, to_write->text,to_write->text_size,to_write->pid);
+                log_debug(logger, "PID: %d - Cant. Bytes: %d", to_write->pid, to_write->text_size);
+                escribirEnEspacioUsuario2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                //escribirEnDireccionFisica(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                /*TODO: send confirmation properly: 
+                if(status == 0) 
+                {
+                    log_error(logger, "ERROR WRITING");
+                } else {
+                    log_debug(logger, "OPERATION SUCCESS");
+                    /*enviar_mensaje(to_write->text, cliente_fd);
+                }*/ 
+                uint32_t status = 1;
+                send_confirmation(cliente_fd, &(status));
                 break;
             case R_REQ: // IO_STDOUT_WRITE
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
-                char* to_send = leerDesdeEspacioUsuario(to_read->physical_address,to_read->text_size,to_read->pid);
-                enviar_mensaje(to_send, cliente_fd);
-                free(to_send);
+                // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
+                char* to_send = leerDesdeEspacioUsuario(to_read->physical_address, to_read->text_size, to_read->pid);
+                if(strlen(to_send) == to_read->text_size) 
+                {
+                    enviar_mensaje(to_send, cliente_fd);
+                    free(to_send);
+                } else {
+                    log_error(logger, "Error al leer desde la posicion fisica: %d", to_read->physical_address);
+                    enviar_mensaje("", cliente_fd);
+                }
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 retardo_en_peticiones();
@@ -303,7 +322,7 @@ void handle_client(void *arg) {
 
     close(cliente_fd);
 
-    return NULL;
+    /*return NULL;*/
 }
 
 int correr_servidor(void *arg) {
