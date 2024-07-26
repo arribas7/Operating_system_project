@@ -514,7 +514,7 @@ char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid) {
 
     int bytesLeidos = 0;
     while (bytesLeidos < tamano) {
-        int numPagina = calcularNumeroPagina(direccion_fisica);
+        int numPagina = calcularNumeroPagina(direccion_fisica); //TO DO 
         int desplazamiento = calcularDesplazamiento(direccion_fisica);
 
         char* dirFisica = obtenerDireccionFisica(tabla->paginas[numPagina].numero_marco, desplazamiento);

@@ -234,7 +234,7 @@ void set(char* registro, char* valor){
     if (strcmp(registro, "DI") == 0)
         reg_proceso_actual->DI = atoi(valor);
 
-    log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
+    //log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
 void mov_in(char* registro, char* logicalAddress){
@@ -637,7 +637,7 @@ t_resize* deserializar_resize(void* stream){
 void recibir_ack_resize(int conexion_mem){
     int size;
     ack = recibir_buffer(&size, conexion_mem);
-    printf("---%s",ack);
+    //printf("---%s",ack);
 }
 
 t_paquete *wait(char* recurso){

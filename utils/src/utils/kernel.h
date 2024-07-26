@@ -20,7 +20,10 @@ typedef struct {
     uint8_t DX;
     uint32_t EAX;
     uint32_t EBX;
-    uint32_t ECX;
+    uint32_t ECX;//a continuacion los registros que agrego
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
 } t_register;
 
 typedef enum {
