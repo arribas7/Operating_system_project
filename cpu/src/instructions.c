@@ -48,6 +48,7 @@ int init_reg_proceso_actual(void){
     reg_proceso_actual->BX = 0;
     reg_proceso_actual->CX = 0;
     reg_proceso_actual->DI = 0;
+    reg_proceso_actual->DX = 0;
     reg_proceso_actual->EAX = 0;
     reg_proceso_actual->EBX = 0;
     reg_proceso_actual->ECX = 0;
@@ -210,15 +211,16 @@ op_code check_interrupt(void){
     }
     return 0;
 }
-
+//FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
-
     if (strcmp(registro, "AX") == 0)
         reg_proceso_actual->AX = (uint8_t)atoi(valor);
     if (strcmp(registro, "BX") == 0) 
         reg_proceso_actual->BX = atoi(valor);
     if (strcmp(registro, "CX") == 0) 
         reg_proceso_actual->CX = atoi(valor);
+    if (strcmp(registro, "DX") == 0) 
+        reg_proceso_actual->DX = atoi(valor);        
     if (strcmp(registro, "EAX") == 0)
         reg_proceso_actual->EAX = atoi(valor);
     if (strcmp(registro, "EBX") == 0)
@@ -232,7 +234,7 @@ void set(char* registro, char* valor){
     if (strcmp(registro, "DI") == 0)
         reg_proceso_actual->DI = atoi(valor);
 
-    log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
+    //log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
 void mov_in(char* registro, char* logicalAddress){
@@ -635,7 +637,7 @@ t_resize* deserializar_resize(void* stream){
 void recibir_ack_resize(int conexion_mem){
     int size;
     ack = recibir_buffer(&size, conexion_mem);
-    printf("---%s",ack);
+    //printf("---%s",ack);
 }
 
 t_paquete *wait(char* recurso){

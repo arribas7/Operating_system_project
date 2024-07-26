@@ -3,7 +3,7 @@
 
 #include "mmu_tlb.h"
 #include "connections.h"
-#include <utils/cpu.h>
+//#include <utils/cpu.h>
 
 void fetch(t_pcb *pcb);
 void decode(t_pcb *pcb);
@@ -72,7 +72,7 @@ void copy_string (char* tamanio);
 
 
 int buscar(char *elemento, char **lista); //to find comando decode
-int obtener_valor_reg(char* reg);
+int obtener_valor_registro(char* reg);
 
 t_resize* new_resize(u_int32_t tamanio);
 t_paquete *resize(char* tamanio);
