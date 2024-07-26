@@ -118,7 +118,7 @@ void std_fs_manager(void* arg)
                         log_error(logger, "ERROR READING FROM MEMORY");
                         response = false;
                     } else {
-                        log_info(logger, "Palabra leida: %s", word);
+                        txt_write_in_stdout(word);
                         response = true;
                     }
                     send_report(instruction, response, k_socket);

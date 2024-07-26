@@ -97,7 +97,7 @@ t_req_to_r* list_to_req_to_r(t_list* list)
 {
     uint32_t pid = *((uint32_t *) list_get(list, 0));
     uint32_t size = *((uint32_t *) list_get(list, 1));
-    uint32_t physical_address = *((uint32_t *) list_get(list, 3));
+    uint32_t physical_address = *((uint32_t *) list_get(list, 2));
     return req_to_read(pid, size, physical_address);
 }
 
@@ -268,9 +268,9 @@ char* mssg_log(uint32_t code)
     char* txt = "";
     if(code == 0) 
     {
-        txt = "ERROR HAS OCURRED";
-    } else {
         txt = "READY";
+    } else {
+        txt = "ERROR HAS OCURRED";
     }
     return txt;
 }

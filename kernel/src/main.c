@@ -108,23 +108,24 @@ void handle_client(void *arg) {
                 log_info(logger, "STATUS %s: %s", name, mssg);
                 send_confirmation(cliente_fd, &(status));
                 
-                /*INSTRUCTION - 1 - TODO: Remove, only for tests.*/
+                /* INSTRUCTIONS */
 
-                /* STDIN */
+                /*
+                if(strcmp(name,"TECLADO") == 0) {
+                    t_instruction* instruction_1 = create_instruction_IO(1, IO_STDIN_READ, "TECLADO", 0, 0, 5, "Path", 0);
+                    send_instruction_IO(instruction_1, cliente_fd);
+                    log_info(logger, "INSTRUCTION_SENDED");
+                    delete_instruction_IO(instruction_1);
+                }
 
-                t_instruction* instruction_1 = create_instruction_IO(1, IO_STDIN_READ, "TECLADO", 0, 0, 5, "Path", 0);
-                send_instruction_IO(instruction_1, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_1);
 
-
-
-                /* STDOUT */
-
-                t_instruction* instruction_2 = create_instruction_IO(2, IO_STDOUT_WRITE, "MONITOR", 0, 0, 5, "myOtherPath", 0);
-                send_instruction_IO(instruction_2, cliente_fd);
-                log_info(logger, "INSTRUCTION_SENDED");
-                delete_instruction_IO(instruction_2);
+                /* STDOUT 
+                if(strcmp(name,"MONITOR") == 0) {
+                    t_instruction* instruction_2 = create_instruction_IO(1, IO_STDOUT_WRITE, "MONITOR", 0, 0, 5, "Path", 0);
+                    send_instruction_IO(instruction_2, cliente_fd);
+                    log_info(logger, "INSTRUCTION_SENDED");
+                    delete_instruction_IO(instruction_2);
+                }*/
 
                 break;
             case REPORT:

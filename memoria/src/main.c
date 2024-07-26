@@ -256,19 +256,23 @@ void handle_client(void *arg) {
             case W_REQ: // IO_STDIN_READ
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
                 log_debug(logger, "PID: %d - Cant. Bytes: %d", to_write->pid, to_write->text_size);
-                uint32_t status = escribirEnDireccionFisica(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                escribirEnEspacioUsuario2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                //escribirEnDireccionFisica(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
+                /*TODO: send confirmation properly: 
                 if(status == 0) 
                 {
                     log_error(logger, "ERROR WRITING");
                 } else {
                     log_debug(logger, "OPERATION SUCCESS");
-                    /*enviar_mensaje(to_write->text, cliente_fd);*/
-                }
+                    /*enviar_mensaje(to_write->text, cliente_fd);
+                }*/ 
+                uint32_t status = 1;
                 send_confirmation(cliente_fd, &(status));
                 break;
             case R_REQ: // IO_STDOUT_WRITE
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
-                char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
+                // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
+                char* to_send = leerDesdeEspacioUsuario(to_read->physical_address, to_read->text_size, to_read->pid);
                 if(strlen(to_send) == to_read->text_size) 
                 {
                     enviar_mensaje(to_send, cliente_fd);

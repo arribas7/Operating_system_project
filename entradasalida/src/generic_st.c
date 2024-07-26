@@ -19,7 +19,7 @@ int wait_time_units(uint32_t time, t_config* config)
     int unit_time = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
     int time_to_wait = unit_time * time;
 
-    return sleep(time_to_wait);
+    return usleep(time_to_wait * 1000);
 }
 
 // STDIN / STDOUT IO
@@ -63,7 +63,6 @@ void send_read_request(t_instruction* instruction, int connection)
 {
     t_req_to_r* mem_req = req_to_read(instruction->pid, instruction->size, instruction->physical_address);
     send_req_to_r(mem_req, connection);
-    delete_req_to_r(mem_req);
 }
 
 char* receive_word(int connection)
