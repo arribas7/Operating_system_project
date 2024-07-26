@@ -126,14 +126,18 @@ char* extract_name_from_path(const char* path) {
 
 void test_dialfs() {
     // Test file creation
-    fs_create("f1.txt", 1);
-    fs_truncate("f1.txt", 16 * 5, 1);
-    fs_create("f2.txt", 2);
+    //fs_create("salida.txt", 1);
+    //fs_create("cronologico.txt", 2);
+    //fs_truncate("salida.txt", 80, 1);
+    //fs_truncate("cronologico.txt", 80, 2);
+
+    //fs_write(100, 16, 0, 1); 
+    //fs_create("f2.txt", 2);
     //fs_truncate("f1.txt", 16 * 1, 1);
-    debug_print_bitmap();
+    //debug_print_bitmap();
     //fs_truncate("f2.txt", 32, 2); // acá lo hace mal
-    compact_dialfs();
-    debug_print_bitmap();
+    //compact_dialfs();
+    //debug_print_bitmap();
 
     // Test file writing
     //fs_write(100, 16, 0, 1);  // Write 16 bytes starting at block 0 for file with PID 1
@@ -144,9 +148,9 @@ void test_dialfs() {
     //fs_read(116, 16, 16, 2);
 
     // Test file deletion
-    fs_delete("f1.txt", 1);
-    fs_delete("f2.txt", 2);
-    compact_dialfs();
+    //fs_delete("f1.txt", 1);
+    //fs_delete("f2.txt", 2);
+    //compact_dialfs();
 
     // Test compactation
     //compact_dialfs(1);
