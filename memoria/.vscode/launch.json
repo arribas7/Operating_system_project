@@ -8,7 +8,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["config/memoria_mem_tlb.config"],
+      "args": ["config/memoria_io.config"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
