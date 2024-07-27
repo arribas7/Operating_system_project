@@ -670,7 +670,7 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
         uint32_t page_offset = (dirFisica + current_offset) % page_size;
 
         // Encontrar el marco asociado a la página actual
-        int marco = marcoAsociado(current_page, tabla);
+        int marco = marcoAsociado(current_page, tabla); // TODO: Remove this. El marco ya lo tenemos porque es una direccion física.
         if (marco == -1) {
             log_error(logger, "No se encontró el marco para la página %d del PID %d", current_page, pid);
             break;
@@ -684,6 +684,7 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
 
         // Realizar la lectura del espacio de usuario
         memcpy(buffer + current_offset, espacio_usuario + (marco * page_size) + page_offset, to_read);
+        log_debug(logger, "Actual buffer read: %s", buffer + current_offset);
         current_offset += to_read;
     }
 

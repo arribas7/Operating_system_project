@@ -213,6 +213,8 @@ op_code check_interrupt(void){
 }
 //FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
+    if (strcmp(registro, "PC") == 0)
+        reg_proceso_actual->PC = atoi(valor);
     if (strcmp(registro, "AX") == 0)
         reg_proceso_actual->AX = (uint8_t)atoi(valor);
     if (strcmp(registro, "BX") == 0) 

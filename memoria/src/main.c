@@ -312,16 +312,16 @@ void handle_client(void *arg) {
                 log_debug(logger, "Processing R_REQ");
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
-                char* to_send = malloc(sizeof(char) * to_read->text_size + 1);
+                char* to_send = malloc(sizeof(char) * to_read->text_size); 
                 leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
                 if(strlen(to_send) == to_read->text_size) 
                 {
                     enviar_mensaje(to_send, cliente_fd);
-                    free(to_send);
                 } else {
-                    log_error(logger, "Error al leer desde la posicion fisica: %d", to_read->physical_address);
+                    log_error(logger, "Error al leer desde la posicion fisica: %d, bytes leídos: %s, length: %d", to_read->physical_address, to_send, strlen(to_send));
                     enviar_mensaje("", cliente_fd);
                 }
+                free(to_send);
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 log_debug(logger,"Processing TLB_MISS");
@@ -414,10 +414,39 @@ void testing_paging(void) {
 }
 
 
-int main(int argc, char *argv[]) {
-    /* ---------------- Setup inicial  ---------------- */
+void test1WriteRead(){
+    /*handle_create_process("scripts_memoria/test1WriteRead", 1, config);
+    // SET EAX 16 -> CPU
+    // SET EBX 20 -> CPU
+    // RESIZE 128
+    resize_process(1,128);
+    // MOV_OUT y MOV_IN escriben solo de a un byte.
 
-    
+    escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+    leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
+    */
+}
+
+void test2WriteReadTwoProcesses(){
+
+}
+
+void test3IOReplicated(){
+
+}
+
+void handle_graceful_shutdown(int sig) {
+    close(server_fd);
+    printf("Socket %d closed\n", server_fd);
+    // TODO: clean everything?
+    exit(0);
+}
+
+int main(int argc, char *argv[]) {
+    // Manage signals
+    signal(SIGINT, handle_graceful_shutdown);
+    signal(SIGTERM, handle_graceful_shutdown);
+    /* ---------------- Setup inicial  ---------------- */
     //config = config_create(argv[1]);
     config = config_create("memoria.config");
     if (config == NULL) {
@@ -471,6 +500,10 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
+
+    test1WriteRead();
+    //test2WriteReadTwoProcesses();
+    //test3IOReplicated();
 
     pthread_join(hilo_servidor, NULL);
     clean(config);
