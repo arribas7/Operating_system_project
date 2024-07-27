@@ -430,11 +430,13 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
                 char *buffer = malloc(old_blocks_needed * block_size);
 
+                /*
                 log_info(logger, "BEGINNING BUFFERING");
                 log_info(logger, "Blocks File: %p", blocks_file);
                 log_info(logger, "Blocks file is at %ld", ftell(blocks_file));
                 log_info(logger, "Trying to fseek %d", start_block * block_size);
                 log_info(logger, "Block Size %d", block_size);
+                */
                 
 
                 if (blocks_file == NULL){
