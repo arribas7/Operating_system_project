@@ -292,7 +292,6 @@ int obtener_valor_reg(char* reg){
     if (strcmp(reg, "EAX") == 0)
         return reg_proceso_actual->EAX;
     if (strcmp(reg, "EBX") == 0)
-        log_debug(logger, "REMOVE_THIS EBX: %d", reg_proceso_actual->EBX);
         return reg_proceso_actual->EBX;
     if (strcmp(reg, "ECX") == 0)
         return reg_proceso_actual->ECX;
