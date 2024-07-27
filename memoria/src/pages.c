@@ -606,3 +606,102 @@ char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid)
         return palabraLeida;
     }
 }
+
+
+//lectura y escritura no contigua:
+
+uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) 
+{
+    uint32_t operation_status = 0;
+    uint32_t page_size = memory.page_size;
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+
+    if (!tabla) {
+        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
+        return operation_status;
+    }
+
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+
+    uint32_t current_offset = 0;
+    while (current_offset < size) {
+        // Calculo pagina actual y desplazamiento dentro de esa página
+        uint32_t current_page = (dirFisica + current_offset) / page_size;
+        uint32_t page_offset = (dirFisica + current_offset) % page_size;
+
+        // Marco asociado a la pagina actual
+        int marco = marcoAsociado(current_page, tabla);
+        if (marco == -1) {
+            log_error(logger, "No se encontró el marco para la página %d del PID %d", current_page, pid);
+            break;
+        }
+
+        // Calcular la cantidad de datos que se pueden escribir en el marco actual
+        uint32_t to_write = page_size - page_offset;
+        if (to_write > (size - current_offset)) {
+            to_write = size - current_offset;
+        }
+
+        // Realizar la escritura en el espacio de usuario
+        memcpy(espacio_usuario + (marco * page_size) + page_offset, txt + current_offset, to_write);
+        current_offset += to_write;
+    }
+
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+
+    if (current_offset == size) {
+        operation_status = 1;
+    } else {
+        log_error(logger, "Error al escribir en la memoria física para el PID %d", pid);
+    }
+
+    return operation_status;
+}
+
+int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid) 
+{
+    uint32_t operation_status = 0;
+    uint32_t page_size = memory.page_size;
+    TablaPaginas* tabla = tablaDePaginasAsociada(pid);
+
+    if (!tabla) {
+        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
+        return operation_status;
+    }
+
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+
+    uint32_t current_offset = 0;
+    while (current_offset < size) {
+        // Calcular la página actual y el desplazamiento dentro de esa página
+        uint32_t current_page = (dirFisica + current_offset) / page_size;
+        uint32_t page_offset = (dirFisica + current_offset) % page_size;
+
+        // Encontrar el marco asociado a la página actual
+        int marco = marcoAsociado(current_page, tabla);
+        if (marco == -1) {
+            log_error(logger, "No se encontró el marco para la página %d del PID %d", current_page, pid);
+            break;
+        }
+
+        // Calcular la cantidad de datos que se pueden leer del marco actual
+        uint32_t to_read = page_size - page_offset;
+        if (to_read > (size - current_offset)) {
+            to_read = size - current_offset;
+        }
+
+        // Realizar la lectura del espacio de usuario
+        memcpy(buffer + current_offset, espacio_usuario + (marco * page_size) + page_offset, to_read);
+        current_offset += to_read;
+    }
+
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+
+    if (current_offset == size) {
+        operation_status = 1;
+    } else {
+        log_error(logger, "Error al leer desde la memoria física para el PID %d", pid);
+    }
+
+    return operation_status;
+}

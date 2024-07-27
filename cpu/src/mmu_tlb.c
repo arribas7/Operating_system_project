@@ -84,7 +84,7 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         TLB[tlb_index].pid = pid;
         TLB[tlb_index].pagina = pagina;
         TLB[tlb_index].marco = marco;
-        TLB[tlb_size].last_time_access = 0;
+        TLB[tlb_index].last_time_access = 0;
         // Incrementar el índice para la próxima entrada
         tlb_index = (tlb_index + 1) % cant_entradas_tlb(); // Incremento circular del índice
     }
@@ -123,6 +123,7 @@ int find_LRU_index() {
 
 int solicitar_tam_pag_a_mem(void){
     t_paquete* peticion = crear_paquete(TAM_PAG);
+    agregar_a_paquete(peticion,"tam_pag",sizeof("tam_pag"));
     enviar_paquete(peticion, conexion_mem); //envio el paquete vacio solo con el opcode, aver si funciona
     
     int op = recibir_operacion(conexion_mem);
