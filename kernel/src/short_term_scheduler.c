@@ -273,6 +273,7 @@ void st_sched_ready_running(void* arg) {
             pthread_mutex_lock(&mutex_running);
             pcb_RUNNING = next_pcb;
             pthread_mutex_unlock(&mutex_running);
+            log_info(logger, "“PID: <%d> - Estado Anterior: <READY> - Estado Actual: <RUNNING>”", next_pcb->pid);
 
             // If using RR or VRR, signal the quantum semaphore
             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {

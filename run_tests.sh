@@ -51,28 +51,69 @@ run_module() {
 # Function to run specific commands for the tests in a new terminal
 run_test() {
   local test_name=$1
+  local no_memoria=$2
+  local no_cpu=$3
+  local no_kernel=$4
+  local no_entradasalida=$5
 
   echo "Executing test: $test_name"
-  run_module "memoria" "${test_configs[${test_name}_memoria]}" "0 0" "940 460"
-  run_module "kernel" "${test_configs[${test_name}_kernel]}" "0 500" "940 500"
-  run_module "cpu" "${test_configs[${test_name}_cpu]}" "940 0" "940 460"
-
-  # Split entradasalida configs and run each in a new terminal
-  IFS=' ' read -r -a entradasalida_configs <<< "${test_configs[${test_name}_entradasalida]}"
-  local positions=("940 500" "940 680" "940 860" "940 1020" "940 1200")
-  local sizes=("950 140" "950 140" "950 140" "950 140" "950 140")
-  local i=0
-  for config in "${entradasalida_configs[@]}"; do
-    run_module "entradasalida" "$config" "${positions[$i]}" "${sizes[$i]}"
-    i=$((i+1))
-  done
+  if [ "$no_memoria" != "true" ]; then
+    run_module "memoria" "${test_configs[${test_name}_memoria]}" "0 0" "940 460"
+  fi
+  if [ "$no_kernel" != "true" ]; then
+    run_module "kernel" "${test_configs[${test_name}_kernel]}" "0 500" "940 500"
+  fi
+  if [ "$no_cpu" != "true" ]; then
+    run_module "cpu" "${test_configs[${test_name}_cpu]}" "940 0" "940 460"
+  fi
+  if [ "$no_entradasalida" != "true" ]; then
+    # Split entradasalida configs and run each in a new terminal
+    IFS=' ' read -r -a entradasalida_configs <<< "${test_configs[${test_name}_entradasalida]}"
+    local positions=("940 500" "940 680" "940 860" "940 1020" "940 1200")
+    local sizes=("950 140" "950 140" "950 140" "950 140" "950 140")
+    local i=0
+    for config in "${entradasalida_configs[@]}"; do
+      run_module "entradasalida" "$config" "${positions[$i]}" "${sizes[$i]}"
+      i=$((i+1))
+    done
+  fi
 }
 
-# Main script execution
-if [ $# -eq 0 ]; then
-  echo "Usage: $0 <test_name>"
+# Parse arguments
+no_memoria="false"
+no_cpu="false"
+no_kernel="false"
+no_entradasalida="false"
+
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    -no_memoria)
+      no_memoria="true"
+      shift
+      ;;
+    -no_cpu)
+      no_cpu="true"
+      shift
+      ;;
+    -no_kernel)
+      no_kernel="true"
+      shift
+      ;;
+    -no_entradasalida)
+      no_entradasalida="true"
+      shift
+      ;;
+    *)
+      test_name="$1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$test_name" ]; then
+  echo "Usage: $0 <test_name> [-no_memoria] [-no_cpu] [-no_kernel] [-no_entradasalida]"
   exit 1
 fi
 
-test_name=$1
-run_test "$test_name"
+run_test "$test_name" "$no_memoria" "$no_cpu" "$no_kernel" "$no_entradasalida"

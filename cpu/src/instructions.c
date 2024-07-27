@@ -38,7 +38,7 @@ int buscar(char *elemento, char **lista) //buscar un elemento en una lista
 }
 
 int init_reg_proceso_actual(void){
-    reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
+    reg_proceso_actual = (t_register *)malloc(sizeof(t_register));
     if (reg_proceso_actual == NULL) {
         fprintf(stderr, "Error al asignar memoria\n");
         return -1;
@@ -225,6 +225,7 @@ void set(char* registro, char* valor){
         reg_proceso_actual->EAX = atoi(valor);
     if (strcmp(registro, "EBX") == 0)
         reg_proceso_actual->EBX = atoi(valor);
+        log_debug(logger,"Remove this: %d",reg_proceso_actual->EBX);
     if (strcmp(registro, "ECX") == 0)
         reg_proceso_actual->ECX = atoi(valor);
     if (strcmp(registro, "EDX") == 0)
@@ -291,6 +292,7 @@ int obtener_valor_reg(char* reg){
     if (strcmp(reg, "EAX") == 0)
         return reg_proceso_actual->EAX;
     if (strcmp(reg, "EBX") == 0)
+        log_debug(logger, "REMOVE_THIS EBX: %d", reg_proceso_actual->EBX);
         return reg_proceso_actual->EBX;
     if (strcmp(reg, "ECX") == 0)
         return reg_proceso_actual->ECX;

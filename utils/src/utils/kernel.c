@@ -48,6 +48,9 @@ t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char *path, t_state prev_state)
     reg->EAX = 0;
     reg->EBX = 0;
     reg->ECX = 0;
+    reg->EDX = 0;
+    reg->SI = 0;
+    reg->DI = 0;
 
     pcb->reg = reg;
     pcb->prev_state = prev_state;

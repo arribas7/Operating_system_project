@@ -51,6 +51,7 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection, t_config 
 t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     int cpu_connection = conexion_by_config(config, "IP_CPU", "PUERTO_CPU_DISPATCH");
 
+    log_debug(logger, "REMOVE_THIS EBX: %d", pcb->reg->EBX);
     log_debug(logger, "CPU connection running in a thread");
     t_buffer *buffer = malloc(sizeof(t_buffer));
     serialize_pcb(pcb, buffer);
@@ -63,6 +64,8 @@ t_return_dispatch *cpu_dispatch(t_pcb *pcb, t_config *config){
     free(buffer);
 
     t_return_dispatch *ret = handle_dispatch_deserialization(cpu_connection, config);
+
+    log_debug(logger, "REMOVE_THIS RETURNED EBX: %d", ret->pcb_updated->reg->EBX);
 
     liberar_conexion(cpu_connection);
     log_debug(logger, "CPU dispatch connection released");
