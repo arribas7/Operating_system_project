@@ -237,9 +237,11 @@ void set(char* registro, char* valor){
     //log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
-void mov_in(char* registro, char* logicalAddress){
+void mov_in(char* registro, char* reg2){
     //int valor = 0; //quitar luego de hacer el siguiente TO DO
-    int fisicalAddr = mmu(logicalAddress);
+    int direccion_logica = obtener_valor_reg(reg2);
+
+    int fisicalAddr = mmu(string_itoa(direccion_logica));
     
     //request to mem
     //int valor = requestRegToMem(fisicalAddr); //TO DO

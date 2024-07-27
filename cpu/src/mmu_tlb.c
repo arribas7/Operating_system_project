@@ -69,6 +69,15 @@ TLBEntry* buscar_en_TLB(int pid, int pagina){
     return NULL; //si no encuentra en la tlb
 }
 
+int buscar_marco_en_TLB(int pid, int pagina) {
+    for (int i = 0; i < cant_entradas_tlb(); i++) {
+        if (TLB[i].pid == pid && TLB[i].pagina == pagina) {
+            return TLB[i].marco; // Devuelve el marco si se encuentra la entrada
+        }
+    }
+    return -1; // Devuelve -1 si no se encuentra la entrada en la TLB
+}
+
 void agregar_a_TLB(int pid, int pagina, int marco) {
     // Verificar si la TLB está llena
 
@@ -136,7 +145,7 @@ int recibir_tam_pag(int socket_cliente)
 {
     int size;
     char* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_debug(logger, "Tam pag received.. %s", tam_pag);
+    log_info(logger, "Tam pag received.. %s", tam_pag);
 
     return atoi(tam_pag);
 }

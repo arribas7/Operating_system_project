@@ -42,5 +42,6 @@ int recibir_tam_pag(int socket_cliente);
 void agregar_a_TLB_LRU(int pid, int pagina, int marco);
 int find_LRU_index();
 
+int buscar_marco_en_TLB(int pid, int pagina);
 
 #endif

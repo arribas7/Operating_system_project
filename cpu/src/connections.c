@@ -93,7 +93,7 @@ int requestRegToMem (int fisicalAddr){
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
 
-    recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
+    recibir_operacion(conexion_mem); 
     int valor = recibir_req(conexion_mem); //receive VALOR DEL REG
     
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "READ", fisicalAddr, valor);

@@ -319,7 +319,10 @@ void handle_client(void *arg) {
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
-                enviar_mensaje(obtener_valor(reg_request->pid,direccion_fisica),cliente_fd);
+                char* leido = malloc(sizeof(char)*4);
+                leerDeDireccionFisica3(direccion_fisica,4,leido,reg_request->pid);
+                enviar_mensaje(leido,cliente_fd);
+                //enviar_mensaje(obtener_valor(reg_request->pid,direccion_fisica),cliente_fd);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
