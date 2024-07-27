@@ -270,7 +270,7 @@ void fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f
     free(buffer);
 }
 
-t_list* list_files() {
+t_list* list_files(char* file_exception) {
     struct dirent* entry;
     DIR* dir = opendir(path_base);
 
@@ -283,7 +283,9 @@ t_list* list_files() {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
             char* filename = strdup(entry->d_name);
-            list_add(filenames, filename);
+            if (file_exception == NULL || strcmp(filename, file_exception) != 0) {
+                list_add(filenames, filename);
+            }
         }
     }
 
@@ -291,7 +293,7 @@ t_list* list_files() {
     return filenames;
 }
 
-void compact_dialfs() {
+void compact_dialfs(char* file_exception) {
     log_info(logger, "Inicio Compactación.");
 
     //Se construye la ruta al archivo de bloques
@@ -299,14 +301,14 @@ void compact_dialfs() {
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
     //Se abre el archivo de bloques en modo de lectura y escritura
-    //FILE *blocks_file = fopen(blocks_path, "rb+");
     blocks_file = fopen(blocks_path, "rb+");
     if (!blocks_file) {
         return;
     }
 
     //Se obtiene una lista de nombre de archivos
-    t_list* filenames = list_files();
+    //Opcionalmente se puede excluir un archivo
+    t_list* filenames = list_files(file_exception);
     if (filenames == NULL) {
         fclose(blocks_file);
         return;
@@ -331,7 +333,7 @@ void compact_dialfs() {
 }
 
 int find_first_free_block(int blocks_needed) {
-    for (int i = 0; i <= bitarray_get_max_bit(bitmap) - blocks_needed; i++) {
+    for (int i = 0; i <= bitarray_get_max_bit(bitmap)) {
         bool block_free = true;
         for (int j = 0; j < blocks_needed; j++) {
             if (bitarray_test_bit(bitmap, i + j)) {
@@ -424,15 +426,36 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
             //Si el bloque está siendo utilizado
             if (bitarray_test_bit(bitmap, start_block + i)) {
-                
-                // TODO: Levantar a un buffer el archivo, limpiar los bits, luego se ejecuta la compactación.
-                //Se compacta el sistema de archivos
-                compact_dialfs();
+                //*****************SE LEE EL ARCHIVO Y SE ALMACENA EN UN BUFFER*****************
+
+                char *buffer = malloc(old_blocks_needed * block_size);
+
+                //Se mueve el puntero del archivo al start block
+                fseek(blocks_file, start_block * block_size, SEEK_SET);
+
+                //Se lee desde el inicio la cantidad de bloques necesarios y se almacena en buffer
+                fread(buffer, block_size, old_blocks_needed, blocks_file);
+
+                //*****************SE LIMPIA EL BITMAP*****************
+
+                for (int i = 0; i < old_blocks_needed; i++) {
+                    bitarray_clean_bit(bitmap, start_block + i);
+                }
+
+                //*****************COMPACTACIÓN*****************
+
+                //Se compacta el sistema de archivos exceptuando al archivo actual
+                compact_dialfs(filename);
+
+                //*****************ESCRITURA*****************
 
                 //Se intenta mover el archivo a un espacio libre después de la compactación
-                int new_start_block = move_file_to_free_space(filename, start_block, actual_size, old_blocks_needed, new_blocks_needed, pid);
+                int new_start_block = find_first_free_block(new_blocks_needed);
                 if (new_start_block == -1) {
                     return;
+                }
+                for (int i = new_start_block; i < new_start_block + new_blocks_needed; i++) {
+                    bitarray_set_bit(bitmap, i);
                 }
                 //Se actualiza el start_block con la nueva posición
                 start_block = new_start_block;  
@@ -440,9 +463,11 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
             }
         }
         //Se marcan los nuevos bloques del archivo como utilizados en el bitmap
+        /*
         for (int i = old_blocks_needed; i < new_blocks_needed; i++) {
             bitarray_set_bit(bitmap, start_block + i);
         }
+        */
     } else if (new_blocks_needed < old_blocks_needed) {
         //Si se necesitan menos bloques que antes, transcurrir el espacio descartado
         for (int i = new_blocks_needed; i < old_blocks_needed; i++) {
