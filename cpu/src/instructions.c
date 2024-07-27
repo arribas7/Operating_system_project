@@ -58,7 +58,7 @@ int init_reg_proceso_actual(void){
 
     return 1;
 }
-
+/*
 int valueOfReg (char* reg){
     if (strcmp(reg, "AX") == 0)
         return reg_proceso_actual->AX;
@@ -77,7 +77,7 @@ int valueOfReg (char* reg){
 
     return 0;
 }
-
+*/
 void recibir_instruccion(int socket_cliente)
 {
     int size;
@@ -308,8 +308,8 @@ void sum(char* destReg, char* origReg){
 
     int valor1,valor2,suma;
 
-    valor1 = valueOfReg(destReg);
-    valor2 = valueOfReg(origReg);
+    valor1 = obtener_valor_reg(destReg);
+    valor2 = obtener_valor_reg(origReg);
 
     suma = valor1 + valor2;
 
@@ -320,8 +320,8 @@ void sub(char* destReg, char* origReg){
 
     int valor1,valor2,resta;
 
-    valor1 = valueOfReg(destReg);
-    valor2 = valueOfReg(origReg);
+    valor1 = obtener_valor_reg(destReg);
+    valor2 = obtener_valor_reg(origReg);
 
     resta = valor1 - valor2;
 
@@ -331,7 +331,7 @@ void sub(char* destReg, char* origReg){
 void jnz(char* reg, char* inst){
     //log_info(logger, "PC in actual process before: %d", reg_proceso_actual->PC); //funciona
 
-    if(valueOfReg(reg))
+    if(obtener_valor_reg(reg))
         reg_proceso_actual->PC = atoi(inst);
 
     //log_info(logger, "PC in actual process after: %d", reg_proceso_actual->PC); //funciona probe init reg proceso actual con AX = 1

@@ -57,7 +57,7 @@ void mov_in(char* registro, char* si);
 void recibir_instruccion(int socket_cliente);
 void mov_in(char* registro, char* logicalAddress);
 void mov_out(char* logicalAddr, char* reg);
-int valueOfReg (char* reg);
+//int valueOfReg (char* reg);
 void sum(char* destReg, char* origReg);
 void sub(char* destReg, char* origReg);
 void jnz(char* reg, char* inst);
