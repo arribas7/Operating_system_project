@@ -225,7 +225,6 @@ void set(char* registro, char* valor){
         reg_proceso_actual->EAX = atoi(valor);
     if (strcmp(registro, "EBX") == 0)
         reg_proceso_actual->EBX = atoi(valor);
-        log_debug(logger,"Remove this: %d",reg_proceso_actual->EBX);
     if (strcmp(registro, "ECX") == 0)
         reg_proceso_actual->ECX = atoi(valor);
     if (strcmp(registro, "EDX") == 0)
