@@ -84,7 +84,7 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         TLB[tlb_index].pid = pid;
         TLB[tlb_index].pagina = pagina;
         TLB[tlb_index].marco = marco;
-        TLB[tlb_size].last_time_access = 0;
+        TLB[tlb_index].last_time_access = 0;
         // Incrementar el índice para la próxima entrada
         tlb_index = (tlb_index + 1) % cant_entradas_tlb(); // Incremento circular del índice
     }
@@ -136,7 +136,7 @@ int recibir_tam_pag(int socket_cliente)
 {
     int size;
     char* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_info(logger, "Tam pag received.. %s", tam_pag);
+    log_debug(logger, "Tam pag received.. %s", tam_pag);
 
     return atoi(tam_pag);
 }

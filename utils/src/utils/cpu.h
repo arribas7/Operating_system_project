@@ -63,6 +63,13 @@ typedef struct
 */
 
 typedef struct{
+    u_int32_t pid;
+    int tamanio;
+    int fisical_si;
+    int fisical_di;
+} t_copy_string;
+
+typedef struct{
     int pid;
     int tamanio;
 } t_resize;
