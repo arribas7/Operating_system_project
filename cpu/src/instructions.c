@@ -38,7 +38,7 @@ int buscar(char *elemento, char **lista) //buscar un elemento en una lista
 }
 
 int init_reg_proceso_actual(void){
-    reg_proceso_actual = (t_reg_cpu *)malloc(sizeof(t_reg_cpu));
+    reg_proceso_actual = (t_register *)malloc(sizeof(t_register));
     if (reg_proceso_actual == NULL) {
         fprintf(stderr, "Error al asignar memoria\n");
         return -1;

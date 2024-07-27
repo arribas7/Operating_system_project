@@ -2,7 +2,7 @@
 #!/bin/bash
 
 # Patrones de los nombres de los procesos que deseas detener
-process_patterns=("bin/cpu cpu.config" "bin/memoria memoria.config" "bin/kernel kernel.config" "bin/entradasalida entradasalida.config")
+process_patterns=("bin/cpu" "bin/memoria" "bin/kernel" "bin/entradasalida")
 
 for pattern in "${process_patterns[@]}"; do
 	# Obtiene el PID del proceso, excluyo el proceso del mismo grep

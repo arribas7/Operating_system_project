@@ -24,7 +24,7 @@ char **instr_decode;
 int cant_parametros;
 char* ack;
 
-t_reg_cpu* reg_proceso_actual = NULL;
+t_register* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
@@ -53,7 +53,7 @@ op_code interrupted_reason = 0;
 int main(int argc, char *argv[])
 {
     /* ---------------- Setup inicial  ---------------- */
-    logger = log_create("cpu.log", "cpu", true, LOG_LEVEL_INFO);
+    logger = log_create("cpu.log", "cpu", true, LOG_LEVEL_DEBUG);
     if (logger == NULL)
     {
         return -1;
@@ -70,10 +70,19 @@ int main(int argc, char *argv[])
     log_info(logger, "Welcome to CPU!");
 
     conexionMemoria(config);
+    pthread_t dispatch_thread;
+    pthread_t interrupt_thread;
 
-    run_dispatch_server();
-    
-    run_interrupt_server();
+
+    if(pthread_create(&(dispatch_thread), NULL, (void*) run_dispatch_server, NULL) != 0) {
+        log_error(logger, "Error creating thread for dispatch server.");
+    }
+    if(pthread_create(&(interrupt_thread), NULL, (void*) run_interrupt_server, NULL) != 0) {
+        log_error(logger, "Error creating thread for interrupt server.");
+    }
+
+    pthread_join(dispatch_thread, NULL);
+    pthread_join(interrupt_thread, NULL);
 
     clean(config);
     return 0;
@@ -97,8 +106,10 @@ t_paquete *procesar_pcb(t_pcb *pcb){
     // Procesar el PCB y ejecutar el ciclo de instrucción
     log_info(logger, "Procesando el PCB con PID: %d", pcb->pid);
     
-    init_reg_proceso_actual(); //luego de procesar el proceso actual, verificar instrucciones, antes de pasar al nuevo proceso del sig PC, acordarse hacer "free(reg_proceso_actual)"
+    //init_reg_proceso_actual(); //luego de procesar el proceso actual, verificar instrucciones, antes de pasar al nuevo proceso del sig PC, acordarse hacer "free(reg_proceso_actual)"
+    reg_proceso_actual = pcb->reg;
     t_paquete *response = NULL;
+    
     pcb_en_ejecucion = pcb;
 
     while(true){
@@ -106,6 +117,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         decode(pcb_en_ejecucion);
         response = execute(pcb_en_ejecucion);
         pcb_en_ejecucion->pc++;
+        pcb_en_ejecucion->reg = reg_proceso_actual;
 
         if(response != NULL){
             break;
@@ -156,8 +168,7 @@ int handle_dispatch(int server_fd)
 
         enviar_paquete(response, kernel_dispatch_socket);
         eliminar_paquete(response);
-        free(pcb);
-
+        delete_pcb(pcb);
         liberar_conexion(kernel_dispatch_socket);
     }
     return EXIT_SUCCESS;
