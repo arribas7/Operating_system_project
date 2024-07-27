@@ -220,15 +220,18 @@ void fs_delete(const char *filename, uint32_t pid) {
     remove(metadata_path);
 }
 
-void fs_write(uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+void fs_write(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
     log_debug(logger, "Phys_addr to read from memory: %d", phys_addr);
     log_info(logger, "PID: %d - Escribir Archivo - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, size, f_pointer);
 
     char *data = malloc(size);
-    snprintf(data, size, "%d: test text.", pid);
+    snprintf(data, size, "Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76");
     // TODO: Call memory to retrieve data with phys_address and size.
     // TODO: required? data[size - 1] = '\0';
+    
 
+    // TODO: Search metadata
+    // block initi
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
@@ -240,8 +243,10 @@ void fs_write(uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pi
     fclose(blocks);
 }
 
-void fs_read(uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+void fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
     log_info(logger, "PID: %d - Leer Archivo - Tamaño a Leer: %d - Puntero Archivo: %d", pid, size, f_pointer);
+    
+    // TODO: Open metadata
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
@@ -419,7 +424,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
             //Si el bloque está siendo utilizado
             if (bitarray_test_bit(bitmap, start_block + i)) {
-
+                
+                // TODO: Levantar a un buffer el archivo, limpiar los bits, luego se ejecuta la compactación.
                 //Se compacta el sistema de archivos
                 compact_dialfs();
 

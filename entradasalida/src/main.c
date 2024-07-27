@@ -135,13 +135,13 @@ void std_fs_manager(void* arg)
                 fs_delete(instruction->f_name, instruction->pid);
                 break;
             case IO_FS_READ:
-                fs_read(config_get_string_value(config, "PATH_BASE_DIALFS"), 0, NULL, 0, instruction->pid);
+                fs_read(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
                 break;
             case IO_FS_TRUNCATE:
                 fs_truncate(instruction->f_name, instruction->size, instruction->pid);
                 break;
             case IO_FS_WRITE:
-                fs_write(config_get_string_value(config, "PATH_BASE_DIALFS"), 0, NULL, 0, instruction->pid);
+                fs_write(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
@@ -171,12 +171,15 @@ char* extract_name_from_path(const char* path)
 
 void test_dialfs() {
     // Test file creation
-    //fs_create("salida.txt", 1);
-    //fs_create("cronologico.txt", 2);
-    //fs_truncate("salida.txt", 80, 1);
-    //fs_truncate("cronologico.txt", 80, 2);
+    fs_create("salida.txt", 1);
+    fs_create("cronologico.txt", 2);
+    fs_truncate("salida.txt", 80, 1);
+    fs_truncate("cronologico.txt", 80, 2);
+    debug_print_bitmap();
 
-    //fs_write(100, 16, 0, 1); 
+    fs_write("salida.txt", 0, 69, 0, 1); // Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
+    fs_read("salida.txt", 0, 69, 0, 1); // READ y escribir en memoria -> Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
+
     //fs_create("f2.txt", 2);
     //fs_truncate("f1.txt", 16 * 1, 1);
     //debug_print_bitmap();
@@ -193,9 +196,8 @@ void test_dialfs() {
     //fs_read(116, 16, 16, 2);
 
     // Test file deletion
-    //fs_delete("f1.txt", 1);
-    //fs_delete("f2.txt", 2);
-    //compact_dialfs();
+    fs_delete("salida.txt", 1);
+    fs_delete("cronologico.txt", 2);
 
     // Test compactation
     //compact_dialfs(1);
