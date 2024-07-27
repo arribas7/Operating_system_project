@@ -80,6 +80,7 @@ void handle_client(void *arg) {
     if(cliente_fd < 0){
         log_error(logger, "invalid client... closing connection");
         liberar_conexion(cliente_fd);
+        exit(0);
     }
     log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 

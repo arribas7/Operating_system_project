@@ -1,4 +1,4 @@
-// kernel.h tiene las estructuras y funciones relacionadas a la comunicación entre módulos.
+/// kernel.h tiene las estructuras y funciones relacionadas a la comunicación entre módulos.
 #ifndef UTILS_CPU_H_
 #define UTILS_CPU_H_
 
@@ -18,10 +18,10 @@ typedef struct {
     uint8_t BX;
     uint8_t CX;
     uint8_t DX;
-    uint32_t EAX;
-    uint32_t EBX;
-    uint32_t ECX;
-    uint32_t EDX;
+    uint8_t EAX;
+    uint8_t EBX;
+    uint8_t ECX;
+    uint8_t EDX;
     uint32_t SI;
     uint32_t DI;
 } t_reg_cpu;

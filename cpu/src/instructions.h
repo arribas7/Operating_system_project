@@ -13,7 +13,7 @@ extern t_log *logger;
 extern t_log *loggerError;
 extern t_config *config;
 
-extern t_reg_cpu* reg_proceso_actual;
+extern t_register* reg_proceso_actual;
 extern t_pcb* pcb_en_ejecucion;
 
 extern int conexion_mem;
@@ -50,6 +50,7 @@ typedef enum
 } t_comando;
 
 extern char *listaComandos[];
+
 
 
 int init_reg_proceso_actual(void);

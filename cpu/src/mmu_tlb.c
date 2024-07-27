@@ -149,3 +149,4 @@ int recibir_tam_pag(int socket_cliente)
 
     return atoi(tam_pag);
 }
+

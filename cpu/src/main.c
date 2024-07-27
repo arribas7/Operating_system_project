@@ -24,7 +24,7 @@ char **instr_decode;
 int cant_parametros;
 char* ack;
 
-t_reg_cpu* reg_proceso_actual = NULL;
+t_register* reg_proceso_actual = NULL;
 t_pcb* pcb_en_ejecucion;
 int kernel_dispatch_socket;
 int kernel_interrupt_socket;
