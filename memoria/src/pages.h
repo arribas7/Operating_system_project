@@ -53,7 +53,7 @@ TablaPaginas* tablaDePaginasAsociada (int pid);
 void enviar_marco(int pagina, int pid, int cliente_fd);
 void liberarTablaPaginas(TablaPaginas tabla);
 bool hayEspacioEnBitmap(int marcos_necesarios);
-void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config);
+void copy_string(int direc_fis_1, int direc_fis_2, int tamanio, int pid);
 char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsociada);
 int calcularDesplazamiento(int direccion_fisica);
 char* obtenerDireccionFisica(int marco, int desplazamiento);
@@ -70,7 +70,11 @@ char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid);
 uint32_t escribirEnDireccionFisica(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid);
 char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid);
 
+//escritura y lectura no contigua 
+
 uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) ;
 int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid);
+void finish_process(int pid);
+
 
 #endif // PAGES_H

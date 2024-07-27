@@ -389,8 +389,8 @@ t_copy_string* new_copy_string(int tamanio){
 
     copy_string->pid = pcb_en_ejecucion->pid;
     copy_string->tamaño = tamanio;
-    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->AX)); //agregar registro DI
-    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->BX)); //AGREGAR REGISTRO SI AL PCB
+    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->DI)); //agregar registro DI
+    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->SI)); //AGREGAR REGISTRO SI AL PCB
 
     return copy_string;
 }

@@ -51,12 +51,7 @@ typedef enum
 
 extern char *listaComandos[];
 
-typedef struct{
-    u_int32_t pid;
-    int tamaño;
-    int fisical_si;
-    int fisical_di;
-} t_copy_string;
+
 
 int init_reg_proceso_actual(void);
 void set(char* registro, char* valor);

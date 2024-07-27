@@ -72,6 +72,13 @@ typedef struct{
     char* recurso;
 } t_ws;
 
+typedef struct{
+    u_int32_t pid;
+    int tamaño;
+    int fisical_si;
+    int fisical_di;
+} t_copy_string;
+
 // INSTRUCTION
 
 t_instruction* create_instruction_IO(uint32_t pid, op_code code, char* name, uint32_t time, uint32_t physical_address, uint32_t size, char* f_name, uint32_t f_pointer);

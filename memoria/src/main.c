@@ -58,20 +58,25 @@ void recibir_tam_pag(int socket_cpu){
     free(buffer);
 }
 
-/* HABILITAR CUANDO INCLUYA CONNECTIONS.H
-t_request* recibir_pagina(int socket_cpu){
-    int size;
-    void *buffer = recibir_buffer(&size, socket_cpu);
-    if (buffer == NULL) {
-        return NULL;
-    }
+t_copy_string* deserializar_copy_string(void* stream){
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    int offset = 0;
 
-    t_request* pagina = deserializar_request(buffer);
-    free(buffer);
+    memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
 
-    return pagina;
+    memcpy(&(copy_string->tamaño), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_di), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return copy_string;
 }
-*/
+
 
 
 /*********************************************************/ /********INCLUIR EN ALGUN.H*******/
@@ -141,50 +146,19 @@ t_request2* recibir_mov_out(int socket_cpu){
 
     return req;
 }
-/*
-int tamanio_proceso(int pid, int tam_pag){
-    TablaPaginas* tablaAsoc = tablaDePaginasAsociada(pid);
-    int tamanio_proceso = tablaAsoc->num_paginas;
-    return tamanio_proceso;
-} 
 
-bool memoria_llena (int tam_actual,int nuevo_tam){
-    return !hayEspacioEnBitmap(tam_actual - nuevo_tam);
-}
-
-void modificar_tamanio_proceso (int pid, int nuevo_tamanio,t_config* config, int tam_pag){
-    TablaPaginas* tablaAsoc = tablaDePaginasAsociada(pid);
-    TablaPaginas* tablaAux = NULL;
-    tablaAux = tablaAsoc;
-
-    dictionary_remove(listaTablasDePaginas,string_itoa(pid));
-    liberarTablaPaginas(*tablaAsoc);
-
-    crearTablaPaginas(pid,nuevo_tamanio,tam_pag);
-
-    TablaPaginas* tablaNew = NULL;
-    tablaNew = dictionary_get(listaTablasDePaginas,string_itoa(pid));
-    tablaNew = tablaAux;
-}
-void nuevo_tamanio_proceso(t_resize* resize){
-
-    resize_process(resize->pid,resize->tamanio)
-    int tam_actual_proceso = tamanio_proceso(resize->pid,tam_pag);
-    int nuevo_tamanio;
-
-    if(tam_actual_proceso > resize->tamanio){ //reduccion de tamanio de proceso
-        nuevo_tamanio = resize->tamanio;
-        modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config,tam_pag);
+t_copy_string* recibir_copy_string (int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
     }
-    else{
-        nuevo_tamanio = tam_actual_proceso + (resize->tamanio - tam_actual_proceso);
-        if (memoria_llena(tam_actual_proceso,nuevo_tamanio)) 
-            enviar_mensaje("Out of memory",socket_cpu);
-        else 
-            modificar_tamanio_proceso(resize->pid,nuevo_tamanio,config,tam_pag);
-    } 
+
+    t_copy_string* cs = deserializar_copy_string(buffer);
+    free(buffer);
+
+    return cs;
 }
-*/
 
 
 void handle_client(void *arg) {
@@ -213,10 +187,10 @@ void handle_client(void *arg) {
             case PC:
                 log_debug(logger, "Processing next PC...");
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
+                //log_info(logger, "pid: %d", pcb->pid);
                 log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
+                //log_info(logger, "quantum: %d", pcb->quantum);
+                //log_info(logger, "path: %s", pcb->path);
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
                 //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
@@ -236,7 +210,6 @@ void handle_client(void *arg) {
                 enviar_mensaje((char *)mensaje, cliente_fd);
                 enviar_respuesta(cliente_fd, OK);
                 break;
-                
             case PAGE_REQUEST:
                 retardo_en_peticiones();
                 t_request* request = recibir_pagina(cliente_fd);
@@ -301,19 +274,9 @@ void handle_client(void *arg) {
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
             case COPY_STRING: //recibo pid, tamanio, di(direccion fisica es un int) y si(direccion fisica), copio (bytes = tamanio) de si en di
-                //recibis pid
-                //con ese pid buscas la tabla de pagina asociada
-                //la direccion fisica es el numero de pagina dentro de la tabla de paginas
-                //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
                 retardo_en_peticiones();
-                pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
-                int direc_fis_1;
-                int direc_fis_2;
-                copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
+                t_copy_string* cs = recibir_copy_string(cliente_fd);
+                copy_string(cs->fisical_si,cs->fisical_di,cs->tamaño,cs->pid);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
                 retardo_en_peticiones();

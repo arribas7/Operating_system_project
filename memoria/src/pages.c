@@ -318,23 +318,30 @@ char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsocia
     return obtenerDireccionFisica(marco, desplazamiento);
 }
 
-void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config) {
-   TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
-   if (!tablaAsociada) {
+void copy_string(int source_df, int dest_df, int tamanio, int pid) {
+    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
+    if (!tablaAsociada) {
        perror("Tabla de páginas no encontrada para el PID proporcionado");
        return;
-   }
+    }
+
+    char* leido = malloc(sizeof(char)*tamanio + 1);
+    leerDeDireccionFisica3(source_df,tamanio,leido,pid);
+    escribirEnDireccionFisica2(dest_df,leido,sizeof(leido),pid);
+   /*
    char *dir_fisica_1 = obtenerDireccionFisicafull(direc_fis_1, tablaAsociada);
    char *dir_fisica_2 = obtenerDireccionFisicafull(direc_fis_2, tablaAsociada);
   
+
    if (!dir_fisica_1 || !dir_fisica_2) {
        perror("No se pudo obtener la dirección física");
        return;
    }
-
+    
    pthread_mutex_lock(&memory.mutex_espacio_usuario);
    strcpy(dir_fisica_2, dir_fisica_1);
    pthread_mutex_unlock(&memory.mutex_espacio_usuario);
+   */
 }
 /********************************FINISH PROCESS**************************************/
 
