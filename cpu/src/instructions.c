@@ -237,9 +237,11 @@ void set(char* registro, char* valor){
     log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
-void mov_in(char* registro, char* logicalAddress){
+void mov_in(char* registro, char* reg2){
     //int valor = 0; //quitar luego de hacer el siguiente TO DO
-    int fisicalAddr = mmu(logicalAddress);
+    int direccion_logica = obtener_valor_reg(reg2);
+
+    int fisicalAddr = mmu(string_itoa(direccion_logica));
     
     //request to mem
     //int valor = requestRegToMem(fisicalAddr); //TO DO
@@ -252,7 +254,7 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "CX") == 0) 
         reg_proceso_actual->CX = valor;
     if (strcmp(registro, "DX") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->DX = valor;
     if (strcmp(registro, "EAX") == 0)
         reg_proceso_actual->EAX = valor;
     if (strcmp(registro, "EBX") == 0)
@@ -262,9 +264,9 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "EDX") == 0)
         reg_proceso_actual->EDX = valor;
     if (strcmp(registro, "SI") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->SI = valor;
     if (strcmp(registro, "DI") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->DI = valor;
 }
 
 void mov_out(char* reg1, char* reg2){
@@ -360,7 +362,7 @@ void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer){
     memcpy(buffer->stream + buffer->offset, &(copy_string->pid), sizeof(u_int32_t));
     buffer->offset += sizeof(u_int32_t);
 
-    memcpy(buffer->stream + buffer->offset, &(copy_string->tamaño), sizeof(int));
+    memcpy(buffer->stream + buffer->offset, &(copy_string->tamanio), sizeof(int));
     buffer->offset += sizeof(int);
 
     memcpy(buffer->stream + buffer->offset, &(copy_string->fisical_si), sizeof(int));
@@ -377,7 +379,7 @@ t_copy_string* deserializar_copy_string(void* stream){
     memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
-    memcpy(&(copy_string->tamaño), stream + offset, sizeof(int));
+    memcpy(&(copy_string->tamanio), stream + offset, sizeof(int));
     offset += sizeof(int);
 
     memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
@@ -396,9 +398,9 @@ t_copy_string* new_copy_string(int tamanio){
     }
 
     copy_string->pid = pcb_en_ejecucion->pid;
-    copy_string->tamaño = tamanio;
-    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->AX)); //agregar registro DI
-    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->BX)); //AGREGAR REGISTRO SI AL PCB
+    copy_string->tamanio = tamanio;
+    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->DI)); //agregar registro DI
+    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->SI)); //AGREGAR REGISTRO SI AL PCB
 
     return copy_string;
 }

@@ -33,6 +33,37 @@ t_resize* deserializar_resize(void* stream){
 
     return resize;
 }
+
+t_copy_string* deserializar_copy_string(void* stream){
+    t_copy_string* copy_string_var = malloc(sizeof(t_copy_string));
+    int offset = 0;
+
+    memcpy(&(copy_string_var->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(copy_string_var->tamanio), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string_var->fisical_si), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string_var->fisical_di), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return copy_string_var;
+}
+t_copy_string* recibir_copy_string (int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_copy_string* cs = deserializar_copy_string(buffer);
+    free(buffer);
+
+    return cs;
+}
 /*********************************************************/ 
 
 t_resize* recibir_resize(int socket_cpu){
@@ -201,10 +232,8 @@ void handle_client(void *arg) {
             case CREATE_PROCESS:
                 log_debug(logger, "Creating process...");
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
+                log_debug(logger, "pid: %d", pcb->pid);
+                log_debug(logger, "pc: %d", pcb->pc);
                 u_int32_t pid = pcb->pid; 
                 handle_create_process(pcb->path,pid,config); //funciona con scripts-pruebas/file1
                 printf("Path recibido: %s", pcb->path);
@@ -213,10 +242,8 @@ void handle_client(void *arg) {
             case PC:
                 log_debug(logger, "Processing next PC...");
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
+                log_debug(logger, "pid: %d", pcb->pid);
+                log_debug(logger, "pc: %d", pcb->pc);
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
                 //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
@@ -313,20 +340,17 @@ void handle_client(void *arg) {
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
                 retardo_en_peticiones();
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
-                int direc_fis_1;
-                int direc_fis_2;
-                copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
+                t_copy_string* cs = recibir_copy_string(cliente_fd);
+                copy_string(cs->fisical_si,cs->fisical_di,cs->tamanio,cs->pid);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
                 log_debug(logger,"Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
-                enviar_mensaje(obtener_valor(reg_request->pid,direccion_fisica),cliente_fd);
+                char* leido = malloc(sizeof(char)*4);
+                leerDeDireccionFisica3(direccion_fisica,4,leido,reg_request->pid);
+                enviar_mensaje(leido,cliente_fd);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
