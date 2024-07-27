@@ -446,6 +446,10 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
                     return;
                 }
 
+                char blocks_path[256];
+                snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
+                blocks_file = fopen(blocks_path, "wb");
+
                 //Se mueve el puntero del archivo al start block
                 fseek(blocks_file, start_block * block_size, SEEK_SET);
 
