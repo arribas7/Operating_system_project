@@ -333,7 +333,7 @@ void compact_dialfs(char* file_exception) {
 }
 
 int find_first_free_block(int blocks_needed) {
-    for (int i = 0; i <= bitarray_get_max_bit(bitmap)) {
+    for (int i = 0; i <= bitarray_get_max_bit(bitmap); i++) {
         bool block_free = true;
         for (int j = 0; j < blocks_needed; j++) {
             if (bitarray_test_bit(bitmap, i + j)) {
@@ -429,6 +429,22 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
                 //*****************SE LEE EL ARCHIVO Y SE ALMACENA EN UN BUFFER*****************
 
                 char *buffer = malloc(old_blocks_needed * block_size);
+
+                log_info(logger, "BEGINNING BUFFERING");
+                log_info(logger, "Blocks File: %p", blocks_file);
+                log_info(logger, "Blocks file is at %ld", ftell(blocks_file));
+                log_info(logger, "Trying to fseek %d", start_block * block_size);
+                log_info(logger, "Block Size %d", block_size);
+                
+
+                if (blocks_file == NULL){
+                    log_error(logger, "NULL FILE POINTER");
+                }
+
+                if (buffer == NULL) {
+                    log_error(logger, "Failed to allocate buffer");
+                    return;
+                }
 
                 //Se mueve el puntero del archivo al start block
                 fseek(blocks_file, start_block * block_size, SEEK_SET);

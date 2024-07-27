@@ -173,6 +173,7 @@ void test_dialfs() {
     // Test file creation
     fs_create("salida.txt", 1);
     fs_create("cronologico.txt", 2);
+    debug_print_bitmap();
     fs_truncate("salida.txt", 80, 1);
     fs_truncate("cronologico.txt", 80, 2);
     debug_print_bitmap();
