@@ -258,12 +258,14 @@ void handle_client(void *arg) {
                 enviar_mensaje(string_itoa(tam_pag),cliente_fd);
             break;
             case WRITE: //dada una direccion fisica y un valor de registro, escribirlo (mov_out)
+                log_debug(logger,"Processing WRITE");
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
                 escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
+                log_debug(logger,"Processing W_REQ");
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
                 log_debug(logger, "PID: %d - Cant. Bytes: %d", to_write->pid, to_write->text_size);
                 escribirEnDireccionFisica2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
@@ -280,6 +282,7 @@ void handle_client(void *arg) {
                 send_confirmation(cliente_fd, &(status));
                 break;
             case R_REQ: // IO_STDOUT_WRITE
+                log_debug(logger, "Processing R_REQ");
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
                 char* to_send = malloc(sizeof(char) * to_read->text_size + 1);
@@ -294,6 +297,7 @@ void handle_client(void *arg) {
                 }
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
+                log_debug(logger,"Processing TLB_MISS");
                 retardo_en_peticiones();
                 t_request* tlb_request = recibir_pagina(cliente_fd);
                 int pagina_tlb = tlb_request->req;
@@ -302,6 +306,7 @@ void handle_client(void *arg) {
             //case INSTRUCTION: //nose para q es, creo que nunca lo use a este
             //break;
             case COPY_STRING: //recibo pid, tamanio, di(direccion fisica es un int) y si(direccion fisica), copio (bytes = tamanio) de si en di
+                log_debug(logger,"Processing COPY_STRING");
                 //recibis pid
                 //con ese pid buscas la tabla de pagina asociada
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
@@ -317,6 +322,7 @@ void handle_client(void *arg) {
                 copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
+                log_debug(logger,"Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
                 int direccion_fisica = reg_request->req;
@@ -347,8 +353,7 @@ int correr_servidor(void *arg) {
         cliente_fd = esperar_cliente(server_fd);
         if (cliente_fd < 0) {
             log_error(logger, "Error al aceptar el cliente");
-            close(cliente_fd);
-            continue;
+            break;
         }
 
         pthread_t client_thread;
