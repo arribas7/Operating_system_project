@@ -52,7 +52,6 @@ typedef enum
 extern char *listaComandos[];
 
 
-
 int init_reg_proceso_actual(void);
 void set(char* registro, char* valor);
 void mov_in(char* registro, char* si);
