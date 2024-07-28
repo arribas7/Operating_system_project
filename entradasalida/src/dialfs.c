@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include "dialfs.h"
 #include "bitarray_utils.h"
+#include <utils/inout.h>
 
 int block_size;
 int block_count;
@@ -220,54 +221,110 @@ void fs_delete(const char *filename, uint32_t pid) {
     remove(metadata_path);
 }
 
-void fs_write(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+int fs_write(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid, int mem_connection) {
     log_debug(logger, "Phys_addr to read from memory: %d", phys_addr);
     log_info(logger, "PID: %d - Escribir Archivo - Tamaño a Escribir: %d - Puntero Archivo: %d", pid, size, f_pointer);
 
-    char *data = malloc(size);
-    snprintf(data, size, "Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76");
-    // TODO: Call memory to retrieve data with phys_address and size.
-    // TODO: required? data[size - 1] = '\0';
-    
+    t_req_to_r* mem_req = req_to_read(pid, size, phys_addr);
+    send_req_to_r(mem_req, mem_connection);
+    char* data = receive_word(mem_connection);
+    if(strlen(data) == 0) {
+        log_error(logger, "ERROR READING FROM MEMORY");
+        return -1;
+    }
 
-    // TODO: Search metadata
-    // block initi
+    free(mem_req);
+    char metadata_path[256];
+    snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
+
+    t_config *metadata = config_create(metadata_path);
+    if (!metadata) {
+        log_error(logger, "Error abriendo archivo de metadata: %s", metadata_path);
+        free(data);
+        return -1;
+    }
+
+    int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
+    int file_size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+
+    if (f_pointer + size > file_size) {
+        char size_str[12];
+        sprintf(size_str, "%d", f_pointer + size);
+        config_set_value(metadata, "TAMANIO_ARCHIVO", size_str);
+        config_save(metadata);
+    }
+    config_destroy(metadata);
+
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
     FILE *blocks = fopen(blocks_path, "rb+");
-    if (!blocks) return;
+    if (!blocks) {
+        log_error(logger, "Error abriendo archivo de bloques: %s", blocks_path);
+        free(data);
+        return -1;
+    }
 
-    fseek(blocks, f_pointer, SEEK_SET);
+    int start_position = start_block * block_size + f_pointer;
+
+    fseek(blocks, start_position, SEEK_SET);
     fwrite(data, sizeof(char), size, blocks);
     fclose(blocks);
+
+    free(data);
+    return 0;
 }
 
-void fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid) {
+int fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_pointer, uint32_t pid, int mem_connection) {
     log_info(logger, "PID: %d - Leer Archivo - Tamaño a Leer: %d - Puntero Archivo: %d", pid, size, f_pointer);
-    
-    // TODO: Open metadata
+    char metadata_path[256];
+    snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
+
+    t_config *metadata = config_create(metadata_path);
+    if (!metadata) {
+        log_error(logger, "Error abriendo archivo de metadata: %s", metadata_path);
+        return -1;
+    }
+
+    int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
+    int file_size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+    config_destroy(metadata);
+
+    if (f_pointer + size > file_size) {
+        log_error(logger, "Intento de leer fuera del límite del archivo");
+        return -1;
+    }
+
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
+    // Abrir el archivo de bloques
     FILE *blocks = fopen(blocks_path, "rb");
     if (!blocks) {
-        log_error(logger, "error opening blocks path: %s", blocks_path);
-        return;
+        log_error(logger, "Error abriendo archivo de bloques: %s", blocks_path);
+        return -1;
     }
 
-    debug_print_blocks(blocks);
+    // Calcular la posición de inicio en el archivo de bloques
+    int start_position = start_block * block_size + f_pointer;
 
+    // Leer el contenido del archivo desde la posición calculada
     char *buffer = malloc(size);
-    fseek(blocks, f_pointer, SEEK_SET);
+    fseek(blocks, start_position, SEEK_SET);
     fread(buffer, sizeof(char), size, blocks);
     fclose(blocks);
 
-    log_debug(logger, "Buffer read: %s", buffer);
-    log_debug(logger, "Phys_addr to write on memory: %d", phys_addr);
-    // TODO: call memory to write buffer
-    // Example: write_to_memory(phys_addr, buffer, size);
+    log_debug(logger, "Buffer leído: %s", buffer);
+    log_debug(logger, "Phys_addr para escribir en memoria: %d", phys_addr);
+
+    t_req_to_w* mem_req = req_to_write(pid, buffer, phys_addr);
+    send_req_to_w(mem_req, mem_connection);
+
+    // Liberar la memoria
+    free(mem_req->text);
+    free(mem_req);
     free(buffer);
+    return 0;
 }
 
 t_list* list_files(char* file_exception) {

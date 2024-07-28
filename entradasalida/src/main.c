@@ -83,7 +83,7 @@ void generic_interface_manager()
 
 void std_fs_manager(void* arg) 
 {
-    int connection = atoi((char *) arg);
+    int mem_connection = atoi((char *) arg);
     while(1) 
     {
         sem_wait(&(use_time));
@@ -92,13 +92,14 @@ void std_fs_manager(void* arg)
         
         generate_log_from_instruction(instruction);
         bool response;
+        int result = 0;
 
         switch(instruction->code) 
         {
             case IO_STDIN_READ:
                 uint32_t status = 0;
-                send_write_request(instruction, connection);
-                receive_confirmation(connection, &(status));
+                send_write_request(instruction, mem_connection);
+                receive_confirmation(mem_connection, &(status));
                 if(status == 0) 
                 {
                     log_error(logger, "AN ERROR HAS OCURRED");
@@ -111,8 +112,8 @@ void std_fs_manager(void* arg)
             case IO_STDOUT_WRITE:
                 if (wait_time_units(1, config) == 0) 
                 {
-                    send_read_request(instruction, connection);
-                    char* word = receive_word(connection);
+                    send_read_request(instruction, mem_connection);
+                    char* word = receive_word(mem_connection);
                     if(strlen(word) == 0) 
                     {
                         log_error(logger, "ERROR READING FROM MEMORY");
@@ -130,22 +131,27 @@ void std_fs_manager(void* arg)
                 break;
             case IO_FS_CREATE:
                 fs_create(instruction->f_name, instruction->pid);
+                send_report(instruction, true, k_socket);
                 break;
             case IO_FS_DELETE:
                 fs_delete(instruction->f_name, instruction->pid);
+                send_report(instruction, true, k_socket);
                 break;
             case IO_FS_READ:
-                fs_read(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
+                result = fs_read(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid, mem_connection);
+                send_report(instruction, result == 0, k_socket);
                 break;
             case IO_FS_TRUNCATE:
                 fs_truncate(instruction->f_name, instruction->size, instruction->pid);
+                send_report(instruction, true, k_socket);
                 break;
             case IO_FS_WRITE:
-                fs_write(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid);
+                result = fs_write(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid, mem_connection);
+                send_report(instruction, result == 0, k_socket);
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
-                send_report(instruction, false, connection);
+                send_report(instruction, false, k_socket);
                 break;
         }
         sem_post(&(use_time));
@@ -178,8 +184,8 @@ void test_dialfs() {
     fs_truncate("cronologico.txt", 80, 2);
     debug_print_bitmap();
 
-    fs_write("salida.txt", 0, 69, 0, 1); // Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
-    fs_read("salida.txt", 0, 69, 0, 1); // READ y escribir en memoria -> Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
+    fs_write("salida.txt", 0, 69, 0, 1, -1); // Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
+    fs_read("salida.txt", 0, 69, 0, 1, -1); // READ y escribir en memoria -> Fallout 1 Fallout 2 Fallout 3 Fallout: New Vegas Fallout 4 Fallout 76
 
     //fs_create("f2.txt", 2);
     //fs_truncate("f1.txt", 16 * 1, 1);
@@ -232,7 +238,7 @@ int main(int argc, char* argv[]) {
         initialize_dialfs(path_base_dialfs, block_size, block_count);
 
         // TODO: remove test
-        test_dialfs();
+        //test_dialfs();
     }
     
     // CREATE KERNEL CONNECTION
