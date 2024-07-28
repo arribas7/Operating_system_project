@@ -14,6 +14,7 @@ typedef enum {
     INVALID_INTERFACE,
     INVALID_OPERATION,
     INTERRUPTED_BY_USER,
+    ERROR_INTERFACE,
     NUM_REASONS // This helps in determining the number of reasons
 } exit_reason;
 

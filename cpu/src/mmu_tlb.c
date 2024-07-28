@@ -15,8 +15,7 @@ uint32_t mmu(char* logicalAddress){
     int marco = 0;
 
     int numero_pagina = floor(direccion_logica / tam_pag);
-    //int desplazamiento = direccion_logica % tam_pag;
-    int desplazamiento = direccion_logica - numero_pagina * tam_pag;
+    int desplazamiento = direccion_logica % tam_pag;
 
     log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
@@ -30,11 +29,12 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB(pcb_en_ejecucion->pid,numero_pagina,marco);
-                direccion_fisica = marco + desplazamiento;
-            }
-            else{
+                // direccion_fisica = marco + desplazamiento;
+                direccion_fisica = marco * tam_pag + desplazamiento;
+            } else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                //direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }   
         else{   //algoritmo LRU
@@ -44,19 +44,22 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB_LRU(pcb_en_ejecucion->pid,numero_pagina,marco);
-                direccion_fisica = marco + desplazamiento;
+                direccion_fisica = marco * tam_pag + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }
     }
     else{
         log_info(logger,"TLB deshabilitada, buscando frame en memoria...");
-        direccion_fisica = requestFrameToMem(numero_pagina) + desplazamiento;
+        marco = requestFrameToMem(numero_pagina);
+        direccion_fisica =  marco * tam_pag + desplazamiento;
     }
-    
+
+    log_debug(logger, "PID: <%d> - DL: <%d> - PAG:<%d> - OFFSET: <%d> ", pcb_en_ejecucion->pid, direccion_logica, numero_pagina, desplazamiento);
+    log_debug(logger, "PID: <%d> - DF: <%d> - MARCO:<%d> - OFFSET: <%d> ", pcb_en_ejecucion->pid, direccion_fisica, marco, desplazamiento);
     return direccion_fisica;
 }
 
@@ -84,7 +87,7 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
         TLB[tlb_index].pid = pid;
         TLB[tlb_index].pagina = pagina;
         TLB[tlb_index].marco = marco;
-        TLB[tlb_size].last_time_access = 0;
+        TLB[tlb_index].last_time_access = 0;
         // Incrementar el índice para la próxima entrada
         tlb_index = (tlb_index + 1) % cant_entradas_tlb(); // Incremento circular del índice
     }
@@ -136,7 +139,7 @@ int recibir_tam_pag(int socket_cliente)
 {
     int size;
     char* tam_pag = recibir_buffer(&size, socket_cliente);
-    log_info(logger, "Tam pag received.. %s", tam_pag);
+    log_debug(logger, "Tam pag received.. %s", tam_pag);
 
     return atoi(tam_pag);
 }

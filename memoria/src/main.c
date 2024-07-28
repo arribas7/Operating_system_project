@@ -33,6 +33,37 @@ t_resize* deserializar_resize(void* stream){
 
     return resize;
 }
+
+t_copy_string* deserializar_copy_string(void* stream){
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    int offset = sizeof(int); // tamanio
+
+    memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
+    offset += sizeof(u_int32_t);
+
+    memcpy(&(copy_string->tamanio), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    memcpy(&(copy_string->fisical_di), stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return copy_string;
+}
+t_copy_string* recibir_copy_string (int socket_cpu){
+    int size;
+    void *buffer = recibir_buffer(&size, socket_cpu);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    t_copy_string* cs = deserializar_copy_string(buffer);
+    free(buffer);
+
+    return cs;
+}
 /*********************************************************/ 
 
 t_resize* recibir_resize(int socket_cpu){
@@ -201,10 +232,8 @@ void handle_client(void *arg) {
             case CREATE_PROCESS:
                 log_debug(logger, "Creating process...");
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
+                log_debug(logger, "pid: %d", pcb->pid);
+                log_debug(logger, "pc: %d", pcb->pc);
                 u_int32_t pid = pcb->pid; 
                 handle_create_process(pcb->path,pid,config); //funciona con scripts-pruebas/file1
                 printf("Path recibido: %s", pcb->path);
@@ -213,10 +242,8 @@ void handle_client(void *arg) {
             case PC:
                 log_debug(logger, "Processing next PC...");
                 pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
+                log_debug(logger, "pid: %d", pcb->pid);
+                log_debug(logger, "pc: %d", pcb->pc);
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
                 //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
@@ -261,8 +288,10 @@ void handle_client(void *arg) {
                 log_debug(logger,"Processing WRITE");
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
+                char asciiValue = (char)write->val;
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
-                escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+
+                escribirEnDireccionFisica2(write->req, &asciiValue, sizeof(asciiValue), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 log_debug(logger,"Processing W_REQ");
@@ -285,16 +314,12 @@ void handle_client(void *arg) {
                 log_debug(logger, "Processing R_REQ");
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
-                char* to_send = malloc(sizeof(char) * to_read->text_size + 1);
+                char* to_send = malloc(sizeof(char) * (to_read->text_size + 1)); 
                 leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
-                if(strlen(to_send) == to_read->text_size) 
-                {
-                    enviar_mensaje(to_send, cliente_fd);
-                    free(to_send);
-                } else {
-                    log_error(logger, "Error al leer desde la posicion fisica: %d", to_read->physical_address);
-                    enviar_mensaje("", cliente_fd);
-                }
+                to_send[to_read->text_size] = '\0';
+                log_debug(logger, "Buffer leído de la posicion fisica: %d.\nBuffer:%s\n Bytes leídos: %d", to_read->physical_address, to_send, to_read->text_size);
+                enviar_mensaje(to_send, cliente_fd);
+                free(to_send);
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 log_debug(logger,"Processing TLB_MISS");
@@ -312,21 +337,19 @@ void handle_client(void *arg) {
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
                 retardo_en_peticiones();
-                pcb = recibir_pcb(cliente_fd);
-                log_info(logger, "pid: %d", pcb->pid);
-                log_info(logger, "pc: %d", pcb->pc);               
-                log_info(logger, "quantum: %d", pcb->quantum);
-                log_info(logger, "path: %s", pcb->path);
-                int direc_fis_1;
-                int direc_fis_2;
-                copy_string(direc_fis_1, pcb->pid,direc_fis_2, cliente_fd, config);
+                t_copy_string* cs = recibir_copy_string(cliente_fd);
+                copy_string(cs->fisical_si,cs->fisical_di,cs->tamanio,cs->pid);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
                 log_debug(logger,"Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
+
                 int direccion_fisica = reg_request->req;
-                enviar_mensaje(obtener_valor(reg_request->pid,direccion_fisica),cliente_fd);
+                char* leido = malloc(sizeof(char));
+
+                leerDeDireccionFisica3(direccion_fisica,sizeof(char),leido,reg_request->pid);
+                enviar_mensaje(leido,cliente_fd);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
@@ -390,10 +413,39 @@ void testing_paging(void) {
 }
 
 
-int main(int argc, char *argv[]) {
-    /* ---------------- Setup inicial  ---------------- */
+void test1WriteRead(){
+    /*handle_create_process("scripts_memoria/test1WriteRead", 1, config);
+    // SET EAX 16 -> CPU
+    // SET EBX 20 -> CPU
+    // RESIZE 128
+    resize_process(1,128);
+    // MOV_OUT y MOV_IN escriben solo de a un byte.
 
-    
+    escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+    leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
+    */
+}
+
+void test2WriteReadTwoProcesses(){
+
+}
+
+void test3IOReplicated(){
+
+}
+
+void handle_graceful_shutdown(int sig) {
+    close(server_fd);
+    printf("Socket %d closed\n", server_fd);
+    // TODO: clean everything?
+    exit(0);
+}
+
+int main(int argc, char *argv[]) {
+    // Manage signals
+    signal(SIGINT, handle_graceful_shutdown);
+    signal(SIGTERM, handle_graceful_shutdown);
+    /* ---------------- Setup inicial  ---------------- */
     //config = config_create(argv[1]);
     config = config_create("memoria.config");
     if (config == NULL) {
@@ -447,6 +499,10 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
+
+    test1WriteRead();
+    //test2WriteReadTwoProcesses();
+    //test3IOReplicated();
 
     pthread_join(hilo_servidor, NULL);
     clean(config);

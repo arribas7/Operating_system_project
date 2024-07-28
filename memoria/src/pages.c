@@ -317,24 +317,10 @@ char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsocia
     int desplazamiento = calcularDesplazamiento(direccion_fisica);
     return obtenerDireccionFisica(marco, desplazamiento);
 }
-
-void copy_string(int direc_fis_1, int pid, int direc_fis_2, int cliente_fd, t_config *config) {
-   TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
-   if (!tablaAsociada) {
-       perror("Tabla de páginas no encontrada para el PID proporcionado");
-       return;
-   }
-   char *dir_fisica_1 = obtenerDireccionFisicafull(direc_fis_1, tablaAsociada);
-   char *dir_fisica_2 = obtenerDireccionFisicafull(direc_fis_2, tablaAsociada);
-  
-   if (!dir_fisica_1 || !dir_fisica_2) {
-       perror("No se pudo obtener la dirección física");
-       return;
-   }
-
-   pthread_mutex_lock(&memory.mutex_espacio_usuario);
-   strcpy(dir_fisica_2, dir_fisica_1);
-   pthread_mutex_unlock(&memory.mutex_espacio_usuario);
+void copy_string(int source_df, int dest_df, int tamanio, int pid) {
+    char* leido = malloc(sizeof(char)*tamanio);
+    leerDeDireccionFisica3(source_df,tamanio,leido,pid);
+    escribirEnDireccionFisica2(dest_df,leido,tamanio,pid);
 }
 /********************************FINISH PROCESS**************************************/
 
@@ -612,60 +598,126 @@ char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid)
 
 uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) 
 {
-    uint32_t operation_status = 0;
-    uint32_t page_size = memory.page_size;
+    // Obtener la tabla de páginas del proceso
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
-
     if (!tabla) {
-        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
-        return operation_status;
+        log_error(logger, "Tabla de páginas no encontrada para el PID %d", pid);
+        return -1;
     }
 
+    uint32_t page_size = memory.page_size;
+    int marco_inicial = dirFisica / page_size;
+    uint32_t offset_dentro_marco = dirFisica % page_size; // Desplazamiento dentro del primer marco
+
+    // Ordenar los marcos de menor a mayor
+    int num_paginas = tabla->num_paginas;
+    int* marcos = malloc(num_paginas * sizeof(int));
+    int count_marcos = 0;
+    for (int i = 0; i < num_paginas; i++) {
+        if (count_marcos > 0 || tabla->paginas[i].numero_marco == marco_inicial) {
+            marcos[count_marcos] = tabla->paginas[i].numero_marco;
+            count_marcos++;
+        }
+    }
+
+    uint32_t bytes_escritos = 0;
     pthread_mutex_lock(&(memory.mutex_espacio_usuario));
 
-    uint32_t current_offset = 0;
-    while (current_offset < size) {
-        // Calculo pagina actual y desplazamiento dentro de esa página
-        uint32_t current_page = (dirFisica + current_offset) / page_size;
-        uint32_t page_offset = (dirFisica + current_offset) % page_size;
+    for (int i = 0; bytes_escritos < size && i < count_marcos; i++) {
+        int marco = marcos[i];
+        char* dir_fisica_real = espacio_usuario + (marco * page_size) + offset_dentro_marco;
 
-        // Marco asociado a la pagina actual
-        int marco = marcoAsociado(current_page, tabla);
-        if (marco == -1) {
-            log_error(logger, "No se encontró el marco para la página %d del PID %d", current_page, pid);
-            break;
+        uint32_t bytes_a_escribir = page_size - offset_dentro_marco;
+        if (bytes_a_escribir > (size - bytes_escritos)) {
+            bytes_a_escribir = size - bytes_escritos;
         }
 
-        // Calcular la cantidad de datos que se pueden escribir en el marco actual
-        uint32_t to_write = page_size - page_offset;
-        if (to_write > (size - current_offset)) {
-            to_write = size - current_offset;
-        }
+        memcpy(dir_fisica_real, txt + bytes_escritos, bytes_a_escribir);
+        bytes_escritos += bytes_a_escribir;
 
-        // Realizar la escritura en el espacio de usuario
-        memcpy(espacio_usuario + (marco * page_size) + page_offset, txt + current_offset, to_write);
-        current_offset += to_write;
+        // Mover al siguiente marco
+        offset_dentro_marco = 0; // Después del primer marco, siempre escribimos desde el inicio del siguiente marco
     }
 
     pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+    free(marcos);
 
-    if (current_offset == size) {
-        operation_status = 1;
-    } else {
-        log_error(logger, "Error al escribir en la memoria física para el PID %d", pid);
-    }
-
-    return operation_status;
+    return bytes_escritos;
 }
 
 int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid) 
 {
-    uint32_t operation_status = 0;
-    uint32_t page_size = memory.page_size;
+    // Obtener la tabla de páginas del proceso
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
-
     if (!tabla) {
-        log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
+        log_error(logger, "Tabla de páginas no encontrada para el PID %d", pid);
+        return -1;
+    }
+
+    uint32_t page_size = memory.page_size;
+    int marco_inicial = dirFisica / page_size;
+    uint32_t offset_dentro_marco = dirFisica % page_size; // Desplazamiento dentro del primer marco
+
+    // Ordenar los marcos de menor a mayor
+    int num_paginas = tabla->num_paginas;
+    int* marcos = malloc(num_paginas * sizeof(int));
+    int count_marcos = 0;
+    for (int i = 0; i < num_paginas; i++) {
+        if (count_marcos > 0 || tabla->paginas[i].numero_marco == marco_inicial) {
+            marcos[count_marcos] = tabla->paginas[i].numero_marco;
+            count_marcos++;
+        }
+    }
+
+    uint32_t bytes_leidos = 0;
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+
+    for (int i = 0; bytes_leidos < size && i < count_marcos; i++) {
+        int marco = marcos[i];
+        char* dir_fisica_real = espacio_usuario + (marco * page_size) + offset_dentro_marco;
+
+        uint32_t bytes_a_leer = page_size - offset_dentro_marco;
+        if (bytes_a_leer > (size - bytes_leidos)) {
+            bytes_a_leer = size - bytes_leidos;
+        }
+
+        memcpy(buffer + bytes_leidos, dir_fisica_real, bytes_a_leer);
+        bytes_leidos += bytes_a_leer;
+
+        // Mover al siguiente marco
+        offset_dentro_marco = 0; // Después del primer marco, siempre leemos desde el inicio del siguiente marco
+    }
+
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+    free(marcos);
+
+    return bytes_leidos;
+}
+
+
+
+
+int leerDeDireccionFisica3Old(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid) 
+{
+    pthread_mutex_lock(&(memory.mutex_espacio_usuario));
+
+    memcpy(buffer, espacio_usuario + dirFisica, size);
+
+    pthread_mutex_unlock(&(memory.mutex_espacio_usuario));
+
+    return 1;
+
+
+    /*uint32_t operation_status = 0;
+    uint32_t page_size = memory.page_size;
+
+    /* Posible mejora de espacio de usuario
+    // Obtener el tamaño total del espacio de usuario
+    uint32_t espacio_usuario_size = obtener_tam_espacio_usuario();
+
+    // Validar que la dirección física y el tamaño solicitado no excedan los límites
+    if (dirFisica + size > espacio_usuario_size) {
+        log_error(logger, "La dirección física y el tamaño solicitado exceden los límites de la memoria para el PID %d", pid);
         return operation_status;
     }
 
@@ -674,15 +726,7 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
     uint32_t current_offset = 0;
     while (current_offset < size) {
         // Calcular la página actual y el desplazamiento dentro de esa página
-        uint32_t current_page = (dirFisica + current_offset) / page_size;
         uint32_t page_offset = (dirFisica + current_offset) % page_size;
-
-        // Encontrar el marco asociado a la página actual
-        int marco = marcoAsociado(current_page, tabla);
-        if (marco == -1) {
-            log_error(logger, "No se encontró el marco para la página %d del PID %d", current_page, pid);
-            break;
-        }
 
         // Calcular la cantidad de datos que se pueden leer del marco actual
         uint32_t to_read = page_size - page_offset;
@@ -691,7 +735,9 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
         }
 
         // Realizar la lectura del espacio de usuario
-        memcpy(buffer + current_offset, espacio_usuario + (marco * page_size) + page_offset, to_read);
+        // memcpy(buffer + current_offset, espacio_usuario + (marco * page_size) + page_offset, to_read); -> con marco asociado
+         memcpy(buffer + current_offset, espacio_usuario + dirFisica + current_offset, to_read);
+        log_debug(logger, "Actual buffer read: %s", buffer + current_offset);
         current_offset += to_read;
     }
 
@@ -703,5 +749,5 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
         log_error(logger, "Error al leer desde la memoria física para el PID %d", pid);
     }
 
-    return operation_status;
+    return operation_status;*/
 }

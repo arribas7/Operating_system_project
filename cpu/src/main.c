@@ -49,9 +49,24 @@ void recibir_instruccion(int socket_cliente);
 int buscar(char *elemento, char **lista);
 
 op_code interrupted_reason = 0;
+int server_fd_dispatch;
+int server_fd_interrupt;
+
+void handle_graceful_shutdown(int sig) {
+    close(server_fd_dispatch);
+    close(server_fd_interrupt);
+    printf("Socket for dispatch: %d closed\n", server_fd_dispatch);
+    printf("Socket for interrupt: %d closed\n", server_fd_interrupt);
+    // TODO: clean everything?
+    exit(0);
+}
 
 int main(int argc, char *argv[])
 {
+    // Manage signals
+    signal(SIGINT, handle_graceful_shutdown);
+    signal(SIGTERM, handle_graceful_shutdown);
+
     /* ---------------- Setup inicial  ---------------- */
     logger = log_create("cpu.log", "cpu", true, LOG_LEVEL_DEBUG);
     if (logger == NULL)
@@ -90,16 +105,16 @@ int main(int argc, char *argv[])
 
 void run_dispatch_server(void){
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
-    int server_fd = iniciar_servidor(puerto);
-    log_info(logger, "Dispatch server ready.");
-    handle_dispatch(server_fd);
+    server_fd_dispatch = iniciar_servidor(puerto);
+    log_info(logger, "Dispatch server ready on socket %d.", server_fd_dispatch);
+    handle_dispatch(server_fd_dispatch);
 }
 
 void run_interrupt_server(void){
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
-    int server_fd = iniciar_servidor(puerto);
-    log_info(logger, "Interrupt server ready.");
-    handle_interrupt(server_fd);
+    server_fd_interrupt = iniciar_servidor(puerto);
+    log_info(logger, "Interrupt server ready on socket %d.", server_fd_interrupt);
+    handle_interrupt(server_fd_interrupt);
 }
 
 t_paquete *procesar_pcb(t_pcb *pcb){
@@ -125,6 +140,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         
         op_code actual_interrupt_reason = check_interrupt();
         if(actual_interrupt_reason > 0){
+            log_debug(logger, "Enviando response por INTERRUPT al kernel..."); 
             response = crear_paquete(actual_interrupt_reason);
             break;
         }
@@ -133,8 +149,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
     if(response != NULL){
         t_buffer* buffer = malloc(sizeof(t_buffer));
 
-        log_info(logger, "Enviando response al kernel..."); 
-
+        log_debug(logger, "Enviando response OK al kernel..."); 
         serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
         agregar_a_paquete(response,buffer->stream,buffer->size);
         free(buffer);

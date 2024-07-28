@@ -213,6 +213,8 @@ op_code check_interrupt(void){
 }
 //FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
+    if (strcmp(registro, "PC") == 0)
+        reg_proceso_actual->PC = atoi(valor);
     if (strcmp(registro, "AX") == 0)
         reg_proceso_actual->AX = (uint8_t)atoi(valor);
     if (strcmp(registro, "BX") == 0) 
@@ -237,9 +239,11 @@ void set(char* registro, char* valor){
     log_info(logger, "%s in actual process: %d", registro, atoi(valor)); //funciona
 }
 
-void mov_in(char* registro, char* logicalAddress){
+void mov_in(char* registro, char* reg2){
     //int valor = 0; //quitar luego de hacer el siguiente TO DO
-    int fisicalAddr = mmu(logicalAddress);
+    int direccion_logica = obtener_valor_reg(reg2);
+
+    int fisicalAddr = mmu(string_itoa(direccion_logica));
     
     //request to mem
     //int valor = requestRegToMem(fisicalAddr); //TO DO
@@ -252,7 +256,7 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "CX") == 0) 
         reg_proceso_actual->CX = valor;
     if (strcmp(registro, "DX") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->DX = valor;
     if (strcmp(registro, "EAX") == 0)
         reg_proceso_actual->EAX = valor;
     if (strcmp(registro, "EBX") == 0)
@@ -262,9 +266,9 @@ void mov_in(char* registro, char* logicalAddress){
     if (strcmp(registro, "EDX") == 0)
         reg_proceso_actual->EDX = valor;
     if (strcmp(registro, "SI") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->SI = valor;
     if (strcmp(registro, "DI") == 0)
-        reg_proceso_actual->EDX = valor;
+        reg_proceso_actual->DI = valor;
 }
 
 void mov_out(char* reg1, char* reg2){
@@ -306,8 +310,8 @@ void sum(char* destReg, char* origReg){
 
     int valor1,valor2,suma;
 
-    valor1 = valueOfReg(destReg);
-    valor2 = valueOfReg(origReg);
+    valor1 = obtener_valor_reg(destReg);
+    valor2 = obtener_valor_reg(origReg);
 
     suma = valor1 + valor2;
 
@@ -318,8 +322,8 @@ void sub(char* destReg, char* origReg){
 
     int valor1,valor2,resta;
 
-    valor1 = valueOfReg(destReg);
-    valor2 = valueOfReg(origReg);
+    valor1 = obtener_valor_reg(destReg);
+    valor2 = obtener_valor_reg(origReg);
 
     resta = valor1 - valor2;
 
@@ -346,21 +350,22 @@ void copy_string (char* tamanio){
 
     agregar_a_paquete(copy_string_paq,buffer->stream,buffer->size);
     enviar_paquete(copy_string_paq,conexion_mem);
-
     eliminar_paquete(copy_string_paq);
+    free(buffer->stream);
+    free(buffer);
 }
 
 void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer){
-    buffer->offset = 0;
-    size_t size = sizeof(u_int32_t) + sizeof(int) * 3;
+    size_t size = sizeof(uint32_t) + sizeof(int) * 3;
     buffer->size = size;
     buffer->stream = malloc(size);
 
+    buffer->offset = 0;
     //serializo:
-    memcpy(buffer->stream + buffer->offset, &(copy_string->pid), sizeof(u_int32_t));
-    buffer->offset += sizeof(u_int32_t);
+    memcpy(buffer->stream + buffer->offset, &(copy_string->pid), sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
 
-    memcpy(buffer->stream + buffer->offset, &(copy_string->tamaño), sizeof(int));
+    memcpy(buffer->stream + buffer->offset, &(copy_string->tamanio), sizeof(int));
     buffer->offset += sizeof(int);
 
     memcpy(buffer->stream + buffer->offset, &(copy_string->fisical_si), sizeof(int));
@@ -372,12 +377,12 @@ void serializar_copy_string(t_copy_string* copy_string, t_buffer* buffer){
 
 t_copy_string* deserializar_copy_string(void* stream){
     t_copy_string* copy_string = malloc(sizeof(t_copy_string));
-    int offset = 0;
+    int offset = sizeof(int); // tamanio
 
     memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
-    memcpy(&(copy_string->tamaño), stream + offset, sizeof(int));
+    memcpy(&(copy_string->tamanio), stream + offset, sizeof(int));
     offset += sizeof(int);
 
     memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
@@ -396,9 +401,9 @@ t_copy_string* new_copy_string(int tamanio){
     }
 
     copy_string->pid = pcb_en_ejecucion->pid;
-    copy_string->tamaño = tamanio;
-    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->AX)); //agregar registro DI
-    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->BX)); //AGREGAR REGISTRO SI AL PCB
+    copy_string->tamanio = tamanio;
+    copy_string->fisical_di = mmu(string_itoa(pcb_en_ejecucion->reg->DI)); //agregar registro DI
+    copy_string->fisical_si = mmu(string_itoa(pcb_en_ejecucion->reg->SI)); //AGREGAR REGISTRO SI AL PCB
 
     return copy_string;
 }
@@ -427,13 +432,14 @@ t_paquete *io_gen_sleep(char* name, char* time)
     */
 }
 
-t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size) 
+t_paquete *io_stdin_read(char* name, char* logicalAdressReg, char* size) 
 {
     t_paquete* io_stdin_read_paq = crear_paquete(IO_STDIN_READ);
+    int logicalAddress =  obtener_valor_reg(logicalAdressReg);
     uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDIN_READ, name, 0, mmu(logicalAdress), reg_size, "", 0);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDIN_READ, name, 0, mmu(string_itoa(logicalAddress)), reg_size, "", 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_read_paq, buffer->stream, buffer->size);
 
@@ -443,13 +449,14 @@ t_paquete *io_stdin_read(char* name, char* logicalAdress, char* size)
     return io_stdin_read_paq;
 }
 
-t_paquete *io_stdin_write(char* name, char* logicalAdress, char* size) 
+t_paquete *io_stdin_write(char* name, char* logicalAdressReg, char* size) 
 {
     t_paquete* io_stdin_write_paq = crear_paquete(IO_STDOUT_WRITE);
+    int logicalAddress =  obtener_valor_reg(logicalAdressReg);
     uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDOUT_WRITE, name, 0, mmu(logicalAdress), reg_size, "", 0);
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_STDOUT_WRITE, name, 0, mmu(string_itoa(logicalAddress)), reg_size, "", 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_write_paq, buffer->stream, buffer->size);
 
@@ -505,13 +512,14 @@ t_paquete *io_fs_truncate(char* name, char* file_name, char* size)
     return io_fs_truncate;
 }
 
-t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
+t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddressReg, char* size, char* file_pointer) 
 {
     t_paquete* io_fs_write = crear_paquete(IO_FS_WRITE);
+    int logicalAddress =  obtener_valor_reg(logicalAddressReg);
     uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_WRITE, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/reg_size, file_name, obtener_valor_registro(file_pointer));
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_WRITE, name, 0, mmu(string_itoa(logicalAddress)), reg_size, file_name, obtener_valor_reg(file_pointer));
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_write, buffer->stream, buffer->size);
 
@@ -521,13 +529,14 @@ t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddress, char* 
     return io_fs_write;
 }
 
-t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddress, char* size, char* file_pointer) 
+t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddressReg, char* size, char* file_pointer) 
 {
     t_paquete* io_fs_read = crear_paquete(IO_FS_READ);
+    int logicalAddress =  obtener_valor_reg(logicalAddressReg);
     uint32_t reg_size =  obtener_valor_reg(size);
     t_buffer* buffer = malloc(sizeof(t_buffer));    
 
-    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(logicalAddress), /*obtener_valor_registro(size)*/reg_size, file_name, obtener_valor_registro(file_pointer));
+    t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(string_itoa(logicalAddress)), reg_size, file_name, obtener_valor_reg(file_pointer));
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_read, buffer->stream, buffer->size);
     
@@ -541,37 +550,6 @@ t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddress, char* s
 
 t_paquete *release(){
     return crear_paquete(RELEASE);
-}
-
-//del pcb en ejecucion
-int obtener_valor_registro (char* registro){
-
-    int valor = 0;
-    //maybe make sense sem for pcb en ejecucion
-    if(!strcmp(registro,"PC"))
-        return pcb_en_ejecucion->pc;
-    if(!strcmp(registro,"AX"))
-        return pcb_en_ejecucion->reg->AX;
-    if(!strcmp(registro,"BX"))
-        return pcb_en_ejecucion->reg->BX;
-    if(!strcmp(registro,"CX"))
-        return pcb_en_ejecucion->reg->CX;
-    if(!strcmp(registro,"DX"))
-        return pcb_en_ejecucion->reg->DX;
-    if(!strcmp(registro,"EAX"))
-        return pcb_en_ejecucion->reg->EAX;
-    if(!strcmp(registro,"EBX"))
-        return pcb_en_ejecucion->reg->EBX;
-    if(!strcmp(registro,"ECX"))
-        return pcb_en_ejecucion->reg->ECX;
-    if(!strcmp(registro,"EDX"))
-        //return pcb_en_ejecucion->reg->EDX;
-    if(!strcmp(registro,"SI"))
-        //return pcb_en_ejecucion->reg->SI;
-    if(!strcmp(registro,"DI"))
-        //return pcb_en_ejecucion->reg->DI;
-
-    return valor;
 }
 
 //RESIZE, WAIT Y SIGNAL:

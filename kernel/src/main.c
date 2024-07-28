@@ -51,6 +51,7 @@ char* scheduler_algorithm;
 
 t_log *logger;
 t_config *config;
+int server_fd;
 
 void destroy_all() {
     log_destroy(logger);
@@ -139,7 +140,11 @@ void handle_client(void *arg) {
                 log_info(logger, "PID: %d", report->pid);
                 mssg = mssg_from_report(report);
                 log_info(logger, "OPERATION_RESULT: %s", mssg); // 0 - ERROR / 1 - OK
-                io_unblock(report->pid);
+                if(!report->result){
+                    exit_process_from_pid(report->pid, ERROR_INTERFACE);
+                } else {
+                    io_unblock(report->pid);
+                }
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing client connection...");
@@ -156,7 +161,7 @@ void handle_client(void *arg) {
 void run_server(void *arg) {
     char *puerto = (char *) arg;
 
-    int server_fd = iniciar_servidor(puerto);
+    server_fd = iniciar_servidor(puerto);
     log_info(logger, "Server ready to receive clients...");
 
     while(1) {
@@ -175,7 +180,18 @@ void run_server(void *arg) {
     /*return EXIT_SUCCESS;*/
 }
 
+void handle_graceful_shutdown(int sig) {
+    close(server_fd);
+    printf("Socket %d closed\n", server_fd);
+    // TODO: clean everything?
+    exit(0);
+}
+
 int main(int argc, char *argv[]) {
+    // Manage signals
+    signal(SIGINT, handle_graceful_shutdown);
+    signal(SIGTERM, handle_graceful_shutdown);
+
     /* ---------------- Initial Setup ---------------- */
     logger = log_create("kernel.log", "kernel", true, LOG_LEVEL_DEBUG);
     if (logger == NULL) {

@@ -97,3 +97,30 @@ Ante cualquier duda, podés consultar la documentación en el repositorio de
 #### MEMORIA
 - Usar un dictionary con key=pid, value=list de instrucciones
 - El value puede tener también los valores que necesita de la memoria.
+
+### RUN tests
+
+`sudo apt-get update`
+`sudo apt-get install gnome-terminal xdotool`
+
+Luego, se pueden levantar las terminales con las configuraciones para la prueba que necesiten ejecutar:
+`./run_tests.sh prueba_io`
+`./run_tests.sh prueba_plani`
+`./run_tests.sh prueba_memoria_tlb`
+`./run_tests.sh prueba_deadlock`
+`./run_tests.sh prueba_fs`
+`./run_tests.sh prueba_salvations_edge`
+
+Esto levanta los modulos en terminales aparte, por lo que no se puede debuggear con VS code. Si necesitan levanta un modulo para debuggear en vscode, pueden:
+
+Ej: cpu
+1. Run del modulo cpu desde vscode
+2. Agregarle el param `-no_cpu` a la llamada al script
+`./run_tests.sh prueba_salvations_edge -no_cpu`
+
+### Valgrind
+Dos comandos para correr el valgrind en la consola. Estan customizados para la prueba plani de kernel: 
+
+valgrind --tool=helgrind ./bin/kernel config/kernel_plani.config
+
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./bin/kernel  kernel_plani.config

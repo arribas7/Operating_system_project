@@ -22,6 +22,13 @@ int iniciar_servidor(const char* puerto)
             continue;
         }
 
+        int opt = 1;
+        // Para evitar tener el problema de escuchar el cliente -1
+        if (setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+            perror("setsockopt");
+            exit(EXIT_FAILURE);
+        }
+
         // Asociamos el socket a un puerto
         if (bind(socket_servidor, p->ai_addr, p->ai_addrlen) == 0){
             break;
@@ -51,6 +58,11 @@ int esperar_cliente(int socket_servidor)
     socklen_t tam_direccion = sizeof(struct sockaddr_in);
 
     socket_cliente = accept(socket_servidor, (struct sockaddr *)&dir_cliente, &tam_direccion);
+
+    if (socket_cliente == -1) {
+        perror("accept");
+        return -1;
+    }
 
     log_info(logger, "Se conecto un cliente!");
 
