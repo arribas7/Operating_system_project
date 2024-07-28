@@ -13,7 +13,7 @@ declare -A test_configs=(
   ["prueba_deadlock_entradasalida"]="config/ESPERA.config"
 
   ["prueba_memoria_tlb_memoria"]="config/memoria_mem_tlb.config"
-  ["prueba_memoria_tlb_cpu"]="config/cpu_io.config"
+  ["prueba_memoria_tlb_cpu"]="config/cpu_memoria_tlb.config"
   ["prueba_memoria_tlb_kernel"]="config/kernel_memoria_tlb.config"
   ["prueba_memoria_tlb_entradasalida"]="config/IO_GEN_SLEEP.config"
 
@@ -27,8 +27,8 @@ declare -A test_configs=(
   ["prueba_fs_kernel"]="config/kernel_fs.config"
   ["prueba_fs_entradasalida"]="config/FS.config config/TECLADO.config config/MONITOR.config"
 
-  ["prueba_salvations_edge_memoria"]="config/memoria_io.config"
-  ["prueba_salvations_edge_cpu"]="config/cpu_io.config"
+  ["prueba_salvations_edge_memoria"]="config/memoria_salvations_edge.config"
+  ["prueba_salvations_edge_cpu"]="config/cpu_salvations_edge.config"
   ["prueba_salvations_edge_kernel"]="config/kernel_salvations_edge.config"
   ["prueba_salvations_edge_entradasalida"]="config/GENERICA.config config/TECLADO.config config/MONITOR.config config/ESPERA.config config/SLP1.config"
 )

@@ -140,7 +140,11 @@ void handle_client(void *arg) {
                 log_info(logger, "PID: %d", report->pid);
                 mssg = mssg_from_report(report);
                 log_info(logger, "OPERATION_RESULT: %s", mssg); // 0 - ERROR / 1 - OK
-                io_unblock(report->pid);
+                if(!report->result){
+                    exit_process_from_pid(report->pid, ERROR_INTERFACE);
+                } else {
+                    io_unblock(report->pid);
+                }
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing client connection...");

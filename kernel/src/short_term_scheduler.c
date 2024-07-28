@@ -169,9 +169,9 @@ void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
             exit_process(pcb, RUNNING, INVALID_RESOURCE);
             break;
         case RESOURCE_BLOCKED:
-        case RESOURCE_RELEASED:
+            move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
-        default: // success and resource_released
+        default: // success
             move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
             break;
     }

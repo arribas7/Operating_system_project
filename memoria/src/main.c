@@ -35,22 +35,22 @@ t_resize* deserializar_resize(void* stream){
 }
 
 t_copy_string* deserializar_copy_string(void* stream){
-    t_copy_string* copy_string_var = malloc(sizeof(t_copy_string));
-    int offset = 0;
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    int offset = sizeof(int); // tamanio
 
-    memcpy(&(copy_string_var->pid), stream + offset, sizeof(u_int32_t));
+    memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
-    memcpy(&(copy_string_var->tamanio), stream + offset, sizeof(int));
+    memcpy(&(copy_string->tamanio), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    memcpy(&(copy_string_var->fisical_si), stream + offset, sizeof(int));
+    memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    memcpy(&(copy_string_var->fisical_di), stream + offset, sizeof(int));
+    memcpy(&(copy_string->fisical_di), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    return copy_string_var;
+    return copy_string;
 }
 t_copy_string* recibir_copy_string (int socket_cpu){
     int size;
@@ -337,7 +337,6 @@ void handle_client(void *arg) {
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
                 retardo_en_peticiones();
-                pcb = recibir_pcb(cliente_fd);
                 t_copy_string* cs = recibir_copy_string(cliente_fd);
                 copy_string(cs->fisical_si,cs->fisical_di,cs->tamanio,cs->pid);
             break;

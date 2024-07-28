@@ -318,15 +318,9 @@ char* obtenerDireccionFisicafull(int direccion_fisica, TablaPaginas* tablaAsocia
     return obtenerDireccionFisica(marco, desplazamiento);
 }
 void copy_string(int source_df, int dest_df, int tamanio, int pid) {
-    TablaPaginas* tablaAsociada = tablaDePaginasAsociada(pid);
-    if (!tablaAsociada) {
-       perror("Tabla de páginas no encontrada para el PID proporcionado");
-       return;
-    }
-
-    char* leido = malloc(sizeof(char)*tamanio + 1);
+    char* leido = malloc(sizeof(char)*tamanio);
     leerDeDireccionFisica3(source_df,tamanio,leido,pid);
-    escribirEnDireccionFisica2(dest_df,leido,sizeof(leido),pid);
+    escribirEnDireccionFisica2(dest_df,leido,tamanio,pid);
 }
 /********************************FINISH PROCESS**************************************/
 

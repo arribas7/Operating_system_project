@@ -63,7 +63,7 @@ typedef struct
 */
 
 typedef struct{
-    u_int32_t pid;
+    uint32_t pid;
     int tamanio;
     int fisical_si;
     int fisical_di;
