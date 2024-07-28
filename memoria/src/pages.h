@@ -74,7 +74,6 @@ char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid);
 uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid) ;
 int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid);
 void finish_process(int pid);
-int leerDeDireccionFisica3G(uint32_t dirFisica, uint32_t size, char* buffer, uint32_t pid);
-uint32_t escribirEnDireccionFisica2G(uint32_t dirFisica, char* txt, uint32_t size, uint32_t pid);
+
 
 #endif // PAGES_H
