@@ -288,8 +288,10 @@ void handle_client(void *arg) {
                 log_debug(logger,"Processing WRITE");
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
+                char asciiValue = (char)write->val;
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
-                escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+
+                escribirEnDireccionFisica2(write->req, &asciiValue, sizeof(asciiValue), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 log_debug(logger,"Processing W_REQ");
@@ -312,15 +314,11 @@ void handle_client(void *arg) {
                 log_debug(logger, "Processing R_REQ");
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
-                char* to_send = malloc(sizeof(char) * to_read->text_size); 
+                char* to_send = malloc(sizeof(char) * (to_read->text_size + 1)); 
                 leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
-                if(strlen(to_send) == to_read->text_size) 
-                {
-                    enviar_mensaje(to_send, cliente_fd);
-                } else {
-                    log_error(logger, "Error al leer desde la posicion fisica: %d, bytes leídos: %s, length: %d", to_read->physical_address, to_send, strlen(to_send));
-                    enviar_mensaje("", cliente_fd);
-                }
+                to_send[to_read->text_size] = '\0';
+                log_debug(logger, "Buffer leído de la posicion fisica: %d.\nBuffer:%s\n Bytes leídos: %d", to_read->physical_address, to_send, to_read->text_size);
+                enviar_mensaje(to_send, cliente_fd);
                 free(to_send);
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
@@ -347,9 +345,11 @@ void handle_client(void *arg) {
                 log_debug(logger,"Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
+
                 int direccion_fisica = reg_request->req;
-                char* leido = malloc(sizeof(char)*4);
-                leerDeDireccionFisica3(direccion_fisica,4,leido,reg_request->pid);
+                char* leido = malloc(sizeof(char));
+
+                leerDeDireccionFisica3(direccion_fisica,sizeof(char),leido,reg_request->pid);
                 enviar_mensaje(leido,cliente_fd);
             break;
             case -1:

@@ -15,8 +15,7 @@ uint32_t mmu(char* logicalAddress){
     int marco = 0;
 
     int numero_pagina = floor(direccion_logica / tam_pag);
-    //int desplazamiento = direccion_logica % tam_pag;
-    int desplazamiento = direccion_logica - numero_pagina * tam_pag;
+    int desplazamiento = direccion_logica % tam_pag;
 
     log_debug(logger, "En mmu....");
     log_debug(logger, "nroPagina: %d", numero_pagina);
@@ -30,11 +29,12 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB(pcb_en_ejecucion->pid,numero_pagina,marco);
-                direccion_fisica = marco + desplazamiento;
-            }
-            else{
+                // direccion_fisica = marco + desplazamiento;
+                direccion_fisica = marco * tam_pag + desplazamiento;
+            } else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                //direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }   
         else{   //algoritmo LRU
@@ -44,19 +44,22 @@ uint32_t mmu(char* logicalAddress){
                 log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
                 marco = requestFrameToMem(numero_pagina);
                 agregar_a_TLB_LRU(pcb_en_ejecucion->pid,numero_pagina,marco);
-                direccion_fisica = marco + desplazamiento;
+                direccion_fisica = marco * tam_pag + desplazamiento;
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
-                direccion_fisica = tlbEntry->marco + desplazamiento;
+                direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
             }
         }
     }
     else{
         log_info(logger,"TLB deshabilitada, buscando frame en memoria...");
-        direccion_fisica = requestFrameToMem(numero_pagina) + desplazamiento;
+        marco = requestFrameToMem(numero_pagina);
+        direccion_fisica =  marco * tam_pag + desplazamiento;
     }
-    
+
+    log_debug(logger, "PID: <%d> - DL: <%d> - PAG:<%d> - OFFSET: <%d> ", pcb_en_ejecucion->pid, direccion_logica, numero_pagina, desplazamiento);
+    log_debug(logger, "PID: <%d> - DF: <%d> - MARCO:<%d> - OFFSET: <%d> ", pcb_en_ejecucion->pid, direccion_fisica, marco, desplazamiento);
     return direccion_fisica;
 }
 
