@@ -3,7 +3,8 @@
 #include <utils/inout.h>
 //#include "cpu/connections.h
 #include "pages.h"
-#define SIZE_OF_REG 10
+
+#define SIZE_REG 100
 
 t_memory memory;
 t_config *config;
@@ -12,7 +13,6 @@ t_log* logger;
 extern t_dictionary* listaTablasDePaginas;
 int tam_pag;
 int server_fd;
-
 
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
@@ -37,22 +37,22 @@ t_resize* deserializar_resize(void* stream){
 }
 
 t_copy_string* deserializar_copy_string(void* stream){
-    t_copy_string* copy_string_var = malloc(sizeof(t_copy_string));
-    int offset = 0;
+    t_copy_string* copy_string = malloc(sizeof(t_copy_string));
+    int offset = sizeof(int); // tamanio
 
-    memcpy(&(copy_string_var->pid), stream + offset, sizeof(u_int32_t));
+    memcpy(&(copy_string->pid), stream + offset, sizeof(u_int32_t));
     offset += sizeof(u_int32_t);
 
-    memcpy(&(copy_string_var->tamanio), stream + offset, sizeof(int));
+    memcpy(&(copy_string->tamanio), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    memcpy(&(copy_string_var->fisical_si), stream + offset, sizeof(int));
+    memcpy(&(copy_string->fisical_si), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    memcpy(&(copy_string_var->fisical_di), stream + offset, sizeof(int));
+    memcpy(&(copy_string->fisical_di), stream + offset, sizeof(int));
     offset += sizeof(int);
 
-    return copy_string_var;
+    return copy_string;
 }
 t_copy_string* recibir_copy_string (int socket_cpu){
     int size;
@@ -290,7 +290,10 @@ void handle_client(void *arg) {
                 log_debug(logger,"Processing WRITE");
                 retardo_en_peticiones();
                 t_request2* write = recibir_mov_out(cliente_fd);
+                //char asciiValue = (char)write->val;
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
+
+                //escribirEnDireccionFisica2(write->req, &asciiValue, sizeof(asciiValue), write->pid);
                 escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
@@ -314,16 +317,12 @@ void handle_client(void *arg) {
                 log_debug(logger, "Processing R_REQ");
                 t_req_to_r* to_read = receive_req_to_r(cliente_fd);
                 // char* to_send = leerDeDireccionFisica(to_read->physical_address, to_read->text_size, to_read->pid);
-                char* to_send = malloc(sizeof(char) * to_read->text_size + 1);
+                char* to_send = malloc(sizeof(char) * (to_read->text_size + 1)); 
                 leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
-                if(strlen(to_send) == to_read->text_size) 
-                {
-                    enviar_mensaje(to_send, cliente_fd);
-                    free(to_send);
-                } else {
-                    log_error(logger, "Error al leer desde la posicion fisica: %d", to_read->physical_address);
-                    enviar_mensaje("", cliente_fd);
-                }
+                to_send[to_read->text_size] = '\0';
+                log_debug(logger, "Buffer leído de la posicion fisica: %d.\nBuffer:%s\n Bytes leídos: %d", to_read->physical_address, to_send, to_read->text_size);
+                enviar_mensaje(to_send, cliente_fd);
+                free(to_send);
                 break;
             case TLB_MISS: //ESTE CODE OP ACTUA LITERALMENTE IGUAL A PAGE_REQUEST
                 log_debug(logger,"Processing TLB_MISS");
@@ -341,7 +340,6 @@ void handle_client(void *arg) {
                 //la direccion fisica es el numero de pagina dentro de la tabla de paginas
                 //entonces con la funcion marcoAsociado se obtendria el marco de esa pagina
                 retardo_en_peticiones();
-                pcb = recibir_pcb(cliente_fd);
                 t_copy_string* cs = recibir_copy_string(cliente_fd);
                 copy_string(cs->fisical_si,cs->fisical_di,cs->tamanio,cs->pid);
             break;
@@ -349,9 +347,11 @@ void handle_client(void *arg) {
                 log_debug(logger,"Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
+
                 int direccion_fisica = reg_request->req;
-                char* leido = malloc(sizeof(char)*SIZE_OF_REG);
-                leerDeDireccionFisica3(direccion_fisica,sizeof(char)*SIZE_OF_REG,leido,reg_request->pid);
+                char* leido = malloc(sizeof(char)* SIZE_REG);
+
+                leerDeDireccionFisica3(direccion_fisica,sizeof(char)*SIZE_REG,leido,reg_request->pid);
                 enviar_mensaje(leido,cliente_fd);
                 free(leido);
             break;
@@ -417,10 +417,39 @@ void testing_paging(void) {
 }
 
 
-int main(int argc, char *argv[]) {
-    /* ---------------- Setup inicial  ---------------- */
+void test1WriteRead(){
+    /*handle_create_process("scripts_memoria/test1WriteRead", 1, config);
+    // SET EAX 16 -> CPU
+    // SET EBX 20 -> CPU
+    // RESIZE 128
+    resize_process(1,128);
+    // MOV_OUT y MOV_IN escriben solo de a un byte.
 
-    
+    escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
+    leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
+    */
+}
+
+void test2WriteReadTwoProcesses(){
+
+}
+
+void test3IOReplicated(){
+
+}
+
+void handle_graceful_shutdown(int sig) {
+    close(server_fd);
+    printf("Socket %d closed\n", server_fd);
+    // TODO: clean everything?
+    exit(0);
+}
+
+int main(int argc, char *argv[]) {
+    // Manage signals
+    signal(SIGINT, handle_graceful_shutdown);
+    signal(SIGTERM, handle_graceful_shutdown);
+    /* ---------------- Setup inicial  ---------------- */
     //config = config_create(argv[1]);
     config = config_create("memoria.config");
     if (config == NULL) {
@@ -475,9 +504,12 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    test1WriteRead();
+    //test2WriteReadTwoProcesses();
+    //test3IOReplicated();
+
     pthread_join(hilo_servidor, NULL);
     clean(config);
          
     return 0;
 }
-
