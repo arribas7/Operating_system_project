@@ -295,17 +295,10 @@ void send_report(t_instruction* instruction, bool result, int connection)
 
 char* mssg_from_report(t_report* report) 
 {
-    char* mssg;
-    switch(report->result) 
-    {
-        case 0:
-            mssg = "ERROR";
-        case 1:
-            mssg = "INSTRUCTION SUCCESSFULL";
-        default:
-            mssg = "AN ERROR HAS OCURRED";
+    if(report->result){
+        return "INSTRUCTION SUCCESSFULL";
     }
-    return mssg;
+    return "AN ERROR HAS OCURRED";
 }
 
 void send_req_to_w(t_req_to_w* mem_req, int connection) 

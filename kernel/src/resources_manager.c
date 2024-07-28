@@ -84,7 +84,6 @@ t_result resource_wait(t_pcb* pcb, char* name) {
     int new_instances_value = resource->instances - 1; 
     if (new_instances_value < 0) {
         queue_push(resource->blocked_queue, pcb);
-        move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
         result = RESOURCE_BLOCKED;
     } else {
         resource->instances = new_instances_value;
@@ -111,7 +110,6 @@ t_result resource_signal_by_instance(t_pcb* pcb, t_resource* resource){
         t_pcb* released_pcb = queue_pop(resource->blocked_queue);
         resource->instances--;
         list_add(resource->assigned_pcbs, released_pcb->pid);
-        result = RESOURCE_RELEASED;
 
         pthread_mutex_lock(&mutex_blocked);
         t_pcb *pcb_released = list_remove_by_pid(list_BLOCKED, released_pcb->pid);
