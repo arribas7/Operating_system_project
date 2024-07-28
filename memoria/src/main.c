@@ -4,7 +4,7 @@
 //#include "cpu/connections.h
 #include "pages.h"
 
-#define SIZE_REG 100
+#define SIZE_REG 5
 
 t_memory memory;
 t_config *config;
@@ -349,9 +349,9 @@ void handle_client(void *arg) {
                 t_request* reg_request = recibir_pagina(cliente_fd);
 
                 int direccion_fisica = reg_request->req;
-                char* leido = malloc(sizeof(char)* SIZE_REG);
-
-                leerDeDireccionFisica3(direccion_fisica,sizeof(char)*SIZE_REG,leido,reg_request->pid);
+                char* leido = malloc(sizeof(char)*memory.page_size);
+                //leo el valor de un registro que esta dentro de un marco, por lo tanto lo leido sera el tamanio de un marco
+                leerDeDireccionFisica3(direccion_fisica,sizeof(char)*memory.page_size,leido,reg_request->pid);
                 enviar_mensaje(leido,cliente_fd);
                 free(leido);
             break;
