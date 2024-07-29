@@ -42,7 +42,6 @@ void start_process(char* path, t_config *config) {
 	op_code code = recibir_operacion(mem_conn);
     log_debug(logger, "Response code: %d", code);
 
-    // TODO: Manage error response codes.
     liberar_conexion(mem_conn);
     log_debug(logger, "Connection released");
     atomic_fetch_add(&pid_count, 1); // Increment after a successful response

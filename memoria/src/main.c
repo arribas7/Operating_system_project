@@ -298,15 +298,6 @@ void handle_client(void *arg) {
                 t_req_to_w* to_write = receive_req_to_w(cliente_fd);
                 log_debug(logger, "PID: %d - Cant. Bytes: %d", to_write->pid, to_write->text_size);
                 escribirEnDireccionFisica2(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
-                //escribirEnDireccionFisica(to_write->physical_address, to_write->text, to_write->text_size, to_write->pid);
-                /*TODO: send confirmation properly: 
-                if(status == 0) 
-                {
-                    log_error(logger, "ERROR WRITING");
-                } else {
-                    log_debug(logger, "OPERATION SUCCESS");
-                    /*enviar_mensaje(to_write->text, cliente_fd);
-                }*/ 
                 uint32_t status = 1;
                 send_confirmation(cliente_fd, &(status));
                 break;
@@ -346,9 +337,10 @@ void handle_client(void *arg) {
                 t_request* reg_request = recibir_pagina(cliente_fd);
 
                 int direccion_fisica = reg_request->req;
-                char* leido = malloc(sizeof(char));
-
+                int size = sizeof(char) + 1;
+                char* leido = malloc(size);
                 leerDeDireccionFisica3(direccion_fisica,sizeof(char),leido,reg_request->pid);
+                leido[size] = '\0';
                 enviar_mensaje(leido,cliente_fd);
             break;
             case -1:
@@ -437,7 +429,6 @@ void test3IOReplicated(){
 void handle_graceful_shutdown(int sig) {
     close(server_fd);
     printf("Socket %d closed\n", server_fd);
-    // TODO: clean everything?
     exit(0);
 }
 

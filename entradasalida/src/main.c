@@ -236,9 +236,6 @@ int main(int argc, char* argv[]) {
         int block_count = config_get_int_value(config, "BLOCK_COUNT");
         const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
         initialize_dialfs(path_base_dialfs, block_size, block_count);
-
-        // TODO: remove test
-        //test_dialfs();
     }
     
     // CREATE KERNEL CONNECTION
