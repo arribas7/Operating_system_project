@@ -10,7 +10,7 @@
 extern t_pcb* pcb_en_ejecucion;
 extern int conexion_mem;
 
-t_reg_cpu* nuevo_reg(uint8_t pc) {
+t_reg_cpu* nuevo_reg(uint8_t pc) { // TODO: Una vez bien definida la struct. Pasar por param las props del pcb.
     t_reg_cpu *reg_cpu = malloc(sizeof(t_reg_cpu));
 
     reg_cpu->AX = 0;

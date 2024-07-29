@@ -172,6 +172,8 @@ void handle_process_state() {
 
     log_info(logger, "BLOCKED state processes:");
     log_list_contents(logger, list_BLOCKED, mutex_blocked);
+
+    // TODO: Confirm if we need to show EXIT list too.
 }
 
 int execute_command(console_command cmd, const char *cmd_args, t_config* config) {

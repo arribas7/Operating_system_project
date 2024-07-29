@@ -5,16 +5,7 @@ int recibir_req(int socket_cliente)
     int size;
     char* req = recibir_buffer(&size, socket_cliente);
     //log_info(logger, "REQ received... %s", req); //esta linea imprime cualquier cosa, pero no afecta al resultado del valor devuelto
-    int asciiValue = (int) *req;
     return atoi(req);
-}
-
-int recibir_req_ascii(int socket_cliente)
-{
-    int size;
-    char* req = recibir_buffer(&size, socket_cliente);
-    //log_info(logger, "REQ received... %s", req); //esta linea imprime cualquier cosa, pero no afecta al resultado del valor devuelto
-    return (int) *req;
 }
 
 void serializar_request(t_request* request, t_buffer* buffer){
@@ -103,7 +94,7 @@ int requestRegToMem (int fisicalAddr){
     eliminar_paquete(peticion);
 
     recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
-    int valor = recibir_req_ascii(conexion_mem); //receive VALOR DEL REG
+    int valor = recibir_req(conexion_mem); //receive VALOR DEL REG
     
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "READ", fisicalAddr, valor);
 

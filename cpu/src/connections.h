@@ -23,7 +23,6 @@ void serializar_request2(t_request2* request, t_buffer* buffer);
 t_request* new_request (u_int32_t pid, int req);
 t_request2* new_request2(u_int32_t pid, int logAdd, int valor);
 int recibir_req(int socket_cliente);
-int recibir_req_ascii(int socket_cliente);
 int requestFrameToMem (int numPag);
 void putRegValueToMem(int fisicalAddress, int valor);
 int requestRegToMem (int fisicalAddr);

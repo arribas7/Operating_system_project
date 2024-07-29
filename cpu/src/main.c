@@ -57,6 +57,7 @@ void handle_graceful_shutdown(int sig) {
     close(server_fd_interrupt);
     printf("Socket for dispatch: %d closed\n", server_fd_dispatch);
     printf("Socket for interrupt: %d closed\n", server_fd_interrupt);
+    // TODO: clean everything?
     exit(0);
 }
 

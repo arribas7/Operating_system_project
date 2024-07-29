@@ -183,6 +183,7 @@ void run_server(void *arg) {
 void handle_graceful_shutdown(int sig) {
     close(server_fd);
     printf("Socket %d closed\n", server_fd);
+    // TODO: clean everything?
     exit(0);
 }
 

@@ -268,6 +268,7 @@ void compact_file(char* filename) {
 
         log_warning(logger, "DESPUÉS DE LIMPIAR");
         debug_print_bitmap();
+        // TODO: remove it
         //debug_print_bitmap();
         //debug_print_blocks(blocks_file);
 
