@@ -317,7 +317,6 @@ void st_sched_ready_running(void* arg) {
             // Signal the short-term scheduler semaphore
             sem_post(&sem_st_scheduler);
             
-            // TODO: free other rets
             if(ret->instruction_IO != NULL){
                 delete_instruction_IO(ret->instruction_IO);
             }
