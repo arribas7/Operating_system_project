@@ -4,6 +4,8 @@
 //#include "cpu/connections.h
 #include "pages.h"
 
+#define SIZE_REG 5
+
 t_memory memory;
 t_config *config;
 t_log* logger;
@@ -292,6 +294,7 @@ void handle_client(void *arg) {
                 //escribir_en_direcc_fisica(write->pid,write->req,write->val);
 
                 escribirEnDireccionFisica2(write->req, &asciiValue, sizeof(asciiValue), write->pid);
+                //escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
             break;
             case W_REQ: // IO_STDIN_READ
                 log_debug(logger,"Processing W_REQ");
@@ -332,15 +335,26 @@ void handle_client(void *arg) {
                 copy_string(cs->fisical_si,cs->fisical_di,cs->tamanio,cs->pid);
             break;
             case REG_REQUEST: //debe devolver el valor de un registro dada una direccFisica (MOV_IN)
-                log_debug(logger,"Processing REG_REQUEST");
+                log_debug(logger, "Processing REG_REQUEST");
                 retardo_en_peticiones();
                 t_request* reg_request = recibir_pagina(cliente_fd);
 
                 int direccion_fisica = reg_request->req;
                 char* leido = malloc(sizeof(char));
 
-                leerDeDireccionFisica3(direccion_fisica,sizeof(char),leido,reg_request->pid);
-                enviar_mensaje(leido,cliente_fd);
+                // Leer el valor de un registro que está dentro de un marco
+                leerDeDireccionFisica3(direccion_fisica, sizeof(char), leido, reg_request->pid);
+                char read_char = leido[0];
+                int number;
+                if (read_char >= '0' && read_char <= '9') 
+                    number = read_char - '0';  //si es un num del 0 al 0 transformamos de una
+                else
+                    number = (int)read_char; //sino tomamos el ascii
+                
+                //printf("numero convertido: %d\n", number);
+                enviar_mensaje(string_itoa(number), cliente_fd);
+
+                free(leido);
             break;
             case -1:
                 log_info(logger, "Connection finished. Client disconnected.");
@@ -499,4 +513,3 @@ int main(int argc, char *argv[]) {
          
     return 0;
 }
-
