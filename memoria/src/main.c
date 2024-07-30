@@ -344,6 +344,7 @@ void handle_client(void *arg) {
 
                 // Leer el valor de un registro que está dentro de un marco
                 leerDeDireccionFisica3(direccion_fisica, sizeof(char), leido, reg_request->pid);
+
                 char read_char = leido[0];
                 int number;
                 if (read_char >= '0' && read_char <= '9') 
