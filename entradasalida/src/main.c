@@ -130,22 +130,27 @@ void std_fs_manager(void* arg)
                 }
                 break;
             case IO_FS_CREATE:
+                wait_time_units(1, config);
                 fs_create(instruction->f_name, instruction->pid);
                 send_report(instruction, true, k_socket);
                 break;
             case IO_FS_DELETE:
+                wait_time_units(1, config);
                 fs_delete(instruction->f_name, instruction->pid);
                 send_report(instruction, true, k_socket);
                 break;
             case IO_FS_READ:
+                wait_time_units(1, config);
                 result = fs_read(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid, mem_connection);
                 send_report(instruction, result == 0, k_socket);
                 break;
             case IO_FS_TRUNCATE:
+                wait_time_units(1, config);
                 fs_truncate(instruction->f_name, instruction->size, instruction->pid);
                 send_report(instruction, true, k_socket);
                 break;
             case IO_FS_WRITE:
+                wait_time_units(1, config);
                 result = fs_write(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid, mem_connection);
                 send_report(instruction, result == 0, k_socket);
                 break;

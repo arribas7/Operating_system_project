@@ -24,9 +24,6 @@ t_bitarray *bitmap;
 size_t bitmap_size;
 FILE *blocks_file = NULL;
 
-// TODO: add mutex
-// TODO: Wait a time unit in each operation
-
 void debug_print_bitmap() {
     size_t max_bits = bitarray_get_max_bit(bitmap);
     char *log_string = malloc(max_bits + 100);
@@ -407,7 +404,7 @@ void compact_dialfs(char* file_exception) {
     msync(bitmap->bitarray, bitmap_size, MS_SYNC);
     fclose(blocks_file);
     
-    usleep(config_get_int_value(config, "RETRASO_COMPACTACION"));
+    usleep(config_get_int_value(config, "RETRASO_COMPACTACION") * 1000);
     log_info(logger, "Fin Compactación.");
 }
 
