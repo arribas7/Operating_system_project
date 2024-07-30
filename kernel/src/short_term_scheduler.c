@@ -5,6 +5,11 @@
 #include <long_term_scheduler.h>
 #include <resources_manager.h>
 #include <utils/inout.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+extern sem_t sem_quantum_finished;
+extern pthread_mutex_t mutex_quantum_interrupted;
 
 // Round Robin (RR) Priority:
 // 1. RUNNING state PCBs have the highest priority.
@@ -118,8 +123,13 @@ void *run_quantum_counter(void *arg) {
         }
 
         //Check for the completion of the timer or interruption of the process
-        while (temporal_gettime(timer) < *(args->remaining_quantum) && *(args->interrupted) == false) {
-            usleep(1000); // sleep 1 ms to wait busy-waiting
+        while (temporal_gettime(timer) < *(args->remaining_quantum)) {
+            pthread_mutex_lock(&mutex_quantum_interrupted);
+            if(args->interrupted){
+                pthread_mutex_unlock(&mutex_quantum_interrupted);
+                break;
+            }
+            pthread_mutex_unlock(&mutex_quantum_interrupted);
         }
 
         //Pause the timer once it's not needed
@@ -150,6 +160,7 @@ void *run_quantum_counter(void *arg) {
         }
         //Destroy timer
         temporal_destroy(timer);
+        sem_post(&sem_quantum_finished);
     }
 }
 
@@ -267,7 +278,7 @@ void st_sched_ready_running(void* arg) {
         t_pcb *next_pcb = get_next_pcb(selection_algorithm);
 
         if(next_pcb == NULL){
-            log_error(logger, "PID: <%d> - PCB not found on ready list (deleted?).");
+            log_error(logger, "Next PCB not found on ready list (deleted?).");
             continue;
         }
 
@@ -303,14 +314,15 @@ void st_sched_ready_running(void* arg) {
         // Lock the mutex to safely handle the PCB return
         pthread_mutex_lock(&mutex_running);
         // If using quantum, interrupt its execution
-            if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+        if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
             // sem_post quantum sem
+            pthread_mutex_lock(&mutex_quantum_interrupted);
             *(quantum_args->interrupted) = true;
-            // Sleep 1 ms to sync up with the independent quantum thread
-            usleep(1000);
-            //Update the remaining quantum from the new pcb
+            pthread_mutex_unlock(&mutex_quantum_interrupted);
+            sem_wait(&sem_quantum_finished);
+            // Actualizar el quantum restante sin necesidad de usleep
             ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
-            }
+        }
         handle_dispatch_return_action(ret);
         free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
         pcb_RUNNING = NULL;

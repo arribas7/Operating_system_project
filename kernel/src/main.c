@@ -45,6 +45,9 @@ sem_t sem_all_scheduler;
 sem_t sem_ready_process;
 sem_t sem_new_process;
 sem_t sem_quantum;
+sem_t sem_quantum_finished;
+pthread_mutex_t mutex_multiprogramming;
+pthread_mutex_t mutex_quantum_interrupted;
 
 int scheduler_paused = 0;
 atomic_int current_multiprogramming_grade;
@@ -61,6 +64,7 @@ void destroy_all() {
     sem_destroy(&sem_all_scheduler);
     sem_destroy(&sem_ready_process);
     sem_destroy(&sem_quantum);
+    sem_destroy(&sem_quantum_finished);
     sem_destroy(&sem_new_process);
     pthread_mutex_destroy(&mutex_multiprogramming);
     pthread_mutex_destroy(&mutex_new);
@@ -68,6 +72,7 @@ void destroy_all() {
     pthread_mutex_destroy(&mutex_ready);
     pthread_mutex_destroy(&mutex_exit);
     pthread_mutex_destroy(&mutex_blocked);
+    pthread_mutex_destroy(&mutex_quantum_interrupted);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
@@ -216,6 +221,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sem_all_scheduler, 0, 1);
     sem_init(&sem_ready_process,0, 0);
     sem_init(&sem_quantum,0, 0);
+    sem_init(&sem_quantum_finished, 0, 0);
     sem_init(&sem_new_process, 0, 0);
     
     pthread_mutex_init(&mutex_multiprogramming, NULL);
@@ -224,6 +230,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&mutex_running, NULL);
     pthread_mutex_init(&mutex_blocked, NULL);
     pthread_mutex_init(&mutex_exit, NULL);
+    pthread_mutex_init(&mutex_quantum_interrupted, NULL);
 
     initialize_resources(config);
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
