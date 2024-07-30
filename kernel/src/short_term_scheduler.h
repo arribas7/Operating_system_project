@@ -21,7 +21,7 @@ extern t_pcb *pcb_RUNNING;
 extern pthread_mutex_t mutex_running;
 
 extern sem_t sem_all_scheduler;
-extern sem_t sem_st_scheduler;
+extern sem_t sem_ready_process;
 extern int scheduler_paused;
 extern sem_t sem_quantum;
 
