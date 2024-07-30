@@ -80,8 +80,7 @@ void generic_interface_manager()
         sem_post(&(use_time));
     }
 }
-
-void std_fs_manager(void* arg) 
+void std_in_manager(void* arg) 
 {
     int mem_connection = atoi((char *) arg);
     while(1) 
@@ -109,26 +108,30 @@ void std_fs_manager(void* arg)
                     send_report(instruction, true, k_socket);
                 }
                 break;
-            case IO_STDOUT_WRITE:
-                if (wait_time_units(1, config) == 0) 
-                {
-                    send_read_request(instruction, mem_connection);
-                    char* word = receive_word(mem_connection);
-                    if(strlen(word) == 0) 
-                    {
-                        log_error(logger, "ERROR READING FROM MEMORY");
-                        response = false;
-                    } else {
-                        txt_write_in_stdout(word);
-                        response = true;
-                    }
-                    send_report(instruction, response, k_socket);
-                    free(word);
-                } else {
-                    log_error(logger, "ERROR HAS OCURRED");
-                    send_report(instruction, response, k_socket);
-                }
+            default:
+                log_error(logger, "INVALID_INSTRUCTION");
+                send_report(instruction, false, k_socket);
                 break;
+        }
+        sem_post(&(use_time));
+    }
+}
+
+void dialfs_manager(void* arg) 
+{
+    int mem_connection = atoi((char *) arg);
+    while(1) 
+    {
+        sem_wait(&(use_time));
+        sem_wait(&(sem_instruction));
+        t_instruction* instruction = get_next_instruction(i_queue);
+        
+        generate_log_from_instruction(instruction);
+        bool response;
+        int result = 0;
+
+        switch(instruction->code) 
+        {
             case IO_FS_CREATE:
                 wait_time_units(1, config);
                 fs_create(instruction->f_name, instruction->pid);
@@ -153,6 +156,50 @@ void std_fs_manager(void* arg)
                 wait_time_units(1, config);
                 result = fs_write(instruction->f_name, instruction->physical_address, instruction->size, instruction->f_pointer, instruction->pid, mem_connection);
                 send_report(instruction, result == 0, k_socket);
+                break;
+            default:
+                log_error(logger, "INVALID_INSTRUCTION");
+                send_report(instruction, false, k_socket);
+                break;
+        }
+        sem_post(&(use_time));
+    }
+}
+
+void std_out_manager(void* arg) 
+{
+    int mem_connection = atoi((char *) arg);
+    while(1) 
+    {
+        sem_wait(&(use_time));
+        sem_wait(&(sem_instruction));
+        t_instruction* instruction = get_next_instruction(i_queue);
+        
+        generate_log_from_instruction(instruction);
+        bool response;
+        int result = 0;
+
+        switch(instruction->code) 
+        {
+            case IO_STDOUT_WRITE:
+                if (wait_time_units(1, config) == 0) 
+                {
+                    send_read_request(instruction, mem_connection);
+                    char* word = receive_word(mem_connection);
+                    if(strlen(word) == 0) 
+                    {
+                        log_error(logger, "ERROR READING FROM MEMORY");
+                        response = false;
+                    } else {
+                        txt_write_in_stdout(word);
+                        response = true;
+                    }
+                    send_report(instruction, response, k_socket);
+                    free(word);
+                } else {
+                    log_error(logger, "ERROR HAS OCURRED");
+                    send_report(instruction, response, k_socket);
+                }
                 break;
             default:
                 log_error(logger, "INVALID_INSTRUCTION");
@@ -234,15 +281,6 @@ int main(int argc, char* argv[]) {
 
     free(log_name);
 
-    // INITIALIZE DIALFS IF NEEDED
-    if(strcmp(type, "DIALFS") == 0) 
-    {
-        int block_size = config_get_int_value(config, "BLOCK_SIZE");
-        int block_count = config_get_int_value(config, "BLOCK_COUNT");
-        const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
-        initialize_dialfs(path_base_dialfs, block_size, block_count);
-    }
-    
     // CREATE KERNEL CONNECTION
     
     k_socket = create_connection(config, "IP_KERNEL", "PUERTO_KERNEL");
@@ -280,28 +318,43 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    if(strcmp(type, "GENERICA") == 0) 
-    {
+    if(strcmp(type, "GENERICA") == 0) {
         if(pthread_create(&(manager_thread), NULL, (void *) generic_interface_manager, NULL) != 0) 
         {
             log_error(logger, "Error creating generic manager thread");
             return -1;
         }    
-    } else {
-        if(strcmp(type, "STDIN") == 0 || strcmp(type, "STDOUT") == 0 || strcmp(type, "DIALFS") == 0) 
-        {
-            int m_socket = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
-            char* s_m_socket = int_to_string(m_socket);
-            if(pthread_create(&(manager_thread), NULL, (void *) std_fs_manager, (void *) s_m_socket) != 0) 
+    } else if(strcmp(type, "STDIN") == 0 || strcmp(type, "STDOUT") == 0 || strcmp(type, "DIALFS") == 0) {
+        int m_socket = create_connection(config, "IP_MEMORIA", "PUERTO_MEMORIA");
+        char* s_m_socket = int_to_string(m_socket);
+
+        if(strcmp(type, "STDIN") == 0){
+                if(pthread_create(&(manager_thread), NULL, (void *) std_in_manager, (void *) s_m_socket) != 0) 
             {
-                log_error(logger, "Error creating STD - FS manager thread");
+                log_error(logger, "Error creating STDIN manager thread");
                 return -1;
             }
-            /*free(s_m_socket);*/
-        } else {
-            log_error(logger, "Error creating manager thread");
-            return -1;
+        } else if(strcmp(type, "STDOUT") == 0){
+                if(pthread_create(&(manager_thread), NULL, (void *) std_out_manager, (void *) s_m_socket) != 0) 
+            {
+                log_error(logger, "Error creating STDOUT manager thread");
+                return -1;
+            }
+        } else if(strcmp(type, "DIALFS") == 0){
+            int block_size = config_get_int_value(config, "BLOCK_SIZE");
+            int block_count = config_get_int_value(config, "BLOCK_COUNT");
+            const char *path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
+            initialize_dialfs(path_base_dialfs, block_size, block_count);
+            
+            if(pthread_create(&(manager_thread), NULL, (void *) dialfs_manager, (void *) s_m_socket) != 0) 
+            {
+                log_error(logger, "Error creating DIALFS manager thread");
+                return -1;
+            }
         }
+    } else {
+        log_error(logger, "Error creating manager thread");
+        return -1;
     }
 
     pthread_join(connection_thread, NULL);
