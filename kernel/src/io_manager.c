@@ -12,7 +12,7 @@ void io_block(t_pcb* pcb, t_instruction *instruction) {
         return;
     }
     send_instruction_IO(instruction, io_interface->connection);
-    log_info(logger, "Instruction sent to interface %s", instruction->name);
+    log_info(logger, "PID: <%d> - Bloqueado por: <%s>", pcb->pid, instruction->name);
     move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
 }
 

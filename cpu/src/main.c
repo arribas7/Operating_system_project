@@ -130,7 +130,12 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         fetch(pcb_en_ejecucion);
         decode(pcb_en_ejecucion);
         response = execute(pcb_en_ejecucion);
-        pcb_en_ejecucion->pc++;
+        if(reg_proceso_actual->PC != pcb_en_ejecucion->pc) {
+            pcb_en_ejecucion->pc = reg_proceso_actual->PC;
+        } else {
+            pcb_en_ejecucion->pc++;
+            reg_proceso_actual->PC = pcb_en_ejecucion->pc;
+        }
         pcb_en_ejecucion->reg = reg_proceso_actual;
 
         if(response != NULL){

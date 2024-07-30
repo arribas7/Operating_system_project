@@ -111,7 +111,6 @@ void *run_quantum_counter(void *arg) {
 
         //Create and start timer
         t_temporal *timer = temporal_create();
-        log_debug(logger, "Quantum Iniciado con %d ms restantes", *(args->remaining_quantum));
         temporal_resume(timer);
 
         //Reset interrupt flag
@@ -121,11 +120,12 @@ void *run_quantum_counter(void *arg) {
         if (strcmp(args->selection_algorithm, "RR") == 0){
             *(args->remaining_quantum) = quantum_time;
         }
+        log_info(logger, "Quantum Iniciado con %d ms restantes", *(args->remaining_quantum));
 
         //Check for the completion of the timer or interruption of the process
         while (temporal_gettime(timer) < *(args->remaining_quantum)) {
             pthread_mutex_lock(&mutex_quantum_interrupted);
-            if(args->interrupted){
+            if(*(args->interrupted)){
                 pthread_mutex_unlock(&mutex_quantum_interrupted);
                 break;
             }
@@ -137,7 +137,7 @@ void *run_quantum_counter(void *arg) {
 
         if (*(args->interrupted) == false) {
             //Quantum is finished
-            log_debug(logger, "Quantum Cumplido");
+            log_info(logger, "Quantum Cumplido");
 
             //Reset the remaining quantum time to default
             *(args->remaining_quantum) = quantum_time;
@@ -146,12 +146,13 @@ void *run_quantum_counter(void *arg) {
             pthread_mutex_lock(&mutex_running);
             if (pcb_RUNNING != NULL) {
                 cpu_interrupt(config, INTERRUPT_TIMEOUT);
+                log_info(logger, "PID: <%d> - Desalojado por fin de Quantum", pcb_RUNNING->pid);
                 pcb_RUNNING = NULL;
             }
             pthread_mutex_unlock(&mutex_running);
         } else {
             //Quantum got interrupted before completion
-            log_debug(logger, "Quantum Interrumpido");
+            log_info(logger, "Quantum Interrumpido");
 
             //Update the remaining time
             int remaining_time = *(args->remaining_quantum) - temporal_gettime(timer);
@@ -180,6 +181,7 @@ void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
             exit_process(pcb, RUNNING, INVALID_RESOURCE);
             break;
         case RESOURCE_BLOCKED:
+            log_info(logger, "PID: <%d> - Bloqueado por: <%s>", pcb->pid, resp_ws->recurso);
             move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         default: // success
