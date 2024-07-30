@@ -49,18 +49,6 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) {
     return false;
 }
 
-bool vrr_pcb_priority(void* pcb1, void* pcb2) {
-    t_pcb* a = (t_pcb*)pcb1;
-    t_pcb* b = (t_pcb*)pcb2;
-
-    // BLOCKED > RUNNING > NEW
-    // If PCB1 has been interrupted by IO and PCB2 hasn't
-    if (a->prev_state == BLOCKED && b->prev_state != BLOCKED) return true;
-    // If PCB1 came into READY from RUNNING and PCB2 was just created
-    //if (a->prev_state == RUNNING && b->prev_state == NEW) return true;
-    return false;
-}
-
 t_pcb* fifo(){
     pthread_mutex_lock(&mutex_ready);
     t_pcb *next_pcb = list_pop(list_READY);
@@ -71,8 +59,6 @@ t_pcb* fifo(){
 
 t_pcb* round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    //list_sort(list_READY, rr_pcb_priority);
-
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
 
@@ -81,10 +67,32 @@ t_pcb* round_robin(){
 
 t_pcb* virtual_round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    list_sort(list_READY, vrr_pcb_priority);
+
+    // Crear una lista temporal para procesos con prev_state == BLOCKED
+    t_list* blocked_list = list_create();
+    t_list* other_list = list_create();
+
+    // Separar los procesos en dos listas: bloqueados y otros
+    while (!list_is_empty(list_READY)) {
+        t_pcb* pcb = list_remove(list_READY, 0);
+        if (pcb->prev_state == BLOCKED) {
+            list_add(blocked_list, pcb);
+        } else {
+            list_add(other_list, pcb);
+        }
+    }
+
+    // Combinar las listas: bloqueados primero
+    list_add_all(list_READY, blocked_list);
+    list_add_all(list_READY, other_list);
+
+    // Limpiar las listas temporales
+    list_destroy(blocked_list);
+    list_destroy(other_list);
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
+
     return next_pcb;
 }
 
