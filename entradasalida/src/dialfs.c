@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include "dialfs.h"
 #include "bitarray_utils.h"
+#include "generic_st.h"
 #include <utils/inout.h>
 
 int block_size;
@@ -113,28 +114,53 @@ void initialize_dialfs(const char *path_base_param, int block_size_param, int bl
 
     block_size = block_size_param;
     block_count = block_count_param;
-    //FILE *blocks_file = fopen(blocks_path, "wb");
-    blocks_file = fopen(blocks_path, "wb");
+
+    blocks_file = fopen(blocks_path, "rb+");
+    if (blocks_file == NULL) {
+        // Si no existe, crearlo en modo escritura/lectura
+        blocks_file = fopen(blocks_path, "wb+");
+        if (blocks_file) {
+            fseek(blocks_file, (block_size * block_count) - 1, SEEK_SET);
+            fputc('\0', blocks_file); // asegurar el tamaño que se pide
+        }
+    } else {
+        // Verificar el tamaño del archivo para determinar si es necesario inicializarlo
+        fseek(blocks_file, 0, SEEK_END);
+        long file_size = ftell(blocks_file);
+        if (file_size < (block_size * block_count)) {
+            fseek(blocks_file, (block_size * block_count) - 1, SEEK_SET);
+            fputc('\0', blocks_file);
+        }
+    }
     if (blocks_file) {
-        fseek(blocks_file, (block_size * block_count) - 1, SEEK_SET);
-        fputc('\0', blocks_file);
         fclose(blocks_file);
     }
 
     char bitmap_path[256];
     snprintf(bitmap_path, sizeof(bitmap_path), "%s/bitmap.dat", path_base);
 
-    int fd = open(bitmap_path, O_RDWR | O_CREAT, 0600);
+    // Intentar abrir el archivo en modo lectura/escritura
+    int fd = open(bitmap_path, O_RDWR);
     if (fd == -1) {
-        log_error(logger, "Error opening bitmap file %s", bitmap_path);
-        return;
+        // Si no existe, crearlo en modo lectura/escritura
+        fd = open(bitmap_path, O_RDWR | O_CREAT, 0600);
+        if (fd == -1) {
+            log_error(logger, "Error opening bitmap file %s", bitmap_path);
+            return;
+        }
     }
 
     bitmap_size = (block_count + 7) / 8;
-    if (ftruncate(fd, bitmap_size) == -1) {
-        log_error(logger, "Error setting size of bitmap file %s", bitmap_path);
-        close(fd);
-        return;
+    // Verificar el tamaño del archivo para determinar si es necesario inicializarlo
+    struct stat st;
+    if (fstat(fd, &st) == 0) {
+        if (st.st_size < bitmap_size) {
+            if (ftruncate(fd, bitmap_size) == -1) {
+                log_error(logger, "Error setting size of bitmap file %s", bitmap_path);
+                close(fd);
+                return;
+            }
+        }
     }
 
     char *bitmap_data = mmap(NULL, bitmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -144,7 +170,10 @@ void initialize_dialfs(const char *path_base_param, int block_size_param, int bl
         return;
     }
 
-    memset(bitmap_data, 0, bitmap_size);
+    if (st.st_size < bitmap_size) {
+        memset(bitmap_data + st.st_size, 0, bitmap_size - st.st_size);
+    }
+
     bitmap = bitarray_create_with_mode(bitmap_data, bitmap_size, LSB_FIRST);
 
     close(fd);
@@ -232,8 +261,6 @@ int fs_write(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f
         log_error(logger, "ERROR READING FROM MEMORY");
         return -1;
     }
-
-    free(mem_req);
     char metadata_path[256];
     snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
 
@@ -319,11 +346,6 @@ int fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_
 
     t_req_to_w* mem_req = req_to_write(pid, buffer, phys_addr);
     send_req_to_w(mem_req, mem_connection);
-
-    // Liberar la memoria
-    free(mem_req->text);
-    free(mem_req);
-    free(buffer);
     return 0;
 }
 

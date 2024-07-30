@@ -108,7 +108,7 @@ void fetch(t_pcb *pcb)
 
 void decode(t_pcb *pcb)
 {
-    instr_decode = string_n_split(instruccion_actual, 4, " ");
+    instr_decode = string_n_split(instruccion_actual, 6, " ");
     cant_parametros = string_array_size(instr_decode) - 1;
     instruccion_decodificada = buscar(instr_decode[0], listaComandos);
     //log_info(logger, "Decode instruction fetched.. %s", listaComandos[instruccion_decodificada]);
@@ -135,6 +135,9 @@ t_paquete *execute(t_pcb *pcb)
         break;
         case 3:
             log_info(logger, "PID: <%d> - <EXECUTE>: <%s> - <%s>, <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2], instr_decode[3]);
+        break;
+        case 5:
+            log_info(logger, "PID: <%d> - <EXECUTE>: <%s> - <%s>, <%s>, <%s>, <%s>, <%s>", pcb->pid, listaComandos[instruccion_decodificada], instr_decode[1], instr_decode[2], instr_decode[3],instr_decode[4], instr_decode[5]);
         break;
     } 
 
