@@ -60,6 +60,9 @@ int requestFrameToMem (int numPag){
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
 
+    free(buffer->stream);
+    free(buffer);
+
     recibir_operacion(conexion_mem); //FRAME O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
     int marco = recibir_req(conexion_mem); 
 
@@ -77,6 +80,9 @@ void putRegValueToMem(int fisicalAddress, int valor){
     agregar_a_paquete(peticion, buffer->stream, buffer->size);
     enviar_paquete(peticion, conexion_mem);
 
+    free(buffer->stream);
+    free(buffer);
+
     eliminar_paquete(peticion);
     log_info(logger, "PID: <%d> - Accion: <%s> - Direccion Fisica: <%d> - Valor: <%d>", pcb_en_ejecucion->pid, "WRITE", fisicalAddress, valor);
 }
@@ -92,6 +98,9 @@ int requestRegToMem (int fisicalAddr){
  
     enviar_paquete(peticion, conexion_mem);
     eliminar_paquete(peticion);
+
+    free(buffer->stream);
+    free(buffer);
 
     recibir_operacion(conexion_mem); //REG O PROBRA SI FUNCIONA SIN ESTA LINEA YA QUE EL FRAME MEMORIA LO PUEDE ENVIAR POR UN MENSAJE SIMPLEMENTE
     int valor = recibir_req(conexion_mem); //receive VALOR DEL REG
