@@ -44,6 +44,8 @@ pthread_mutex_t mutex_multiprogramming;
 sem_t sem_all_scheduler;
 sem_t sem_st_scheduler;
 sem_t sem_quantum;
+sem_t sem_unblock;
+sem_t sem_cpu_dispatch;
 
 int scheduler_paused = 0;
 atomic_int current_multiprogramming_grade;
@@ -143,7 +145,9 @@ void handle_client(void *arg) {
                 if(!report->result){
                     exit_process_from_pid(report->pid, ERROR_INTERFACE);
                 } else {
+                    sem_wait(&sem_unblock);
                     io_unblock(report->pid);
+                    sem_post(&sem_unblock);
                 }
                 break;
             case -1:
@@ -214,6 +218,8 @@ int main(int argc, char *argv[]) {
     sem_init(&sem_all_scheduler, 0, 1);
     sem_init(&sem_st_scheduler,0, 1);
     sem_init(&sem_quantum,0, 0);
+    sem_init(&sem_unblock,0, 1);
+    sem_init(&sem_cpu_dispatch,0, 1);
     
     pthread_mutex_init(&mutex_multiprogramming, NULL);
     pthread_mutex_init(&mutex_new, NULL);

@@ -15,6 +15,8 @@ extern sem_t sem_all_scheduler;
 extern pthread_mutex_t mutex_multiprogramming;
 extern int scheduler_paused;
 extern atomic_int current_multiprogramming_grade;
+extern sem_t sem_cpu_dispatch;
+extern sem_t sem_unblock;
 
 typedef enum {
     CMD_EJECUTAR_SCRIPT,

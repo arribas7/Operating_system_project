@@ -24,6 +24,8 @@ extern sem_t sem_all_scheduler;
 extern sem_t sem_st_scheduler;
 extern int scheduler_paused;
 extern sem_t sem_quantum;
+extern sem_t sem_cpu_dispatch;
+extern sem_t sem_unblock;
 
 void st_sched_ready_running(void* arg);
 

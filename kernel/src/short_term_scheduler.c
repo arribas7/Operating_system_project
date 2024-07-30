@@ -308,7 +308,9 @@ void st_sched_ready_running(void* arg) {
                 //Update the remaining quantum from the new pcb
                 ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
              }
+            sem_wait(&sem_cpu_dispatch);
             handle_dispatch_return_action(ret);
+            sem_post(&sem_cpu_dispatch);
             free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
             pcb_RUNNING = NULL;
             // Unlock the mutex
