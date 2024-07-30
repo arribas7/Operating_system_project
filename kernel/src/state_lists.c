@@ -4,12 +4,14 @@
 #include <state_lists.h>
 #include <utils/kernel.h>
 #include <pthread.h>
-
+#include <semaphore.h>
 
 extern t_log *logger;
 
 extern pthread_mutex_t mutex_blocked;
 extern pthread_mutex_t mutex_ready;
+extern sem_t sem_ready_process;
+
 t_list *list_NEW = NULL;
 t_list *list_READY = NULL;
 t_pcb *pcb_running = NULL;
@@ -168,8 +170,14 @@ void *list_remove_by_pid(t_list* list, int pid) {
 void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_list* destination_list, pthread_mutex_t* mutex) {
 	log_info(logger, "“PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>”", pcb->pid, t_state_to_string(prev_status), t_state_to_string(destination_status));
 	pcb->prev_state = prev_status;
+
 	pthread_mutex_lock(mutex);
+	
 	list_add(destination_list, pcb);
+	if(destination_status == READY){
+		sem_post(&sem_ready_process);
+	}
+
 	pthread_mutex_unlock(mutex);
 }
 
@@ -184,6 +192,9 @@ void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pt
 		
 		pthread_mutex_lock(to_mutex);
 		list_add(to_list, pcb);
+		if(to_status == READY){
+			sem_post(&sem_ready_process);
+		}
 		pthread_mutex_unlock(to_mutex);
 	} else {
 		log_error(logger, "PID %d doesn't exist on list", pid);
