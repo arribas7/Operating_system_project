@@ -201,15 +201,7 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
             log_list_contents(logger, list_EXIT, mutex_exit);;
             break;
         case CMD_TEST_LOG:
-             if(pcb_RUNNING != NULL) {
-                log_info(logger, "Running Process PID: %d", pcb_RUNNING->pid);
-            } else {
-                log_info(logger, "No process running.");
-            }
-            log_info(logger, "||||||||||||||||||||BLOCKED LIST||||||||||||||||||||");
-            log_list_contents(logger, list_BLOCKED, mutex_blocked);
-            log_info(logger, "||||||||||||||||||||READY LIST||||||||||||||||||||");
-            log_list_contents(logger, list_READY, mutex_ready);
+            handle_process_state();
         break;
         case CMD_TEST_TIMEOUT:
             log_list_contents(logger, list_BLOCKED, mutex_blocked);

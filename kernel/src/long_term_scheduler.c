@@ -160,7 +160,7 @@ void lt_sched_new_ready() {
             t_pcb *pcb = (t_pcb*) list_pop(list_NEW);
             pthread_mutex_unlock(&mutex_new);
 
-            move_pcb(pcb, RUNNING, READY, list_READY, &mutex_ready);
+            move_pcb(pcb, NEW, READY, list_READY, &mutex_ready);
         } else {
             pthread_mutex_unlock(&mutex_new);
             sem_post(&sem_multiprogramming); // Revertir el semáforo si no hay procesos para mover
