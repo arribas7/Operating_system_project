@@ -74,11 +74,8 @@ void *log_list_contents(t_log *logger, t_list *list, pthread_mutex_t mutex) {
 		log_info(logger, "***************************");
         log_info(logger, "--PCB #%d", i + 1);
 		log_info(logger, "---pid: %d", pcb->pid);
-		//log_debug(logger, "---path size: %zu", strlen(pcb->path));
+		log_info(logger, "---prev_state: %s", t_state_to_string(pcb->prev_state));
 		log_info(logger, "---path: %s", pcb->path);
-
-		//log_info(logger, "---pc: %d", pcb->pc);
-		//log_info(logger, "---quantum: %d", pcb->quantum);
     }
 	log_info(logger, "***************************");
 	log_info(logger, "-----------List End-----------");
@@ -172,13 +169,14 @@ void move_pcb(t_pcb* pcb, t_state prev_status, t_state destination_status, t_lis
 	pcb->prev_state = prev_status;
 
 	pthread_mutex_lock(mutex);
-	
 	list_add(destination_list, pcb);
+	pthread_mutex_unlock(mutex);
+
 	if(destination_status == READY){
+		log_info(logger, "||||| Ingreso a ready: Cola Ready / Ready prioridad ||||| ");
+		log_list_contents(logger, list_READY, mutex_ready);
 		sem_post(&sem_ready_process);
 	}
-
-	pthread_mutex_unlock(mutex);
 }
 
 void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pthread_mutex_t* from_mutex, t_state to_status, t_list* to_list, pthread_mutex_t* to_mutex) {
@@ -192,10 +190,13 @@ void move_pcb_from_to_by_pid(int pid, t_state from_status, t_list* from_list, pt
 		
 		pthread_mutex_lock(to_mutex);
 		list_add(to_list, pcb);
+		pthread_mutex_unlock(to_mutex);
+		
 		if(to_status == READY){
+			log_info(logger, "||||| Ingreso a ready: Cola Ready / Ready prioridad ||||| ");
+			log_list_contents(logger, list_READY, mutex_ready);
 			sem_post(&sem_ready_process);
 		}
-		pthread_mutex_unlock(to_mutex);
 	} else {
 		log_error(logger, "PID %d doesn't exist on list", pid);
 	}
