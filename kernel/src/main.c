@@ -132,7 +132,7 @@ void handle_client(void *arg) {
                     send_instruction_IO(instruction_1, cliente_fd);
                     log_info(logger, "INSTRUCTION_SENDED");
                     delete_instruction_IO(instruction_1);
-                }
+                }*/
 
 
                 /* STDOUT 
@@ -152,8 +152,6 @@ void handle_client(void *arg) {
                 if(!report->result){
                     exit_process_from_pid(report->pid, ERROR_INTERFACE);
                 } else {
-                    //sem_wait(&sem_unblock);
-                    //sem_post(&sem_unblock);
                     io_unblock(report->pid);
                 }
                 break;
