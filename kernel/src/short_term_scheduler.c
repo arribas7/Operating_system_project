@@ -310,6 +310,8 @@ void st_sched_ready_running(void* arg) {
         t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
         log_debug(logger, "Dispatched a PCB %s", next_pcb->path);
 
+        sem_wait(&sem_cpu_dispatch); //continue if scheduler is ready
+        sem_post(&sem_cpu_dispatch); //scheduler is ready
         // Handle errors from the CPU dispatch
         if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
             log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);
@@ -331,6 +333,7 @@ void st_sched_ready_running(void* arg) {
             // Actualizar el quantum restante sin necesidad de usleep
             ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
         }
+        
         handle_dispatch_return_action(ret);
         free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
         pcb_RUNNING = NULL;

@@ -48,6 +48,8 @@ sem_t sem_quantum;
 sem_t sem_quantum_finished;
 pthread_mutex_t mutex_multiprogramming;
 pthread_mutex_t mutex_quantum_interrupted;
+sem_t sem_unblock;
+sem_t sem_cpu_dispatch;
 
 int scheduler_paused = 0;
 atomic_int current_multiprogramming_grade;
@@ -130,7 +132,7 @@ void handle_client(void *arg) {
                     send_instruction_IO(instruction_1, cliente_fd);
                     log_info(logger, "INSTRUCTION_SENDED");
                     delete_instruction_IO(instruction_1);
-                }
+                }*/
 
 
                 /* STDOUT 
@@ -223,6 +225,8 @@ int main(int argc, char *argv[]) {
     sem_init(&sem_quantum,0, 0);
     sem_init(&sem_quantum_finished, 0, 0);
     sem_init(&sem_new_process, 0, 0);
+    sem_init(&sem_unblock,0, 1);
+    sem_init(&sem_cpu_dispatch,0, 1);
     
     pthread_mutex_init(&mutex_multiprogramming, NULL);
     pthread_mutex_init(&mutex_new, NULL);
