@@ -152,9 +152,9 @@ void handle_client(void *arg) {
                 if(!report->result){
                     exit_process_from_pid(report->pid, ERROR_INTERFACE);
                 } else {
-                    sem_wait(&sem_unblock);
+                    //sem_wait(&sem_unblock);
                     io_unblock(report->pid);
-                    sem_post(&sem_unblock);
+                    //sem_post(&sem_unblock);
                 }
                 break;
             case -1:
