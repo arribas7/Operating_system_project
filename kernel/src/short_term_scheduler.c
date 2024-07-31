@@ -308,8 +308,6 @@ void st_sched_ready_running(void* arg) {
 
         // Dispatch the PCB to the CPU and get the result
         t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
-        log_debug(logger, "||||||||||||||||||||READY LIST||||||||||||||||||||");
-        log_list_contents(logger, list_READY, mutex_ready);
         log_debug(logger, "Dispatched a PCB %s", next_pcb->path);
 
         // Handle errors from the CPU dispatch
@@ -346,6 +344,5 @@ void st_sched_ready_running(void* arg) {
             destroy_ws(ret->resp_ws);
         }
         free(ret);
-        log_debug(logger, "||||||||||||||||||||PROCESO FINALIZADO||||||||||||||||||||");
     }
 }
