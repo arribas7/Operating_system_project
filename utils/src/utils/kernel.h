@@ -43,10 +43,6 @@ typedef struct {
     t_state prev_state;
 } t_pcb;
 
-typedef struct {
-    u_int32_t instruction;
-} t_syscall;
-
 /**
 * @fn    serialize_pcb
 * @brief Serialize pcb struct to be able to transport it to other services.

@@ -5,6 +5,11 @@
 #include <long_term_scheduler.h>
 #include <resources_manager.h>
 #include <utils/inout.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+extern sem_t sem_quantum_finished;
+extern pthread_mutex_t mutex_quantum_interrupted;
 
 // Round Robin (RR) Priority:
 // 1. RUNNING state PCBs have the highest priority.
@@ -44,18 +49,6 @@ bool rr_pcb_priority(void* pcb1, void* pcb2) {
     return false;
 }
 
-bool vrr_pcb_priority(void* pcb1, void* pcb2) {
-    t_pcb* a = (t_pcb*)pcb1;
-    t_pcb* b = (t_pcb*)pcb2;
-
-    // BLOCKED > RUNNING > NEW
-    // If PCB1 has been interrupted by IO and PCB2 hasn't
-    if (a->prev_state == BLOCKED && b->prev_state != BLOCKED) return true;
-    // If PCB1 came into READY from RUNNING and PCB2 was just created
-    //if (a->prev_state == RUNNING && b->prev_state == NEW) return true;
-    return false;
-}
-
 t_pcb* fifo(){
     pthread_mutex_lock(&mutex_ready);
     t_pcb *next_pcb = list_pop(list_READY);
@@ -66,8 +59,6 @@ t_pcb* fifo(){
 
 t_pcb* round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    //list_sort(list_READY, rr_pcb_priority);
-
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
 
@@ -76,10 +67,32 @@ t_pcb* round_robin(){
 
 t_pcb* virtual_round_robin(){
     pthread_mutex_lock(&mutex_ready);
-    list_sort(list_READY, vrr_pcb_priority);
+
+    // Crear una lista temporal para procesos con prev_state == BLOCKED
+    t_list* blocked_list = list_create();
+    t_list* other_list = list_create();
+
+    // Separar los procesos en dos listas: bloqueados y otros
+    while (!list_is_empty(list_READY)) {
+        t_pcb* pcb = list_remove(list_READY, 0);
+        if (pcb->prev_state == BLOCKED) {
+            list_add(blocked_list, pcb);
+        } else {
+            list_add(other_list, pcb);
+        }
+    }
+
+    // Combinar las listas: bloqueados primero
+    list_add_all(list_READY, blocked_list);
+    list_add_all(list_READY, other_list);
+
+    // Limpiar las listas temporales
+    list_destroy(blocked_list);
+    list_destroy(other_list);
 
     t_pcb *next_pcb = list_pop(list_READY);
     pthread_mutex_unlock(&mutex_ready);
+
     return next_pcb;
 }
 
@@ -106,7 +119,6 @@ void *run_quantum_counter(void *arg) {
 
         //Create and start timer
         t_temporal *timer = temporal_create();
-        log_info(logger, "Quantum Iniciado con %d ms restantes", *(args->remaining_quantum));
         temporal_resume(timer);
 
         //Reset interrupt flag
@@ -116,10 +128,16 @@ void *run_quantum_counter(void *arg) {
         if (strcmp(args->selection_algorithm, "RR") == 0){
             *(args->remaining_quantum) = quantum_time;
         }
+        log_info(logger, "Quantum Iniciado con %d ms restantes", *(args->remaining_quantum));
 
         //Check for the completion of the timer or interruption of the process
-        while (temporal_gettime(timer) < *(args->remaining_quantum) && *(args->interrupted) == false) {
-            usleep(1000); // sleep 1 ms to wait busy-waiting
+        while (temporal_gettime(timer) < *(args->remaining_quantum)) {
+            pthread_mutex_lock(&mutex_quantum_interrupted);
+            if(*(args->interrupted)){
+                pthread_mutex_unlock(&mutex_quantum_interrupted);
+                break;
+            }
+            pthread_mutex_unlock(&mutex_quantum_interrupted);
         }
 
         //Pause the timer once it's not needed
@@ -136,6 +154,7 @@ void *run_quantum_counter(void *arg) {
             pthread_mutex_lock(&mutex_running);
             if (pcb_RUNNING != NULL) {
                 cpu_interrupt(config, INTERRUPT_TIMEOUT);
+                log_info(logger, "PID: <%d> - Desalojado por fin de Quantum", pcb_RUNNING->pid);
                 pcb_RUNNING = NULL;
             }
             pthread_mutex_unlock(&mutex_running);
@@ -150,6 +169,7 @@ void *run_quantum_counter(void *arg) {
         }
         //Destroy timer
         temporal_destroy(timer);
+        sem_post(&sem_quantum_finished);
     }
 }
 
@@ -169,6 +189,7 @@ void handle_resource(t_pcb* pcb, op_code code, t_ws* resp_ws){
             exit_process(pcb, RUNNING, INVALID_RESOURCE);
             break;
         case RESOURCE_BLOCKED:
+            log_info(logger, "PID: <%d> - Bloqueado por: <%s>", pcb->pid, resp_ws->recurso);
             move_pcb(pcb, RUNNING, BLOCKED, list_BLOCKED, &mutex_blocked);
             break;
         default: // success
@@ -259,81 +280,71 @@ void st_sched_ready_running(void* arg) {
 
     // Main loop to continuously check for ready processes to schedule
     while (1) {
-        // Wait for the semaphore indicating scheduling is allowed
-        sem_wait(&sem_all_scheduler); 
-        // Immediately release the semaphore for the next iteration
-        sem_post(&sem_all_scheduler); 
-        if (!list_is_empty(list_READY)) { 
-            sem_wait(&sem_st_scheduler);
+        sem_wait(&sem_all_scheduler); // Wait for the semaphore indicating scheduling is allowed
+        sem_post(&sem_all_scheduler); // Immediately release the semaphore for the next iteration
+        sem_wait(&sem_ready_process);
 
-            // Get the next process control block (PCB) based on the selection algorithm
-            t_pcb *next_pcb = get_next_pcb(selection_algorithm);
+        // Get the next process control block (PCB) based on the selection algorithm
+        t_pcb *next_pcb = get_next_pcb(selection_algorithm);
 
-            // Lock the mutex to safely update the running PCB
-            pthread_mutex_lock(&mutex_running);
-            pcb_RUNNING = next_pcb;
-            pthread_mutex_unlock(&mutex_running);
-            log_info(logger, "“PID: <%d> - Estado Anterior: <READY> - Estado Actual: <RUNNING>”", next_pcb->pid);
-
-            // If using RR or VRR, signal the quantum semaphore
-            if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
-                //Update the remaining quantum
-                //log_info(logger, "The quantum of the next pcb is %d", next_pcb->quantum)
-                *(quantum_args->remaining_quantum) = next_pcb->quantum;
-                sem_post(&sem_quantum);
-            }
-
-            // Dispatch the PCB to the CPU and get the result
-            t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
-            log_info(logger, "||||||||||||||||||||READY LIST||||||||||||||||||||");
-            log_list_contents(logger, list_READY, mutex_ready);
-            log_info(logger, "Dispatched a PCB %s", next_pcb->path);
-
-            // Handle errors from the CPU dispatch
-            if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
-                log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);
-                return;
-            }
-
-            // Log the CPU dispatch response
-            //log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
-
-            // Lock the mutex to safely handle the PCB return
-            pthread_mutex_lock(&mutex_running);
-            // If using quantum, interrupt its execution
-             if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
-                *(quantum_args->interrupted) = true;
-                // Sleep 1 ms to sync up with the independent quantum thread
-                usleep(1000);
-                //Update the remaining quantum from the new pcb
-                ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
-             }
-            sem_wait(&sem_cpu_dispatch);
-            handle_dispatch_return_action(ret);
-            sem_post(&sem_cpu_dispatch);
-            free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
-            pcb_RUNNING = NULL;
-            // Unlock the mutex
-            pthread_mutex_unlock(&mutex_running);
-
-            // Signal the short-term scheduler semaphore
-            sem_post(&sem_st_scheduler);
-            
-            if(ret->instruction_IO != NULL){
-                delete_instruction_IO(ret->instruction_IO);
-            }
-            if(ret->resp_ws != NULL){
-                destroy_ws(ret->resp_ws);
-            }
-            free(ret);
-            log_info(logger, "||||||||||||||||||||PROCESO FINALIZADO||||||||||||||||||||");
+        if(next_pcb == NULL){
+            log_error(logger, "Next PCB not found on ready list (deleted?).");
+            continue;
         }
 
-        // Check if the scheduler is paused
-        if (scheduler_paused) {
-            // Block until the scheduling is resumed
-            sem_wait(&sem_all_scheduler); 
-            sem_post(&sem_all_scheduler);
+        // Lock the mutex to safely update the running PCB
+        pthread_mutex_lock(&mutex_running);
+        pcb_RUNNING = next_pcb;
+        pthread_mutex_unlock(&mutex_running);
+        log_info(logger, "“PID: <%d> - Estado Anterior: <READY> - Estado Actual: <RUNNING>”", next_pcb->pid);
+
+        // If using RR or VRR, signal the quantum semaphore
+        if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+            //Update the remaining quantum
+            //log_info(logger, "The quantum of the next pcb is %d", next_pcb->quantum)
+            *(quantum_args->remaining_quantum) = next_pcb->quantum;
+            sem_post(&sem_quantum);
         }
+
+        // Dispatch the PCB to the CPU and get the result
+        t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
+        log_debug(logger, "Dispatched a PCB %s", next_pcb->path);
+
+        // Handle errors from the CPU dispatch
+        if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
+            log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);
+            return;
+        }
+
+        // Log the CPU dispatch response
+        //log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
+
+        // Lock the mutex to safely handle the PCB return
+        pthread_mutex_lock(&mutex_running);
+        // If using quantum, interrupt its execution
+        if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
+            // sem_post quantum sem
+            pthread_mutex_lock(&mutex_quantum_interrupted);
+            *(quantum_args->interrupted) = true;
+            pthread_mutex_unlock(&mutex_quantum_interrupted);
+            sem_wait(&sem_quantum_finished);
+            // Actualizar el quantum restante sin necesidad de usleep
+            ret->pcb_updated->quantum = *(quantum_args->remaining_quantum);
+        }
+        sem_wait(&sem_cpu_dispatch);
+        handle_dispatch_return_action(ret);
+        sem_post(&sem_cpu_dispatch);
+        free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
+        pcb_RUNNING = NULL;
+        // Unlock the mutex
+        pthread_mutex_unlock(&mutex_running);
+        
+        if(ret->instruction_IO != NULL){
+            delete_instruction_IO(ret->instruction_IO);
+        }
+        if(ret->resp_ws != NULL){
+            destroy_ws(ret->resp_ws);
+        }
+        free(ret);
     }
 }

@@ -242,6 +242,7 @@ void handle_client(void *arg) {
                 enviar_respuesta(cliente_fd, OK);
                 break;
             case PC:
+                retardo_en_peticiones();
                 log_debug(logger, "Processing next PC...");
                 pcb = recibir_pcb(cliente_fd);
                 log_debug(logger, "pid: %d", pcb->pid);
@@ -249,7 +250,6 @@ void handle_client(void *arg) {
                 /* TODO Jannet: uncomment this, I send a hardcoded data just for testing*/
                 //const char *instruction = get_complete_instruction(&dict, pcb->pc,pcb->pid);
                 //const char *instruction = get_complete_instruction(pcb->pid, pcb->pc);
-                retardo_en_peticiones();
                 enviar_mensaje(get_complete_instruction(pcb->pid, pcb->pc),cliente_fd);
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 //enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
@@ -451,8 +451,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_graceful_shutdown);
     signal(SIGTERM, handle_graceful_shutdown);
     /* ---------------- Setup inicial  ---------------- */
-    //config = config_create(argv[1]);
-    config = config_create("memoria.config");
+    config = config_create(argv[1]);
     if (config == NULL) {
         perror("memoria.config creation failed");
         exit(EXIT_FAILURE);

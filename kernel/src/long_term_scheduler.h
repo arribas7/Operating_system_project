@@ -39,6 +39,7 @@ extern sem_t sem_multiprogramming;
 extern pthread_mutex_t mutex_multiprogramming;
 
 extern sem_t sem_all_scheduler;
+extern sem_t sem_new_process;
 extern int scheduler_paused;
 extern atomic_int pid_count;
 extern t_config *config;
