@@ -14,6 +14,7 @@ extern t_list *list_BLOCKED;
 extern pthread_mutex_t mutex_blocked;
 extern t_list *list_READY;
 extern pthread_mutex_t mutex_ready;
+extern sem_t sem_unblock;
 
 void io_block(t_pcb* pcb, t_instruction *instruction);
 void io_unblock(int pid);

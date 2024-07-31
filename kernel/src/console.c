@@ -92,8 +92,8 @@ void handle_start_scheduler() {
     if(scheduler_paused) {
         scheduler_paused = 0;
         sem_post(&sem_all_scheduler);
-        //sem_post(&sem_cpu_dispatch);
-        //sem_post(&sem_unblock);
+        sem_post(&sem_cpu_dispatch);
+        sem_post(&sem_unblock);
         log_info(logger, "Scheduler started.");
     } else {
         log_info(logger, "Scheduler is already running.");
@@ -103,8 +103,8 @@ void handle_start_scheduler() {
 void handle_stop_scheduler() {
     if(!scheduler_paused){
         sem_wait(&sem_all_scheduler);
-        //sem_wait(&sem_cpu_dispatch);
-        //sem_wait(&sem_unblock);
+        sem_wait(&sem_cpu_dispatch);
+        sem_wait(&sem_unblock);
         scheduler_paused = 1;
         log_info(logger, "Scheduler stopped.");
     } else {

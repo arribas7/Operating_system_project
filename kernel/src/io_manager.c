@@ -17,5 +17,7 @@ void io_block(t_pcb* pcb, t_instruction *instruction) {
 }
 
 void io_unblock(int pid) {
+    sem_wait(&sem_unblock);
+    sem_post(&sem_unblock);
     move_pcb_from_to_by_pid(pid, BLOCKED, list_BLOCKED, &mutex_blocked, READY, list_READY, &mutex_ready);
 }
