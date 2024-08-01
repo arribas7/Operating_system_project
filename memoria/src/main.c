@@ -146,7 +146,10 @@ t_request2* deserializar_request2(void* stream){
 /*********************************************************/
 
 void retardo_en_peticiones(){
-    sleep(config_get_int_value(config,"RETARDO_RESPUESTA")/1000);
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 1000000 * config_get_int_value(config,"RETARDO_RESPUESTA"); // 1 ms
+    nanosleep(&ts, NULL);
 }
 
 t_request* recibir_pagina(int socket_cpu){
