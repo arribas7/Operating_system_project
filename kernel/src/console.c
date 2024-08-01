@@ -216,7 +216,8 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
             break;
         case CMD_EXIT:
             log_info(logger, "Exiting console.");
-            return 1;
+            exit(0);
+            break;
         case CMD_TEST_PLANI:
             execute_command(CMD_FINALIZAR_PROCESO, "4", config);
             break;
