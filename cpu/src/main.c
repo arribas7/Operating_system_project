@@ -51,6 +51,8 @@ int buscar(char *elemento, char **lista);
 op_code interrupted_reason = 0;
 int server_fd_dispatch;
 int server_fd_interrupt;
+sem_t interrupt_semaphore;
+sem_t data_semaphore;
 
 void handle_graceful_shutdown(int sig) {
     close(server_fd_dispatch);
@@ -86,7 +88,8 @@ int main(int argc, char *argv[])
     conexionMemoria(config);
     pthread_t dispatch_thread;
     pthread_t interrupt_thread;
-
+    sem_init(&interrupt_semaphore, 0, 0);
+    sem_init(&data_semaphore, 0, 0);
 
     if(pthread_create(&(dispatch_thread), NULL, (void*) run_dispatch_server, NULL) != 0) {
         log_error(logger, "Error creating thread for dispatch server.");
@@ -99,6 +102,9 @@ int main(int argc, char *argv[])
     pthread_join(interrupt_thread, NULL);
 
     clean(config);
+    sem_destroy(&interrupt_semaphore);
+    sem_destroy(&data_semaphore);
+
     return 0;
 }
 
@@ -204,7 +210,8 @@ int handle_interrupt(int server_fd)
         {
             case INTERRUPT_BY_USER:
             case INTERRUPT_TIMEOUT:
-                interrupted_reason = cod_op;
+                set_interrupt(cod_op);
+                //interrupted_reason = cod_op;
                 break;
             
             default:

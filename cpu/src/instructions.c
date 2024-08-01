@@ -81,10 +81,14 @@ int valueOfReg (char* reg){
 void recibir_instruccion(int socket_cliente)
 {
     int size;
+    sem_wait(&data_semaphore);
     instruccion_actual = recibir_buffer(&size, socket_cliente);
     //log_info(logger, "Before fetching instruction.. %s", instruccion_actual);
 }
 
+void notify_data_received() {
+    sem_post(&data_semaphore);  // Notificar que hay datos disponibles
+}
 
 void fetch(t_pcb *pcb)
 {
@@ -99,7 +103,8 @@ void fetch(t_pcb *pcb)
     free(buffer->stream);
     free(buffer);
 
-    recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR) //PROBAR SI FUNCIONA SIN ESTA LINEA YA QUE LA INSTRUCCION VIENE EN UN MENSAJE
+    int code_op = recibir_operacion(conexion_mem);   // sera MENSAJE DESDE MEMORIA (LA INSTRUCCION A EJECUTAR) //PROBAR SI FUNCIONA SIN ESTA LINEA YA QUE LA INSTRUCCION VIENE EN UN MENSAJE
+    if (code_op != -1) notify_data_received();
     recibir_instruccion(conexion_mem); // LA INSTRUCCION
 
     //“PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”
@@ -206,14 +211,19 @@ t_paquete *execute(t_pcb *pcb)
     return response;
 }
 
-op_code check_interrupt(void){
-    if(interrupted_reason > 0){
-        op_code actual_interrupted_reason = interrupted_reason;
-        interrupted_reason = 0;
-        return actual_interrupted_reason;
-    }
-    return 0;
+op_code check_interrupt(void) {
+    //espero sem de interrupt
+    sem_wait(&interrupt_semaphore);
+    op_code actual_interrupted_reason = interrupted_reason;
+    interrupted_reason = 0;
+    return actual_interrupted_reason;
 }
+
+void set_interrupt(op_code reason) {
+    interrupted_reason = reason;
+    sem_post(&interrupt_semaphore);  // notifico la interrupcion
+}
+
 //FALTA AGREGAR DX Y PC A LOS REGISTROS A LEER O ESCRIBIR
 void set(char* registro, char* valor){
     if (strcmp(registro, "PC") == 0)

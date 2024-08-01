@@ -4,6 +4,7 @@
 #include "mmu_tlb.h"
 #include "connections.h"
 //#include <utils/cpu.h>
+#include "semaphore.h"
 
 void fetch(t_pcb *pcb);
 void decode(t_pcb *pcb);
@@ -25,6 +26,9 @@ extern char **instr_decode;
 extern int cant_parametros; //de la instruccion que llega desde memoria
 extern op_code interrupted_reason;
 extern char* ack;
+
+extern sem_t interrupt_semaphore;
+extern sem_t data_semaphore;
 
 typedef enum
 {
@@ -109,5 +113,6 @@ typedef enum {
 
 
 op_code check_interrupt(void);
+void set_interrupt(op_code reason);
 
 #endif
