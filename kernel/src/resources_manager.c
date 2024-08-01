@@ -148,7 +148,7 @@ bool pid_list_exists(t_list* list, int searchPid) {
 	}
 	return false;
 }
-
+/*
 void release_all_resources(t_pcb *pcb) {
     void release_pcb_from_resource(t_resource* resource) {
         pthread_mutex_lock(&resource->mutex);
@@ -168,4 +168,34 @@ void release_all_resources(t_pcb *pcb) {
     list_iterate(resources_list, (void*)release_pcb_from_resource);
     pthread_mutex_unlock(&mutex_resources);
 }
+*/
 
+void release_all_resources(t_pcb *pcb) {
+    void release_pcb_from_resource(t_resource* resource) {
+        pthread_mutex_lock(&resource->mutex);
+        bool isAssigned = pid_list_exists(resource->assigned_pcbs, pcb->pid);
+        pthread_mutex_unlock(&resource->mutex);
+
+        if(isAssigned){
+            resource_signal_by_instance(pcb, resource);
+        } else {
+            pthread_mutex_lock(&resource->mutex);
+            list_remove_by_pid(resource->blocked_queue->elements, pcb->pid);
+            pthread_mutex_unlock(&resource->mutex);
+            
+            // Remover el PCB de la lista general de bloqueados
+            pthread_mutex_lock(&mutex_blocked);
+            t_pcb *pcb_removed = list_remove_by_pid(list_BLOCKED, pcb->pid);
+            if (pcb_removed != NULL){
+                log_debug(logger, "PCB con PID <%d> removido de la lista BLOCKED.", pcb->pid);
+            } else {
+                log_warning(logger, "PCB con PID <%d> no encontrado en la lista BLOCKED.", pcb->pid);
+            }
+            pthread_mutex_unlock(&mutex_blocked);
+        }
+    }
+
+    pthread_mutex_lock(&mutex_resources);
+    list_iterate(resources_list, (void*)release_pcb_from_resource);
+    pthread_mutex_unlock(&mutex_resources);
+}
