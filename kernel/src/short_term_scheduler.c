@@ -138,6 +138,10 @@ void *run_quantum_counter(void *arg) {
                 break;
             }
             pthread_mutex_unlock(&mutex_quantum_interrupted);
+            struct timespec ts;
+            ts.tv_sec = 0;
+            ts.tv_nsec = 1000000; // 1 ms
+            nanosleep(&ts, NULL);
         }
 
         //Pause the timer once it's not needed
