@@ -138,6 +138,7 @@ void *run_quantum_counter(void *arg) {
                 break;
             }
             pthread_mutex_unlock(&mutex_quantum_interrupted);
+            usleep(1000);
         }
 
         //Pause the timer once it's not needed
