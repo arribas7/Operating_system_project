@@ -88,7 +88,7 @@ void destroy_all() {
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
     state_list_destroy(list_EXIT);
-    free(pcb_RUNNING);
+    delete_pcb(pcb_RUNNING);
     destroy_resource_list();
     log_destroy(logger);
     config_destroy(config);

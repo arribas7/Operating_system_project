@@ -84,7 +84,7 @@ void state_list_clean(t_list * list) {
 }
 
 void state_list_destroy(t_list * list) {
-	list_destroy_and_destroy_elements(list, (void*) delete_pcb);
+	list_destroy_and_destroy_elements(list, (void*) list_element_destroyer);
 }
 
 bool list_has_pid(t_list* list, int pid) {
