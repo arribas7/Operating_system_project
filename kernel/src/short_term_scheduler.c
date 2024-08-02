@@ -138,10 +138,7 @@ void *run_quantum_counter(void *arg) {
                 break;
             }
             pthread_mutex_unlock(&mutex_quantum_interrupted);
-            struct timespec ts;
-            ts.tv_sec = 0;
-            ts.tv_nsec = 1000000; // 1 ms
-            nanosleep(&ts, NULL);
+            usleep(1000);
         }
 
         //Pause the timer once it's not needed
@@ -314,8 +311,8 @@ void st_sched_ready_running(void* arg) {
         t_return_dispatch *ret = cpu_dispatch(pcb_RUNNING, config);
         log_debug(logger, "Dispatched a PCB %s", next_pcb->path);
 
-        sem_wait(&sem_cpu_dispatch); //continue if scheduler is ready
-        sem_post(&sem_cpu_dispatch); //scheduler is ready
+        //sem_wait(&sem_cpu_dispatch); //continue if scheduler is ready
+        //sem_post(&sem_cpu_dispatch); //scheduler is ready
         // Handle errors from the CPU dispatch
         if(ret->resp_code == GENERAL_ERROR || ret->resp_code == NOT_SUPPORTED){
             log_error(logger, "Error returned from cpu dispatch: %d", ret->resp_code);

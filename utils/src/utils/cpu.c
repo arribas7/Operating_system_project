@@ -220,7 +220,8 @@ void send_instruction_IO(t_instruction* instruction, int socket_cliente) {
     t_paquete* package = crear_paquete(instruction->code);
     serialize_instruction_IO(instruction, package->buffer);
     enviar_paquete(package, socket_cliente);
-    eliminar_paquete(package);
+    free(package->buffer);
+    eliminar_paquete(package);   
 }
 
 void delete_instruction_IO(t_instruction* instruction) {

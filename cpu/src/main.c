@@ -7,7 +7,6 @@
 //#include <utils/kernel.h>
 #include <pthread.h>
 //#include <utils/cpu.h>
-#include <semaphore.h>
 //#include <math.h>
 #include <commons/collections/queue.h>
 #include "connections.h"
@@ -109,7 +108,6 @@ int main(int argc, char *argv[])
     conexionMemoria(config);
     pthread_t dispatch_thread;
     pthread_t interrupt_thread;
-
 
     if(pthread_create(&(dispatch_thread), NULL, (void*) run_dispatch_server, NULL) != 0) {
         log_error(logger, "Error creating thread for dispatch server.");

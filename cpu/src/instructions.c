@@ -430,6 +430,7 @@ t_paquete *io_gen_sleep(char* name, char* time)
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return package;
@@ -455,6 +456,7 @@ t_paquete *io_stdin_read(char* name, char* logicalAdressReg, char* size)
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_stdin_read_paq;
@@ -474,6 +476,7 @@ t_paquete *io_stdin_write(char* name, char* logicalAdressReg, char* size)
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_stdin_write_paq;
@@ -491,6 +494,7 @@ t_paquete *io_fs_create(char* name, char* file_name)
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_create;
@@ -508,6 +512,7 @@ t_paquete *io_fs_delete(char* name, char* file_name)
     free(instruction->f_name);
     free(instruction->name);   
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_delete;
@@ -526,6 +531,7 @@ t_paquete *io_fs_truncate(char* name, char* file_name, char* size)
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_truncate;
@@ -545,6 +551,7 @@ t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddressReg, cha
     free(instruction->f_name);
     free(instruction->name);
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_write;
@@ -564,6 +571,7 @@ t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddressReg, char
     free(instruction->f_name);
     free(instruction->name);   
     free(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_read;

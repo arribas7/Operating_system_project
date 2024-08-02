@@ -14,6 +14,32 @@ extern t_dictionary* listaTablasDePaginas;
 int tam_pag;
 int server_fd;
 
+void destroy_page_table(void* table) {
+    TablaPaginas* tabla = (TablaPaginas*)table;
+    if (tabla == NULL) return;
+
+    pthread_mutex_destroy(&tabla->mutex_tabla);
+    free(tabla->paginas);
+    free(tabla);
+}
+
+void destroy_all_page_tables(t_dictionary* listaTablasDePaginas) {
+    if (listaTablasDePaginas == NULL) return;
+
+    dictionary_destroy_and_destroy_elements(listaTablasDePaginas, destroy_page_table);
+}
+
+void destroy_all_mem(){
+    destroy_all_page_tables(listaTablasDePaginas);
+    config_destroy(config);
+    log_destroy(logger);
+}
+
+void cleanup(){
+    destroy_all_mem();
+}
+
+
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
 
@@ -145,11 +171,9 @@ t_request2* deserializar_request2(void* stream){
 
 /*********************************************************/
 
-void retardo_en_peticiones(){
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 1000000L * config_get_int_value(config,"RETARDO_RESPUESTA"); // 1 ms
-    nanosleep(&ts, NULL);
+void retardo_en_peticiones() {
+    unsigned int retardo_ms = config_get_int_value(config, "RETARDO_RESPUESTA");
+    usleep(1000 * retardo_ms);
 }
 
 t_request* recibir_pagina(int socket_cpu){
@@ -453,6 +477,7 @@ void handle_graceful_shutdown(int sig) {
 }
 
 int main(int argc, char *argv[]) {
+    atexit(cleanup);
     // Manage signals
     signal(SIGINT, handle_graceful_shutdown);
     signal(SIGTERM, handle_graceful_shutdown);
@@ -516,6 +541,6 @@ int main(int argc, char *argv[]) {
 
     pthread_join(hilo_servidor, NULL);
     clean(config);
-         
+    destroy_all_mem();
     return 0;
 }
