@@ -64,8 +64,8 @@ t_log *logger;
 t_config *config;
 int server_fd;
 
-t_list *client_sockets;
-pthread_mutex_t client_sockets_mutex;
+//t_list *client_sockets;
+//pthread_mutex_t client_sockets_mutex;
 
 pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
 
@@ -90,9 +90,9 @@ void destroy_all() {
     state_list_destroy(list_EXIT);
     free(pcb_RUNNING);
     destroy_resource_list();
-    destroy_interface_list(interface_list);
     log_destroy(logger);
     config_destroy(config);
+    destroy_interface_list(interface_list);
 }
 
 void initialize_lists() {
@@ -133,7 +133,6 @@ void handle_client(void *arg) {
                     char* type = type_from_list(lista);
                     log_info(logger, "NEW IO CONNECTED: NAME: %s, TYPE: %s", name, type);
                     add_interface_to_list(interface_list, interface);
-                    free(type);
                     status = 0;
                 }
 
@@ -141,10 +140,6 @@ void handle_client(void *arg) {
                 mssg = mssg_log(status);
                 log_info(logger, "STATUS %s: %s", name, mssg);
                 send_confirmation(cliente_fd, &(status));
-                free(name);
-                free(list_get(lista,0));
-                free(list_get(lista,2));
-                free(lista);
                 break;
             case REPORT:
                 t_report* report = list_to_report(lista);
@@ -168,7 +163,7 @@ void handle_client(void *arg) {
                 log_warning(logger, "Unknown operation.");
                 break;
         }
-        //list_destroy_and_destroy_elements(lista, free);
+        list_destroy_and_destroy_elements(lista, free);
     }
 }
 
@@ -190,10 +185,10 @@ void run_server(void *arg) {
             exit(0);
         }
         pthread_detach(client_thread);
-
+/*
         pthread_mutex_lock(&client_sockets_mutex);
         list_add(client_sockets, socket_server);
-        pthread_mutex_unlock(&client_sockets_mutex);
+        pthread_mutex_unlock(&client_sockets_mutex);*/
     }
 }
 
@@ -201,7 +196,7 @@ void run_server(void *arg) {
 void cleanup() {
     liberar_conexion(server_fd);
     printf("Socket %d closed\n", server_fd);
-    pthread_mutex_lock(&client_sockets_mutex);
+    /*pthread_mutex_lock(&client_sockets_mutex);
     void close_socket(void *socket) {
         int client_fd = *(int *)socket;
         liberar_conexion(client_fd);
@@ -211,7 +206,7 @@ void cleanup() {
     list_iterate(client_sockets, close_socket);
     list_destroy(client_sockets);
     pthread_mutex_unlock(&client_sockets_mutex);
-    pthread_mutex_destroy(&client_sockets_mutex);
+    pthread_mutex_destroy(&client_sockets_mutex);*/
     destroy_all();
     printf("Clean up done.\n");
 }
@@ -269,8 +264,8 @@ int main(int argc, char *argv[]) {
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 
-    client_sockets = list_create();
-    pthread_mutex_init(&client_sockets_mutex, NULL);
+    /*client_sockets = list_create();
+    pthread_mutex_init(&client_sockets_mutex, NULL);*/
 
     if (pthread_create(&(server_thread), NULL, (void *) run_server, (void *) puerto) != 0) {
         log_error(logger, "Error creating server thread");

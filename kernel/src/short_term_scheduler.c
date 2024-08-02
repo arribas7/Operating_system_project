@@ -322,7 +322,6 @@ void st_sched_ready_running(void* arg) {
         //log_debug(logger, "Processing cpu dispatch response_code: %d", ret->resp_code);
 
         // Lock the mutex to safely handle the PCB return
-        pthread_mutex_lock(&mutex_running);
         // If using quantum, interrupt its execution
         if (strcmp(selection_algorithm, "RR") == 0 || strcmp(selection_algorithm, "VRR") == 0) {
             // sem_post quantum sem
@@ -335,6 +334,7 @@ void st_sched_ready_running(void* arg) {
         }
         
         handle_dispatch_return_action(ret);
+        pthread_mutex_lock(&mutex_running);
         delete_pcb(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
         pcb_RUNNING = NULL;
         // Unlock the mutex
