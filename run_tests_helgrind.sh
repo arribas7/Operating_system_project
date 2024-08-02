@@ -41,7 +41,7 @@ run_module() {
   local size=$4
 
   echo "Running module: $module with config: $config"
-  gnome-terminal -- bash -c "cd $module && make clean && make all && ./bin/$module $config; exec bash"
+  gnome-terminal -- bash -c "cd $module && make clean && make all && valgrind --tool=helgrind ./bin/$module $config; exec bash"
   sleep 1
   window_id=$(xdotool search --sync --onlyvisible --class gnome-terminal | tail -1)
   xdotool windowmove $window_id $position
