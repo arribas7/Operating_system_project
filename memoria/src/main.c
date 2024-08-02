@@ -148,7 +148,7 @@ t_request2* deserializar_request2(void* stream){
 void retardo_en_peticiones(){
     struct timespec ts;
     ts.tv_sec = 0;
-    ts.tv_nsec = 1000000 * config_get_int_value(config,"RETARDO_RESPUESTA"); // 1 ms
+    ts.tv_nsec = 1000000L * config_get_int_value(config,"RETARDO_RESPUESTA"); // 1 ms
     nanosleep(&ts, NULL);
 }
 
@@ -243,6 +243,7 @@ void handle_client(void *arg) {
                 handle_create_process(pcb->path,pid,config); //funciona con scripts-pruebas/file1
                 printf("Path recibido: %s", pcb->path);
                 enviar_respuesta(cliente_fd, OK);
+                delete_pcb(pcb);
                 break;
             case PC:
                 retardo_en_peticiones();
@@ -256,6 +257,7 @@ void handle_client(void *arg) {
                 enviar_mensaje(get_complete_instruction(pcb->pid, pcb->pc),cliente_fd);
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 //enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
+                delete_pcb(pcb);
                 break;
             case FINISH_PROCESS:
                 retardo_en_peticiones();
@@ -267,6 +269,7 @@ void handle_client(void *arg) {
                 snprintf(mensaje, sizeof(mensaje), "Process %d has finished", pcb->pid);
                 enviar_mensaje((char *)mensaje, cliente_fd);
                 enviar_respuesta(cliente_fd, OK);
+                delete_pcb(pcb);
                 break;
                 
             case PAGE_REQUEST:

@@ -52,6 +52,28 @@ op_code interrupted_reason = 0;
 int server_fd_dispatch;
 int server_fd_interrupt;
 
+void destroy_all_cpu(){
+    delete_pcb(pcb_en_ejecucion);
+    free(reg_proceso_actual);
+    free_all_global_variables();
+    config_destroy(config);
+    log_destroy(logger);
+}
+
+void cleanup(){
+    liberar_conexion(server_fd_dispatch);
+    liberar_conexion(server_fd_interrupt);
+    liberar_conexion(conexion_mem);
+    destroy_all_cpu();
+}
+
+void free_all_global_variables(){
+    free(ack);
+    free(instruccion_actual);
+    free_double_pointer(instr_decode,sizeof(instr_decode));
+}
+
+//agregar aqui en esta funcion los frees
 void handle_graceful_shutdown(int sig) {
     close(server_fd_dispatch);
     close(server_fd_interrupt);
@@ -62,6 +84,7 @@ void handle_graceful_shutdown(int sig) {
 
 int main(int argc, char *argv[])
 {
+    atexit(cleanup);
     // Manage signals
     signal(SIGINT, handle_graceful_shutdown);
     signal(SIGTERM, handle_graceful_shutdown);
@@ -99,6 +122,7 @@ int main(int argc, char *argv[])
     pthread_join(interrupt_thread, NULL);
 
     clean(config);
+    destroy_all_cpu();
     return 0;
 }
 
@@ -156,6 +180,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         log_debug(logger, "Enviando response OK al kernel..."); 
         serialize_pcb(pcb_en_ejecucion, buffer); // We always need to return pcb updated
         agregar_a_paquete(response,buffer->stream,buffer->size);
+        free(buffer->stream);
         free(buffer);
     }
     return response;

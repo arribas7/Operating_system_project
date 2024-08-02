@@ -109,5 +109,6 @@ typedef enum {
 
 
 op_code check_interrupt(void);
+void free_double_pointer(char **array, int size);
 
 #endif
