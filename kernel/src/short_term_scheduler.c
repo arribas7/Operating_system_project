@@ -335,11 +335,11 @@ void st_sched_ready_running(void* arg) {
         }
         
         handle_dispatch_return_action(ret);
-        free(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
+        delete_pcb(pcb_RUNNING); // free pcb because we used the updated pcb in other lists
         pcb_RUNNING = NULL;
         // Unlock the mutex
         pthread_mutex_unlock(&mutex_running);
-        
+
         if(ret->instruction_IO != NULL){
             delete_instruction_IO(ret->instruction_IO);
         }

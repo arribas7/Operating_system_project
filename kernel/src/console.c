@@ -230,6 +230,7 @@ int execute_command(console_command cmd, const char *cmd_args, t_config* config)
 
 void *interactive_console(void *arg) {
     t_config *config = (t_config *) arg;
+
     char *line;
     console_command cmd;
     char *cmd_args;

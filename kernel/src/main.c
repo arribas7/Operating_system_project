@@ -22,16 +22,19 @@
 
 t_interface_list* interface_list;
 
-extern t_list *list_NEW;
+t_list* resources_list;
+pthread_mutex_t mutex_resources;
+
+t_list *list_NEW;
 pthread_mutex_t mutex_new;
 
-extern t_list *list_READY;
+t_list *list_READY;
 pthread_mutex_t mutex_ready;
 
-extern t_list *list_BLOCKED;
+t_list *list_BLOCKED;
 pthread_mutex_t mutex_blocked;
 
-extern t_list *list_EXIT;
+t_list *list_EXIT;
 pthread_mutex_t mutex_exit;
 
 t_pcb *pcb_RUNNING;
@@ -54,14 +57,19 @@ sem_t sem_cpu_dispatch;
 int scheduler_paused = 0;
 atomic_int current_multiprogramming_grade;
 char* scheduler_algorithm;
+char* puerto_server;
+int* socket_server;
 
 t_log *logger;
 t_config *config;
 int server_fd;
 
+t_list *client_sockets;
+pthread_mutex_t client_sockets_mutex;
+
+pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
+
 void destroy_all() {
-    log_destroy(logger);
-    config_destroy(config);
     sem_destroy(&sem_multiprogramming);
     sem_destroy(&sem_all_scheduler);
     sem_destroy(&sem_ready_process);
@@ -75,12 +83,23 @@ void destroy_all() {
     pthread_mutex_destroy(&mutex_exit);
     pthread_mutex_destroy(&mutex_blocked);
     pthread_mutex_destroy(&mutex_quantum_interrupted);
+    pthread_mutex_destroy(&mutex_resources);
     state_list_destroy(list_NEW);
     state_list_destroy(list_READY);
     state_list_destroy(list_BLOCKED);
     state_list_destroy(list_EXIT);
-    destroy_resource_list();
     free(pcb_RUNNING);
+    destroy_resource_list();
+    destroy_interface_list(interface_list);
+    log_destroy(logger);
+    config_destroy(config);
+}
+
+void initialize_lists() {
+    list_NEW = list_create();
+    list_READY = list_create();
+    list_BLOCKED = list_create();
+    list_EXIT = list_create();
 }
 
 void handle_client(void *arg) {
@@ -94,13 +113,12 @@ void handle_client(void *arg) {
     }
     log_info(logger, "New client connected, socket fd: %d", cliente_fd);
 
-    t_list *lista;
     char* name;
     char* mssg;
 
     while (1) {
         int cod_op = recibir_operacion(cliente_fd);
-        lista = recibir_paquete(cliente_fd);
+        t_list *lista = recibir_paquete(cliente_fd);
         switch (cod_op) {
             case IO:
                 uint32_t status;
@@ -123,26 +141,10 @@ void handle_client(void *arg) {
                 mssg = mssg_log(status);
                 log_info(logger, "STATUS %s: %s", name, mssg);
                 send_confirmation(cliente_fd, &(status));
-                
-                /* INSTRUCTIONS */
-
-                /*
-                if(strcmp(name,"TECLADO") == 0) {
-                    t_instruction* instruction_1 = create_instruction_IO(1, IO_STDIN_READ, "TECLADO", 0, 0, 5, "Path", 0);
-                    send_instruction_IO(instruction_1, cliente_fd);
-                    log_info(logger, "INSTRUCTION_SENDED");
-                    delete_instruction_IO(instruction_1);
-                }*/
-
-
-                /* STDOUT 
-                if(strcmp(name,"MONITOR") == 0) {
-                    t_instruction* instruction_2 = create_instruction_IO(1, IO_STDOUT_WRITE, "MONITOR", 0, 0, 5, "Path", 0);
-                    send_instruction_IO(instruction_2, cliente_fd);
-                    log_info(logger, "INSTRUCTION_SENDED");
-                    delete_instruction_IO(instruction_2);
-                }*/
-
+                free(name);
+                free(list_get(lista,0));
+                free(list_get(lista,2));
+                free(lista);
                 break;
             case REPORT:
                 t_report* report = list_to_report(lista);
@@ -154,48 +156,75 @@ void handle_client(void *arg) {
                 } else {
                     io_unblock(report->pid);
                 }
+                delete_report(report);
                 break;
             case -1:
                 log_info(logger, "Client disconnected. Finishing client connection...");
                 delete_interface_from_list(interface_list, name);
+                list_destroy_and_destroy_elements(lista, free);
                 liberar_conexion(cliente_fd);
                 return;
             default:
                 log_warning(logger, "Unknown operation.");
                 break;
         }
+        //list_destroy_and_destroy_elements(lista, free);
     }
 }
 
 void run_server(void *arg) {
-    char *puerto = (char *) arg;
+    puerto_server = (char *) arg;
 
-    server_fd = iniciar_servidor(puerto);
+    server_fd = iniciar_servidor(puerto_server);
     log_info(logger, "Server ready to receive clients...");
 
     while(1) {
         int cliente_fd = esperar_cliente(server_fd);
 
         pthread_t client_thread;
-        int *new_sock = malloc(sizeof(int));
-        *new_sock = cliente_fd;
+        socket_server = malloc(sizeof(int));
+        *socket_server = cliente_fd;
 
-        if(pthread_create(&(client_thread), NULL, (void*) handle_client, (void*) new_sock) != 0) {
+        if(pthread_create(&(client_thread), NULL, (void*) handle_client, (void*) socket_server) != 0) {
             log_error(logger, "Error creating thread for the client.");
-            free(new_sock);
+            exit(0);
         }
         pthread_detach(client_thread);
+
+        pthread_mutex_lock(&client_sockets_mutex);
+        list_add(client_sockets, socket_server);
+        pthread_mutex_unlock(&client_sockets_mutex);
     }
-    /*return EXIT_SUCCESS;*/
+}
+
+
+void cleanup() {
+    liberar_conexion(server_fd);
+    printf("Socket %d closed\n", server_fd);
+    pthread_mutex_lock(&client_sockets_mutex);
+    void close_socket(void *socket) {
+        int client_fd = *(int *)socket;
+        liberar_conexion(client_fd);
+        printf("Client Socket %d closed\n", client_fd);
+        free(socket);
+    }
+    list_iterate(client_sockets, close_socket);
+    list_destroy(client_sockets);
+    pthread_mutex_unlock(&client_sockets_mutex);
+    pthread_mutex_destroy(&client_sockets_mutex);
+    destroy_all();
+    printf("Clean up done.\n");
 }
 
 void handle_graceful_shutdown(int sig) {
-    close(server_fd);
-    printf("Socket %d closed\n", server_fd);
+    printf("Handling %d signal\n", sig);
     exit(0);
 }
 
+
 int main(int argc, char *argv[]) {
+    // Register cleanup function to be called on exit
+    atexit(cleanup);
     // Manage signals
     signal(SIGINT, handle_graceful_shutdown);
     signal(SIGTERM, handle_graceful_shutdown);
@@ -214,6 +243,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    pthread_mutex_init(&mutex_resources, NULL);
     initialize_resources();
 
     atomic_init(&pid_count, 0);
@@ -236,10 +266,11 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&mutex_exit, NULL);
     pthread_mutex_init(&mutex_quantum_interrupted, NULL);
 
-    initialize_resources(config);
     scheduler_algorithm = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-    pthread_t server_thread, console_thread, lt_sched_new_ready_thread, st_sched_ready_running_thread;
     char *puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+
+    client_sockets = list_create();
+    pthread_mutex_init(&client_sockets_mutex, NULL);
 
     if (pthread_create(&(server_thread), NULL, (void *) run_server, (void *) puerto) != 0) {
         log_error(logger, "Error creating server thread");
@@ -266,7 +297,6 @@ int main(int argc, char *argv[]) {
     pthread_join(console_thread, NULL);
     pthread_join(lt_sched_new_ready_thread, NULL);
     pthread_join(st_sched_ready_running_thread, NULL);
-
-    destroy_all();
+    //destroy_all();
     return 0;
 }

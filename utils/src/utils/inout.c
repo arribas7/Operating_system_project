@@ -484,3 +484,9 @@ t_interface* find_interface_by_name(t_interface_list* interface_list, char* name
     pthread_mutex_unlock(&(interface_list->mutex));
     return ret_interface;
 }
+
+void destroy_interface_list(t_interface_list* interface_list) {
+    list_destroy_and_destroy_elements(interface_list->list, (void*) delete_interface);
+    pthread_mutex_destroy(&(interface_list->mutex));
+    free(interface_list);
+}
