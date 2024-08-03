@@ -5,7 +5,19 @@ TLBEntry TLB[32];
 int tlb_index = 0;
 int tlb_size = 0; //para ir sabiendo cuantas entradas hay en la tlb
 //int numero_pagina = 0;
-time_t current_time;
+int current_time = 0;
+
+void contenido_tlb(){
+    int i=0;
+    for (i=0; i<cant_entradas_tlb();i++)
+        log_debug(logger,"TLB i: %d - Pagina: %d - LTA: %d",i, TLB[i].pagina, TLB[i].last_time_access);
+}
+
+void actualizar_tlb_LRU(TLBEntry* tlbEntry){
+    tlbEntry->last_time_access = buscar_mayor_TA_en_TLB() + 1000;
+    log_debug(logger,"Actualizo entrada tlb con current time: %ld",tlbEntry->last_time_access);
+}
+
 
 uint32_t mmu(char* logicalAddress){
     int direccion_fisica;
@@ -50,10 +62,12 @@ uint32_t mmu(char* logicalAddress){
             }
             else{
                 log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d> ", pcb_en_ejecucion->pid, numero_pagina);
+                actualizar_tlb_LRU(tlbEntry);
                 direccion_fisica = tlbEntry->marco * tam_pag + desplazamiento;
                 marco = tlbEntry->marco;
             }
         }
+        contenido_tlb();
     }
     else{
         log_info(logger,"TLB deshabilitada, buscando frame en memoria...");
@@ -67,12 +81,24 @@ uint32_t mmu(char* logicalAddress){
 }
 
 TLBEntry* buscar_en_TLB(int pid, int pagina){
-    for (int i=0; i < cant_entradas_tlb() ; i++){
+    int entradas = cant_entradas_tlb();
+    for (int i = 0; i < entradas; i++){
         if (TLB[i].pid == pid && TLB[i].pagina == pagina){
             return &TLB[i];
         }  
     }
     return NULL; //si no encuentra en la tlb
+}
+
+int buscar_mayor_TA_en_TLB(){
+    int mayor = TLB[0].last_time_access;
+
+    for (int i = 1; i < cant_entradas_tlb(); i++) {
+        if (TLB[i].last_time_access > mayor) {
+            mayor = TLB[i].last_time_access;
+        }
+    }
+    return mayor;
 }
 
 void agregar_a_TLB(int pid, int pagina, int marco) {
@@ -96,8 +122,8 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
 }
 
 void agregar_a_TLB_LRU(int pid, int pagina, int marco) {
-    current_time = time(NULL);
-    log_debug(logger,"CURRENT_TIME: %ld",current_time);
+    current_time = buscar_mayor_TA_en_TLB() + 1000;
+    //log_debug(logger,"CURRENT_TIME: %ld",current_time);
     // Verificar si la TLB está llena
     if (tlb_size < cant_entradas_tlb()) {
         // Si hay espacio disponible, agregar la entrada al final de la TLB
@@ -117,11 +143,11 @@ void agregar_a_TLB_LRU(int pid, int pagina, int marco) {
 
 int find_LRU_index() {
     int lru_index = 0;
-    time_t oldest_time = TLB[0].last_time_access;
+    int oldest = TLB[0].last_time_access;
 
     for (int i = 1; i < cant_entradas_tlb(); i++) {
-        if ((int)TLB[i].last_time_access > oldest_time) {
-            oldest_time = TLB[i].last_time_access;
+        if (TLB[i].last_time_access < oldest) {
+            oldest = TLB[i].last_time_access;
             lru_index = i;
         }
     }
@@ -150,4 +176,5 @@ int recibir_tam_pag(int socket_cliente)
     free(tam_pag);
     return tampagina;
 }
+
 
