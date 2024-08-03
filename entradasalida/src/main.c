@@ -229,6 +229,7 @@ char* extract_name_from_path(const char* path)
 
 void test_dialfs() {
     // Test file creation
+    /*
     fs_create("salida.txt", 1);
     fs_create("cronologico.txt", 2);
     debug_print_bitmap();
@@ -260,6 +261,7 @@ void test_dialfs() {
 
     // Test compactation
     //compact_dialfs(1);
+    */
 }
 
 int main(int argc, char* argv[]) {
