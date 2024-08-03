@@ -91,7 +91,6 @@ TLBEntry* buscar_en_TLB(int pid, int pagina){
 }
 
 int buscar_mayor_TA_en_TLB(){
-    int entradas = cant_entradas_tlb();
     int mayor = TLB[0].last_time_access;
 
     for (int i = 1; i < cant_entradas_tlb(); i++) {
