@@ -144,7 +144,8 @@ int recibir_tam_pag(int socket_cliente)
     int size;
     char* tam_pag = recibir_buffer(&size, socket_cliente);
     log_debug(logger, "Tam pag received.. %s", tam_pag);
-
-    return atoi(tam_pag);
+    int tampagina = atoi(tam_pag);
+    free(tam_pag);
+    return tampagina;
 }
 

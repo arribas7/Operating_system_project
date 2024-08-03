@@ -14,6 +14,32 @@ extern t_dictionary* listaTablasDePaginas;
 int tam_pag;
 int server_fd;
 
+void destroy_page_table(void* table) {
+    TablaPaginas* tabla = (TablaPaginas*)table;
+    if (tabla == NULL) return;
+
+    pthread_mutex_destroy(&tabla->mutex_tabla);
+    free(tabla->paginas);
+    free(tabla);
+}
+
+void destroy_all_page_tables(t_dictionary* listaTablasDePaginas) {
+    if (listaTablasDePaginas == NULL) return;
+
+    dictionary_destroy_and_destroy_elements(listaTablasDePaginas, destroy_page_table);
+}
+
+void destroy_all_mem(){
+    destroy_all_page_tables(listaTablasDePaginas);
+    config_destroy(config);
+    log_destroy(logger);
+}
+
+void cleanup(){
+    destroy_all_mem();
+}
+
+
 void end_process(){
     int frameCount = memory.memory_size / memory.page_size; 
 
@@ -144,8 +170,9 @@ t_request2* deserializar_request2(void* stream){
 
 
 /*********************************************************/
-void retardo_en_peticiones(){
-    unsigned int retardo_ms = config_get_int_value(config,"RETARDO_RESPUESTA"); // 1 ms
+
+void retardo_en_peticiones() {
+    unsigned int retardo_ms = config_get_int_value(config, "RETARDO_RESPUESTA");
     usleep(1000 * retardo_ms);
 }
 
@@ -240,6 +267,7 @@ void handle_client(void *arg) {
                 handle_create_process(pcb->path,pid,config); //funciona con scripts-pruebas/file1
                 printf("Path recibido: %s", pcb->path);
                 enviar_respuesta(cliente_fd, OK);
+                delete_pcb(pcb);
                 break;
             case PC:
                 retardo_en_peticiones();
@@ -253,6 +281,7 @@ void handle_client(void *arg) {
                 enviar_mensaje(get_complete_instruction(pcb->pid, pcb->pc),cliente_fd);
                 //enviar_mensaje((char *)instruction, cliente_fd);
                 //enviar_mensaje("IO_GEN_SLEEP XXX 10", cliente_fd);
+                delete_pcb(pcb);
                 break;
             case FINISH_PROCESS:
                 retardo_en_peticiones();
@@ -264,6 +293,7 @@ void handle_client(void *arg) {
                 snprintf(mensaje, sizeof(mensaje), "Process %d has finished", pcb->pid);
                 enviar_mensaje((char *)mensaje, cliente_fd);
                 enviar_respuesta(cliente_fd, OK);
+                delete_pcb(pcb);
                 break;
                 
             case PAGE_REQUEST:
@@ -447,6 +477,7 @@ void handle_graceful_shutdown(int sig) {
 }
 
 int main(int argc, char *argv[]) {
+    atexit(cleanup);
     // Manage signals
     signal(SIGINT, handle_graceful_shutdown);
     signal(SIGTERM, handle_graceful_shutdown);
@@ -510,6 +541,6 @@ int main(int argc, char *argv[]) {
 
     pthread_join(hilo_servidor, NULL);
     clean(config);
-         
+    destroy_all_mem();
     return 0;
 }

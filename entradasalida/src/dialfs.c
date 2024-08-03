@@ -393,19 +393,18 @@ void compact_dialfs(char* file_exception) {
     //Variable para rastrear el bloque actual durante compactación
     int current_block = 0;
 
-    log_filenames_list(filenames);
+    //log_filenames_list(filenames);
     sort_filenames_by_position(filenames);
-    log_filenames_list(filenames);
+    //log_filenames_list(filenames);
     list_iterate(filenames, (void*)compact_file);
-    log_filenames_list(filenames);
-
-    list_destroy_and_destroy_elements(filenames, free);
+    //log_filenames_list(filenames);
 
     msync(bitmap->bitarray, bitmap_size, MS_SYNC);
     fclose(blocks_file);
     
     usleep(config_get_int_value(config, "RETRASO_COMPACTACION") * 1000);
     log_info(logger, "Fin Compactación.");
+    list_destroy_and_destroy_elements(filenames, free);
 }
 
 int find_first_free_block(int blocks_needed) {
@@ -424,37 +423,24 @@ int find_first_free_block(int blocks_needed) {
     return -1;
 }
 
-int move_file_to_free_space(const char *filename, int start_block, int actual_size, int old_blocks_needed, int new_blocks_needed, uint32_t pid) {
+int move_file_to_free_space(const char *filename, char* buffer, int new_blocks_needed, int actual_size) {
     int new_start_block = find_first_free_block(new_blocks_needed);
     if (new_start_block == -1) {
         log_error(logger, "No hay suficiente espacio libre después de la compactación.");
         return -1;
     }
 
-    char *buffer = malloc(actual_size);
     char blocks_path[256];
     snprintf(blocks_path, sizeof(blocks_path), "%s/bloques.dat", path_base);
 
     //FILE *blocks_file = fopen(blocks_path, "rb+");
     blocks_file = fopen(blocks_path, "rb+");
-    if (!blocks_file) {
-        free(buffer);
-        return -1;
-    }
-    fseek(blocks_file, start_block * block_size, SEEK_SET);
-    fread(buffer, sizeof(char), actual_size, blocks_file);
 
     fseek(blocks_file, new_start_block * block_size, SEEK_SET);
     fwrite(buffer, sizeof(char), actual_size, blocks_file);
+
     free(buffer);
     fclose(blocks_file);
-
-    for (int j = start_block; j < start_block + old_blocks_needed; j++) {
-        bitarray_clean_bit(bitmap, j);
-    }
-    for (int j = new_start_block; j < new_start_block + new_blocks_needed; j++) {
-        bitarray_set_bit(bitmap, j);
-    }
 
     msync(bitmap->bitarray, bitmap_size, MS_SYNC);
     debug_print_bitmap();
@@ -462,11 +448,20 @@ int move_file_to_free_space(const char *filename, int start_block, int actual_si
     char metadata_path[256];
     snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename);
     t_config *metadata = config_create(metadata_path);
+
     char new_start_block_str[12];
+
     sprintf(new_start_block_str, "%d", new_start_block);
     config_set_value(metadata, "BLOQUE_INICIAL", new_start_block_str);
+
+    log_warning(logger, "NEW START BLOCK OF FILE %s IS %d (DECIMAL) %s (STRING)", filename, new_start_block, new_start_block_str);
+
     config_save(metadata);
     config_destroy(metadata);
+
+    for (int j = 0; j < new_blocks_needed; j++) {
+        bitarray_set_bit(bitmap, new_start_block + j);
+    }
 
     return new_start_block;
 }
@@ -491,8 +486,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
     int new_blocks_needed = get_blocks_needed(new_size, block_size);
     int old_blocks_needed = get_blocks_needed(actual_size, block_size);
 
-    //log_debug(logger, "bitmap before:");
-    //debug_print_bitmap();
+    log_debug(logger, "bitmap before:");
+    debug_print_bitmap();
 
     //Si se necesita más espacio
     if (new_blocks_needed > old_blocks_needed) {
@@ -536,8 +531,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
                 //*****************SE LIMPIA EL BITMAP*****************
 
-                for (int i = 0; i < old_blocks_needed; i++) {
-                    bitarray_clean_bit(bitmap, start_block + i);
+                for (int j = 0; j < old_blocks_needed; j++) {
+                    bitarray_clean_bit(bitmap, start_block + j);
                 }
 
                 //*****************COMPACTACIÓN*****************
@@ -548,15 +543,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
                 //*****************ESCRITURA*****************
 
                 //Se intenta mover el archivo a un espacio libre después de la compactación
-                int new_start_block = find_first_free_block(new_blocks_needed);
-                if (new_start_block == -1) {
-                    return;
-                }
-                for (int i = new_start_block; i < new_start_block + new_blocks_needed; i++) {
-                    bitarray_set_bit(bitmap, i);
-                }
-                //Se actualiza el start_block con la nueva posición
-                start_block = new_start_block;  
+                move_file_to_free_space(filename, buffer, new_blocks_needed, actual_size);
+
                 break;
             }
         }
@@ -576,8 +564,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
     //Sincronizar Bitmap con FS
     msync(bitmap->bitarray, bitmap_size, MS_SYNC);
-    //log_debug(logger, "bitmap after:");
-    //debug_print_bitmap();
+    log_debug(logger, "bitmap after:");
+    debug_print_bitmap();
 
     //Actualizar Metadata
     metadata = config_create(metadata_path);
@@ -586,4 +574,8 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
     config_set_value(metadata, "TAMANIO_ARCHIVO", new_size_str);
     config_save(metadata);
     config_destroy(metadata);
+
+    t_list* completeFilenames = list_files(NULL);
+    log_filenames_list(completeFilenames);
+    list_destroy_and_destroy_elements(completeFilenames, free);
 }

@@ -130,7 +130,24 @@ void sort_filenames_by_position(t_list* list_files){
 }
 
 void log_filename(char* filename){
-    log_info(logger, "FILE %s", filename);
+    //Check para saber si es bitmap.dat o bloques.dat y abortar la funcion
+    if (strcmp(filename, "bitmap.dat") == 0 || strcmp(filename, "bloques.dat") == 0) {
+
+    } else {
+    //Se construye la ruta a la metadata
+    char metadata_path[256];
+    snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename); //path_base es variable global de este archivo
+
+    //Bloque inicial y tamaño del archivo desde la metadata
+    t_config *metadata = config_create(metadata_path);
+    int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
+    int size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
+
+    //Bloques necesarios
+    int blocks_needed = get_blocks_needed(size, block_size);
+
+    log_info(logger, "FILE %s SIZE %d AT BLOCK %d", filename, blocks_needed, start_block);
+    }
 }
 
 void log_filenames_list(t_list* list_files){
@@ -172,6 +189,8 @@ void compact_file(char* filename) {
 
     //Se lee desde el inicio la cantidad de bloques necesarios y se almacena en buffer
     fread(buffer, block_size, blocks_needed, blocks_file);
+
+    log_info(logger, "El archivo %s ocupa %d bloques", filename, blocks_needed); 
 
     //**************SE BORRAN LOS DATOS DEL ARCHIVO DEL BITMAP**************
 
