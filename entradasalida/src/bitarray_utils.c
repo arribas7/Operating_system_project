@@ -132,14 +132,19 @@ void sort_filenames_by_position(t_list* list_files){
 void log_filename(char* filename){
     //Check para saber si es bitmap.dat o bloques.dat y abortar la funcion
     if (strcmp(filename, "bitmap.dat") == 0 || strcmp(filename, "bloques.dat") == 0) {
+        return;
+    }
 
-    } else {
     //Se construye la ruta a la metadata
     char metadata_path[256];
     snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename); //path_base es variable global de este archivo
 
     //Bloque inicial y tamaño del archivo desde la metadata
     t_config *metadata = config_create(metadata_path);
+    if (metadata == NULL) {
+        return; // Error al crear la configuración
+    }
+
     int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
     int size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
 
@@ -147,7 +152,9 @@ void log_filename(char* filename){
     int blocks_needed = get_blocks_needed(size, block_size);
 
     log_info(logger, "FILE %s SIZE %d AT BLOCK %d", filename, blocks_needed, start_block);
-    }
+
+    // Liberar la memoria de la configuración
+    config_destroy(metadata);
 }
 
 void log_filenames_list(t_list* list_files){
@@ -172,6 +179,10 @@ void compact_file(char* filename) {
 
     //Bloque inicial y tamaño del archivo desde la metadata
     t_config *metadata = config_create(metadata_path);
+    if (metadata == NULL) {
+        return; // Error al crear la configuración
+    }
+
     int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
     int size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
 
@@ -183,6 +194,10 @@ void compact_file(char* filename) {
     //Si el bloque de inicio del archivo no es el bloque actual (comienza en 0)
     //Se arma un buffer con el espacio necesario para el archivo
     char *buffer = malloc(blocks_needed * block_size);
+    if (!buffer) {
+        config_destroy(metadata); // Free metadata if allocation fails
+        return;
+    }
 
     //Se mueve el puntero del archivo al start block
     fseek(blocks_file, start_block * block_size, SEEK_SET);
@@ -190,7 +205,7 @@ void compact_file(char* filename) {
     //Se lee desde el inicio la cantidad de bloques necesarios y se almacena en buffer
     fread(buffer, block_size, blocks_needed, blocks_file);
 
-    log_info(logger, "El archivo %s ocupa %d bloques", filename, blocks_needed); 
+    log_info(logger, "El archivo %s ocupa %d bloques", filename, blocks_needed);
 
     //**************SE BORRAN LOS DATOS DEL ARCHIVO DEL BITMAP**************
 
@@ -217,8 +232,7 @@ void compact_file(char* filename) {
     }
 
     //**************SE ACTUALIZA LA METADATA**************
-    free(buffer);
-    //debug_print_bitmap();
+    free(buffer); // Free the buffer after its use
 
     //Se crea current_block_str y se le carga current_block
     char current_block_str[12];
@@ -232,73 +246,3 @@ void compact_file(char* filename) {
     
     //current_block += blocks_needed;
 }
-
-/*
-//Función para compactar cada archivo individualmente
-    void compact_file(char* filename) {
-        //Check para saber si es bitmap.dat o bloques.dat y abortar la funcion
-        if (strcmp(filename, "bitmap.dat") == 0 || strcmp(filename, "bloques.dat") == 0) {
-            return;
-        }
-
-        //Se construye la ruta a la metadata
-        char metadata_path[256];
-        snprintf(metadata_path, sizeof(metadata_path), "%s/%s", path_base, filename); //path_base es variable global de este archivo
-
-        //Bloque inicial y tamaño del archivo desde la metadata
-        t_config *metadata = config_create(metadata_path);
-        int start_block = config_get_int_value(metadata, "BLOQUE_INICIAL");
-        int size = config_get_int_value(metadata, "TAMANIO_ARCHIVO");
-
-        //Bloques necesarios
-        int blocks_needed = get_blocks_needed(size, block_size);
-
-        //Si el bloque de inicio del archivo no es el bloque actual (comienza en 0)
-        if ((start_block != current_block) || 1) {
-            //Se arma un buffer con el espacio necesario para el archivo
-            char *buffer = malloc(blocks_needed * block_size);
-
-            //Se mueve el puntero del archivo al start block
-            fseek(blocks_file, start_block * block_size, SEEK_SET);
-
-            //Se lee desde el inicio la cantidad de bloques necesarios y se almacena en buffer
-            fread(buffer, block_size, blocks_needed, blocks_file);
-
-            //Aquí se tiene el contenido del archivo que queremos mover 
-
-            //Se mueve el puntero del archivo al current block
-            fseek(blocks_file, current_block * block_size, SEEK_SET);
-
-            //Se escribe el contenido del buffer en el current block
-            fwrite(buffer, block_size, blocks_needed, blocks_file);
-            free(buffer);
-        }
-
-        log_error(logger, "START BLOCK %d CURRENT BLOCK %d BLOCKS NEEDED %d", start_block, current_block, blocks_needed);
-        log_warning(logger, "ANTES DE LIMPIAR");
-        //log_warning(logger, "%s NEEDS COMPACTING %d", bitmap_string(), needs_compacting(bitmap_string()));
-        debug_print_bitmap();
-        //Limpia los bits necesarios desde el inicio hasta donde se requieran
-        //Los bits limpiados se ponen al final con un 1
-        for (int i = 0; i < blocks_needed; i++) {
-            bitarray_clean_bit(bitmap, start_block + i);
-            bitarray_set_bit(bitmap, current_block + i);
-        }
-
-        log_warning(logger, "DESPUÉS DE LIMPIAR");
-        debug_print_bitmap();
-        //debug_print_bitmap();
-        //debug_print_blocks(blocks_file);
-
-        //Se crea current_block_str y se le carga current_block
-        char current_block_str[12];
-        sprintf(current_block_str, "%d", current_block);
-
-        //Se cambia el valor del bloque inicial en la metadata del archivo
-        config_set_value(metadata, "BLOQUE_INICIAL", current_block_str);
-        config_save(metadata);
-        config_destroy(metadata);
-        
-        current_block += blocks_needed;
-    }
-*/
