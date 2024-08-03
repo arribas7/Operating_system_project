@@ -1,10 +1,11 @@
 #include "mmu_tlb.h"
+#include "time.h"
 
 TLBEntry TLB[32];
 int tlb_index = 0;
 int tlb_size = 0; //para ir sabiendo cuantas entradas hay en la tlb
 //int numero_pagina = 0;
-int current_time = 0;
+time_t current_time;
 
 uint32_t mmu(char* logicalAddress){
     int direccion_fisica;
@@ -76,7 +77,6 @@ TLBEntry* buscar_en_TLB(int pid, int pagina){
 
 void agregar_a_TLB(int pid, int pagina, int marco) {
     // Verificar si la TLB está llena
-
     if (tlb_size < cant_entradas_tlb()) {
         // Si hay espacio disponible, agregar la entrada al final de la TLB
         TLB[tlb_size].pid = pid;
@@ -96,6 +96,8 @@ void agregar_a_TLB(int pid, int pagina, int marco) {
 }
 
 void agregar_a_TLB_LRU(int pid, int pagina, int marco) {
+    current_time = time(NULL);
+    log_debug(logger,"CURRENT_TIME: %ld",current_time);
     // Verificar si la TLB está llena
     if (tlb_size < cant_entradas_tlb()) {
         // Si hay espacio disponible, agregar la entrada al final de la TLB
@@ -115,11 +117,11 @@ void agregar_a_TLB_LRU(int pid, int pagina, int marco) {
 
 int find_LRU_index() {
     int lru_index = 0;
-    int lru_time = 999999999;
+    time_t oldest_time = TLB[0].last_time_access;
 
-    for (int i = 0; i < cant_entradas_tlb(); i++) {
-        if (TLB[i].last_time_access < lru_time) {
-            lru_time = TLB[i].last_time_access;
+    for (int i = 1; i < cant_entradas_tlb(); i++) {
+        if ((int)TLB[i].last_time_access > oldest_time) {
+            oldest_time = TLB[i].last_time_access;
             lru_index = i;
         }
     }
