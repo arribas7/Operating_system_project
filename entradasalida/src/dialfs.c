@@ -550,7 +550,6 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
                 //Se intenta mover el archivo a un espacio libre después de la compactación
                 move_file_to_free_space(filename, buffer, new_blocks_needed, actual_size);
-                free(buffer);
                 break;
             }
         }
