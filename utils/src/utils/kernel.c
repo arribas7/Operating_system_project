@@ -5,6 +5,8 @@
 #include <commons/config.h>
 #include <utils/client.h>
 
+extern t_log* logger;
+
 t_pcb *new_pcb(u_int32_t pid, u_int32_t quantum, char *path, t_state prev_state)
 {
     // Check if path is NULL
@@ -61,6 +63,7 @@ void delete_pcb(t_pcb *pcb)
 {
     if (pcb != NULL)
     {
+        log_debug(logger, "Destroying pcb with PID: %d", pcb->pid);
         free(pcb->path);
         free(pcb->reg);
         free(pcb);
@@ -72,8 +75,6 @@ uint32_t string_to_uint32(const char *str) {
 }
 
 void serialize_pcb(t_pcb* pcb, t_buffer* buffer){
-    void* aux;
-
     // Calculate the size needed for serialization
     buffer->size = sizeof(u_int32_t) * 4  // pid, pc, quantum, and path length
                     + strlen(pcb->path) + 1 // path string and null terminator

@@ -7,8 +7,8 @@
 #include <utils/kernel.h>
 #include <pthread.h>
 
-t_list* resources_list;
-pthread_mutex_t mutex_resources;
+extern t_list* resources_list;
+extern pthread_mutex_t mutex_resources;
 
 extern t_config *config;
 extern t_log* logger;
@@ -31,7 +31,6 @@ t_resource* new_resource(char* name, int instances) {
 
 void initialize_resources() {
     resources_list = list_create();
-    pthread_mutex_init(&mutex_resources, NULL);
 
     char** resource_names = config_get_array_value(config, "RECURSOS");
     char** resource_instances_str = config_get_array_value(config, "INSTANCIAS_RECURSOS");
@@ -49,7 +48,7 @@ void initialize_resources() {
 void destroy_resource(t_resource* resource) {
     free(resource->name);
     queue_destroy_and_destroy_elements(resource->blocked_queue, (void*)free);
-    list_destroy(resource->assigned_pcbs);
+    list_destroy_and_destroy_elements(resource->assigned_pcbs, (void*)free);
     pthread_mutex_destroy(&resource->mutex);
     free(resource);
 }

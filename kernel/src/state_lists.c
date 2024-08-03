@@ -12,18 +12,10 @@ extern pthread_mutex_t mutex_blocked;
 extern pthread_mutex_t mutex_ready;
 extern sem_t sem_ready_process;
 
-t_list *list_NEW = NULL;
-t_list *list_READY = NULL;
-t_pcb *pcb_running = NULL;
-t_list *list_BLOCKED = NULL;
-t_list *list_EXIT = NULL;
-
-void initialize_lists() {
-    list_NEW = list_create();
-    list_READY = list_create();
-    list_BLOCKED = list_create();
-    list_EXIT = list_create();
-}
+extern t_list *list_NEW;
+extern t_list *list_READY;
+extern t_list *list_BLOCKED;
+extern t_list *list_EXIT;
 
 t_list *list_push(t_list *list, void *element) {
     list_add(list, element);
@@ -92,7 +84,7 @@ void state_list_clean(t_list * list) {
 }
 
 void state_list_destroy(t_list * list) {
-	list_destroy_and_destroy_elements(list, list_element_destroyer);
+	list_destroy_and_destroy_elements(list, (void*) list_element_destroyer);
 }
 
 bool list_has_pid(t_list* list, int pid) {

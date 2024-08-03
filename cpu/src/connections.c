@@ -5,7 +5,9 @@ int recibir_req(int socket_cliente)
     int size;
     char* req = recibir_buffer(&size, socket_cliente);
     //log_info(logger, "REQ received... %s", req); //esta linea imprime cualquier cosa, pero no afecta al resultado del valor devuelto
-    return atoi(req);
+    int reqq = atoi(req);
+    free(req);
+    return reqq;
 }
 
 void serializar_request(t_request* request, t_buffer* buffer){
