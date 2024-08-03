@@ -448,7 +448,7 @@ void testing_paging(void) {
     free(memory.frames_ocupados);
 }
 
-
+/*
 void test1WriteRead(){
     /*handle_create_process("scripts_memoria/test1WriteRead", 1, config);
     // SET EAX 16 -> CPU
@@ -459,7 +459,7 @@ void test1WriteRead(){
 
     escribirEnDireccionFisica2(write->req, string_itoa(write->val), strlen(string_itoa(write->val)), write->pid);
     leerDeDireccionFisica3(to_read->physical_address, to_read->text_size, to_send, to_read->pid);
-    */
+    
 }
 
 void test2WriteReadTwoProcesses(){
@@ -469,6 +469,8 @@ void test2WriteReadTwoProcesses(){
 void test3IOReplicated(){
 
 }
+*/
+
 
 void handle_graceful_shutdown(int sig) {
     close(server_fd);
@@ -511,19 +513,6 @@ int main(int argc, char *argv[]) {
 
     //testing_paging();
 
-    /*-------------------Test diccionary----------------------------*/
-    /*
-    const char *file_path="scripts-pruebas/file1";
-    //recibir_path();
-    uint32_t TIPO1=1; //tipo es el PID1
-     uint32_t TIPO2=2; //tipo es el PID2
-    printf("Step PID1: %s\n",file_path);
-    handle_create_process(file_path,TIPO1);
-    printf("Step PID2: %s\n",file_path);
-    handle_create_process(file_path,TIPO2);
-    
-*/
-
     /* ---------------- Hilos ---------------- */
 
     pthread_t hilo_servidor;
@@ -534,10 +523,6 @@ int main(int argc, char *argv[]) {
         log_error(logger, "Error al crear el hilo del servidor");
         return -1;
     }
-
-    test1WriteRead();
-    //test2WriteReadTwoProcesses();
-    //test3IOReplicated();
 
     pthread_join(hilo_servidor, NULL);
     clean(config);

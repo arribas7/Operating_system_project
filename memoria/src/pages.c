@@ -145,7 +145,6 @@ void escribirEnEspacioUsuario(const char* buffer, int tamano_proceso) {
 }  
 
 // Función para crear la tabla de páginas de un proceso (y asignar marcos a cada página)
-
 TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     TablaPaginas* tabla = (TablaPaginas*)malloc(sizeof(TablaPaginas));  // Cambiar a puntero y usar malloc
     tabla->paginas = NULL;
@@ -414,20 +413,14 @@ int ampliar_tamanio_proceso(TablaPaginas* tabla, int pid, int marcos_actuales, i
 
 
     for (int i = marcos_actuales, j=0; i < marcos_necesarios_nuevos; ++i , j++) {
-        /*
-        int marco = asignarMarcoLibre();
-        if (marco == -1) {
-            log_error(logger, "No free frames available al ampliar el proceso PID %d", pid);
-            return 0;
-        }
-        */
         tabla->paginas[i].pagina_id = i;
         tabla->paginas[i].numero_marco = marcos_nuevos[j];
     }
 
     tabla->num_paginas = marcos_necesarios_nuevos;
-    log_info(logger, "Proceso PID %d ampliado a %d bytes (%d páginas)", pid, marcos_necesarios_nuevos * memory.page_size, marcos_necesarios_nuevos);
 
+    log_info(logger, "PID: %d - Tamaño actual: %d bytes - Tamaño a Ampliar: %d bytes", pid, marcos_necesarios_nuevos * memory.page_size, marcos_necesarios_nuevos * memory.page_size);
+    log_info(logger, "Proceso PID %d ampliado a %d bytes (%d páginas)", pid, marcos_necesarios_nuevos * memory.page_size, marcos_necesarios_nuevos);
     free(marcos_nuevos);
 
     return 1;
@@ -447,6 +440,7 @@ int reducir_tamanio_proceso(TablaPaginas* tabla, int pid, int marcos_actuales, i
     }
 
     tabla->num_paginas = marcos_necesarios_nuevos;
+    log_info(logger, "PID: %d - Tamaño actual: %d bytes - Tamaño a Reducir: %d bytes", pid, marcos_necesarios_nuevos * memory.page_size, marcos_necesarios_nuevos * memory.page_size);
     log_info(logger, "Proceso PID %d reducido a %d bytes (%d páginas)", pid, marcos_necesarios_nuevos * memory.page_size, marcos_necesarios_nuevos);
 
     return 1;
@@ -619,6 +613,7 @@ uint32_t escribirEnDireccionFisica2(uint32_t dirFisica, char* txt, uint32_t size
     for (int i = 0; i < num_paginas; i++) {
         if (count_marcos > 0 || tabla->paginas[i].numero_marco == marco_inicial) {
             marcos[count_marcos] = tabla->paginas[i].numero_marco;
+            log_info(logger,"Acceso a tabla de paginas - PID: %d - Pagina: %d - Marco: %d",pid,tabla->paginas[i].pagina_id,tabla->paginas[i].numero_marco);
             count_marcos++;
         }
     }
@@ -668,6 +663,7 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
     for (int i = 0; i < num_paginas; i++) {
         if (count_marcos > 0 || tabla->paginas[i].numero_marco == marco_inicial) {
             marcos[count_marcos] = tabla->paginas[i].numero_marco;
+            log_info(logger,"Acceso a tabla de paginas - PID: %d - Pagina: %d - Marco: %d",pid,tabla->paginas[i].pagina_id,tabla->paginas[i].numero_marco);
             count_marcos++;
         }
     }
@@ -675,6 +671,8 @@ int leerDeDireccionFisica3(uint32_t dirFisica, uint32_t size, char* buffer, uint
     uint32_t bytes_leidos = 0;
     pthread_mutex_lock(&(memory.mutex_espacio_usuario));
 
+    log_info(logger,"PID: %d - Accion: %s - Direccion fisica: %d - Tamaño: %d",pid,"LEER",dirFisica,size);
+    
     for (int i = 0; bytes_leidos < size && i < count_marcos; i++) {
         int marco = marcos[i];
         char* dir_fisica_real = espacio_usuario + (marco * page_size) + offset_dentro_marco;
