@@ -39,4 +39,6 @@ void load_instructions_from_file(InstructionDictionary *dict, FILE *file);
 void instruction_dictionary_free(InstructionDictionary *dict);
 void send_instruction(const char *instruction, int socket_cliente);
 
+extern void destroy_page_table(void* table);
+
 #endif // FILES_H

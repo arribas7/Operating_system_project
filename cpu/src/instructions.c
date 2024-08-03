@@ -21,7 +21,13 @@
     [_IO_FS_READ] = "IO_FS_READ",
     [_EXIT] = "EXIT"
 };
-
+/*
+void free_double_pointer(char **array, int size) {
+    for (int i = 0; i < size; i++)
+        free(array[i]); 
+    free(array);
+}
+*/
 int buscar(char *elemento, char **lista) //buscar un elemento en una lista
 {
     int i = 0;
@@ -112,11 +118,6 @@ void decode(t_pcb *pcb)
     cant_parametros = string_array_size(instr_decode) - 1;
     instruccion_decodificada = buscar(instr_decode[0], listaComandos);
     //log_info(logger, "Decode instruction fetched.. %s", listaComandos[instruccion_decodificada]);
-    /*
-    instr_decode = strtok(instruccion_actual, " ");
-    instruccion_decodificada = buscar(instr_decode,listaComandos);
-    log_info(logger, "Decode instruction fetched.. %s", instruccion_actual);
-    */
 }
 
 t_paquete *execute(t_pcb *pcb)
@@ -424,7 +425,8 @@ t_paquete *io_gen_sleep(char* name, char* time)
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(package, buffer->stream, buffer->size);
     
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return package;
@@ -447,7 +449,8 @@ t_paquete *io_stdin_read(char* name, char* logicalAdressReg, char* size)
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_read_paq, buffer->stream, buffer->size);
 
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_stdin_read_paq;
@@ -464,7 +467,8 @@ t_paquete *io_stdin_write(char* name, char* logicalAdressReg, char* size)
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_stdin_write_paq, buffer->stream, buffer->size);
 
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_stdin_write_paq;
@@ -478,8 +482,9 @@ t_paquete *io_fs_create(char* name, char* file_name)
     t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_CREATE, name, 0, 0, 0, file_name, 0);
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_create, buffer->stream, buffer->size);
-    
-    free(instruction);
+
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_create;
@@ -494,7 +499,8 @@ t_paquete *io_fs_delete(char* name, char* file_name)
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_delete,buffer->stream,buffer->size);
     
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_delete;
@@ -510,7 +516,8 @@ t_paquete *io_fs_truncate(char* name, char* file_name, char* size)
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_truncate, buffer->stream, buffer->size);
 
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_truncate;
@@ -527,7 +534,8 @@ t_paquete *io_fs_write(char* name, char* file_name, char* logicalAddressReg, cha
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_write, buffer->stream, buffer->size);
 
-    free(instruction);
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_write;
@@ -543,8 +551,9 @@ t_paquete *io_fs_read(char* name, char* file_name, char* logicalAddressReg, char
     t_instruction* instruction = create_instruction_IO(pcb_en_ejecucion->pid, IO_FS_READ, name, 0, mmu(string_itoa(logicalAddress)), reg_size, file_name, obtener_valor_reg(file_pointer));
     serialize_instruction_IO(instruction, buffer);
     agregar_a_paquete(io_fs_read, buffer->stream, buffer->size);
-    
-    free(instruction);
+ 
+    delete_instruction_IO(instruction);
+    free(buffer->stream);
     free(buffer);
 
     return io_fs_read;

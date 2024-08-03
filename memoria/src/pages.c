@@ -187,11 +187,12 @@ TablaPaginas* crearTablaPaginas(int pid, int tamano_proceso, int tamano_marco) {
     }
 
     // Agregar la tabla al diccionario de tablas de páginas
-    dictionary_put(listaTablasDePaginas, string_itoa(tabla->pid_tabla), tabla);
+    char* s_pid_tabla = string_itoa(tabla->pid_tabla);
+    dictionary_put(listaTablasDePaginas, s_pid_tabla , tabla);
     log_info(logger, "****Se registra la creación de la tabla de páginas***");
     log_info(logger, "PID: %d - Tabla de páginas creada - Tamaño: %d páginas", pid, num_marcos);
     //log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
-
+    free(s_pid_tabla);
     return tabla;
 }
 
@@ -341,11 +342,13 @@ void free_TablaDePaginas(int pid) {
         // Registrar el evento de destrucción de la tabla de páginas
         log_info(logger, "Destrucción de Tabla de Páginas - PID: %d - Cantidad de Páginas: %d (Tamaño de la Tabla)", pid, num_marcos);
         log_info(logger, "PID: %d - Tamaño: %d", pid, num_marcos);
-
-    dictionary_remove_and_destroy(listaTablasDePaginas, string_itoa(pid), (void(*)(void*)) liberarTablaPaginas);
-      } else {
+    
+        char* s_pid = string_itoa(pid); 
+        dictionary_remove_and_destroy(listaTablasDePaginas, s_pid , (void(*)(void*)) destroy_page_table);
+        free(s_pid);
+    } 
+    else 
         log_error(logger, "No se encontró la tabla de páginas para el PID %d", pid);
-     }
  }
 
 void finish_process(int pid) {

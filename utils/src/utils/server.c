@@ -157,7 +157,7 @@ t_pcb* recibir_pcb(int socket_cliente) {
     if (buffer == NULL) {
         return NULL;
     }
-    
+
     offset += sizeof(int);
 
     t_pcb* pcb = deserialize_pcb(buffer, offset);

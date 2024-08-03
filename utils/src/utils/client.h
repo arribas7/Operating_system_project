@@ -98,4 +98,6 @@ void *serializar_paquete(t_paquete *paquete, int bytes);
 
 void crear_buffer(t_paquete *paquete);
 
+void enviar_respuesta(int socket_cliente, op_code code);
+
 #endif
