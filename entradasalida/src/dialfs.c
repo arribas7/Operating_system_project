@@ -46,42 +46,44 @@ void debug_print_bitmap() {
 }
 
 void debug_print_blocks(FILE *blocks_file) {
-    //Chequear si es null
     if (!blocks_file) {
         log_error(logger, "Error: blocks_file es NULL.");
         return;
     }
+
     long original_pointer = ftell(blocks_file);
     fseek(blocks_file, 0, SEEK_END);
     long file_size = ftell(blocks_file);
     fseek(blocks_file, 0, SEEK_SET);
 
     char *buffer = malloc(file_size + 1);  // +1 para el terminador nulo
-    if (buffer == NULL) {
+    if (!buffer) {
         log_error(logger, "NO SE PUDO ASIGNAR MEMORIA PARA BUFFER");
+        return;
     }
 
-    fseek(blocks_file, 0, SEEK_SET);
     fread(buffer, sizeof(char), file_size, blocks_file);
-
-    //buffer[file_size] = '\0';
+    buffer[file_size] = '\0';
 
     char *log_string = malloc(file_size + 50);
-    
+    if (!log_string) {
+        log_error(logger, "NO SE PUDO ASIGNAR MEMORIA PARA log_string");
+        free(buffer);
+        return;
+    }
+
     strcpy(log_string, "[DEBUG] Blocks file content:\n");
     strcat(log_string, buffer);
     strcat(log_string, "\n");
 
     log_debug(logger, "%s", log_string);
-    //log_debug(logger, "The buffer is (string) %s", buffer);
-    //log_debug(logger, "The buffer is (decimal) %d", buffer);
 
     free(log_string);
     free(buffer);
 
-    // Volver al puntero original
     fseek(blocks_file, original_pointer, SEEK_SET);
 }
+
 
 void create_directory_if_not_exists(const char *path) {
     struct stat st = {0};
@@ -307,6 +309,7 @@ int fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_
     t_config *metadata = config_create(metadata_path);
     if (!metadata) {
         log_error(logger, "Error abriendo archivo de metadata: %s", metadata_path);
+        
         return -1;
     }
 
@@ -343,6 +346,7 @@ int fs_read(const char* filename, uint32_t phys_addr, uint32_t size, uint32_t f_
 
     t_req_to_w* mem_req = req_to_write(pid, buffer, phys_addr);
     send_req_to_w(mem_req, mem_connection);
+    free(buffer);
     return 0;
 }
 
@@ -511,7 +515,9 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
                 
 
                 if (blocks_file == NULL){
+                    free(buffer);
                     log_error(logger, "NULL FILE POINTER");
+                    return;
                 }
 
                 if (buffer == NULL) {
@@ -544,7 +550,7 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
 
                 //Se intenta mover el archivo a un espacio libre después de la compactación
                 move_file_to_free_space(filename, buffer, new_blocks_needed, actual_size);
-
+                free(buffer);
                 break;
             }
         }
@@ -578,4 +584,5 @@ void fs_truncate(const char *filename, uint32_t new_size, uint32_t pid) {
     t_list* completeFilenames = list_files(NULL);
     log_filenames_list(completeFilenames);
     list_destroy_and_destroy_elements(completeFilenames, free);
+
 }
