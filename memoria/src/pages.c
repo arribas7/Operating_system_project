@@ -480,7 +480,7 @@ void liberarMarcoFisico(int marco) {
     // Opcional: Limpiar el contenido del marco en la memoria física (espacio_usuario)
     memset(espacio_usuario + (marco * memory.page_size), 0, memory.page_size);
 }
-
+/*
 char* leerDesdeEspacioUsuario(int direccion_fisica, int tamano, int pid) {
     // Obtener la tabla de páginas del proceso
     TablaPaginas* tabla = tablaDePaginasAsociada(pid);
@@ -589,7 +589,7 @@ char* leerDeDireccionFisica(uint32_t dirFisica, uint32_t size, uint32_t pid)
         return palabraLeida;
     }
 }
-
+*/
 
 //lectura y escritura no contigua:
 

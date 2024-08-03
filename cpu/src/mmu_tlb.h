@@ -25,7 +25,7 @@ typedef struct tlb{
     int pid;
     int pagina;
     int marco;
-    int last_time_access;
+    long int last_time_access;
 } TLBEntry;
 
 extern TLBEntry TLB[32];
