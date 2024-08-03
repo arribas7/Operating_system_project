@@ -17,9 +17,9 @@ t_log *loggerError;
 t_config *config;
 
 //t_pcb *pcb_cpug;
-char *instruccion_actual;
+char *instruccion_actual = NULL;
 int instruccion_decodificada;
-char **instr_decode;
+char **instr_decode = NULL;
 int cant_parametros;
 char* ack;
 
@@ -50,27 +50,30 @@ int buscar(char *elemento, char **lista);
 op_code interrupted_reason = 0;
 int server_fd_dispatch;
 int server_fd_interrupt;
-
+/*
 void destroy_all_cpu(){
     delete_pcb(pcb_en_ejecucion);
     free(reg_proceso_actual);
-    free_all_global_variables();
+    free(instruccion_actual);
+    //free_all_global_variables();
     config_destroy(config);
     log_destroy(logger);
 }
-
+*/
 void cleanup(){
     liberar_conexion(server_fd_dispatch);
     liberar_conexion(server_fd_interrupt);
     liberar_conexion(conexion_mem);
-    destroy_all_cpu();
+    //destroy_all_cpu();
+    //free(instruccion_actual);
 }
-
+/*
 void free_all_global_variables(){
     free(ack);
     free(instruccion_actual);
     free_double_pointer(instr_decode,sizeof(instr_decode));
 }
+*/
 
 //agregar aqui en esta funcion los frees
 void handle_graceful_shutdown(int sig) {
@@ -120,7 +123,6 @@ int main(int argc, char *argv[])
     pthread_join(interrupt_thread, NULL);
 
     clean(config);
-    destroy_all_cpu();
     return 0;
 }
 
@@ -152,6 +154,8 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         fetch(pcb_en_ejecucion);
         decode(pcb_en_ejecucion);
         response = execute(pcb_en_ejecucion);
+        if (instr_decode != NULL) string_array_destroy(instr_decode);
+        if (instruccion_actual != NULL) free(instruccion_actual);
         if(reg_proceso_actual->PC != pcb_en_ejecucion->pc) {
             pcb_en_ejecucion->pc = reg_proceso_actual->PC;
         } else {
@@ -163,7 +167,7 @@ t_paquete *procesar_pcb(t_pcb *pcb){
         if(response != NULL){
             break;
         }
-        
+
         op_code actual_interrupt_reason = check_interrupt();
         if(actual_interrupt_reason > 0){
             log_debug(logger, "Enviando response por INTERRUPT al kernel..."); 
@@ -204,10 +208,9 @@ int handle_dispatch(int server_fd)
             enviar_respuesta(kernel_dispatch_socket, GENERAL_ERROR);
             continue;
         }
-
         // Process dispatch and get the updated pcb
+        
         t_paquete *response = procesar_pcb(pcb);
-
         enviar_paquete(response, kernel_dispatch_socket);
         eliminar_paquete(response);
         delete_pcb(pcb);
