@@ -44,7 +44,8 @@ t_return_dispatch *handle_dispatch_deserialization(int cpu_connection, t_config 
     ret->instruction_IO = instruction_IO;
     log_debug(logger, "PCB PC updated: %d",pcb_updated->pc);
     log_debug(logger, "NEW QUANTUM VALUE: %d",pcb_updated->quantum);
-
+    
+    list_destroy_and_destroy_elements(list_package, free);
     return ret;
 }
 

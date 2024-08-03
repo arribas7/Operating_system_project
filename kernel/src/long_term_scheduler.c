@@ -49,7 +49,6 @@ void start_process(char* path, t_config *config) {
     pthread_mutex_lock(&mutex_new);
     list_push(list_NEW, pcb);
     pthread_mutex_unlock(&mutex_new);
-
     sem_post(&sem_new_process); 
 }
 
@@ -94,7 +93,7 @@ void exit_process_from_pid(int pid, exit_reason reason) {
     pthread_mutex_lock(&mutex_running);
     t_pcb *pcb = pcb_RUNNING;
     if(pcb_RUNNING != NULL && pcb_RUNNING->pid == pid) {
-        cpu_interrupt(config, INTERRUPT_BY_USER); // interrupt should answer dispatch and move it to running
+        cpu_interrupt(config, INTERRUPT_BY_USER); // interrupt should answer dispatch and move it to ready.
         pthread_mutex_unlock(&mutex_running);
         return;
     } else {

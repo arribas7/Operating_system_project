@@ -158,4 +158,5 @@ void add_interface_to_list(t_interface_list* list, t_interface* interface);
 t_interface* delete_interface_from_list(t_interface_list* list, char* name);
 t_interface* find_interface_by_name(t_interface_list* interface_list, char* name);
 
+void destroy_interface_list(t_interface_list* list);
 #endif
