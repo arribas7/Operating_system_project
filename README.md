@@ -1,4 +1,5 @@
 # TP Grupo 4 2024-1C K3050
+Podes encontrar el enunciado aqui:
 
 ### [Enunciado](https://docs.google.com/document/d/1-AqFTroovEMcA1BfC2rriB5jsLE6SUa4mbcAox1rPec/edit)
 
